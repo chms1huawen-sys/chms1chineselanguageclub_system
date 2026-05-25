@@ -1,0 +1,268 @@
+﻿-- SQL Schema for 一中华文学会系统 (Chinese Language Club System)
+-- Execute this in the Supabase SQL Editor
+
+-- 1. Enable UUID Extension if not enabled
+create extension if not exists "uuid-ossp";
+
+-- 2. Drop existing tables if they exist (for clean setup)
+drop trigger if exists on_auth_user_created on auth.users;
+drop function if exists public.handle_new_user();
+drop table if exists public.notifications cascade;
+drop table if exists public.task_comments cascade;
+drop table if exists public.tasks cascade;
+drop table if exists public.events cascade;
+drop table if exists public.team_members cascade;
+drop table if exists public.teams cascade;
+drop table if exists public.users cascade;
+
+-- 3. Create Users Table (extends auth.users)
+create table public.users (
+  id uuid references auth.users on delete cascade primary key,
+  name text not null,
+  email text not null unique,
+  custom_role_label text,
+  role text not null check (role in ('convener_teacher', 'advisor_teacher', 'chairperson', 'vice_chairperson', 'secretary', 'vice_secretary', 'treasurer', 'vice_treasurer', 'general_affairs', 'vice_general_affairs', 'activity_lead', 'vice_activity_lead', 'activity_member', 'media_lead', 'vice_media_lead', 'custom')),
+  fcm_token text,
+  notification_enabled boolean not null default true,
+  is_active boolean not null default true,
+  created_at timestamp with time zone default timezone('utc'::text, now()) not null
+);
+
+-- 4. Create Teams Table (Sessions / Event committees)
+create table public.teams (
+  id uuid default gen_random_uuid() primary key,
+  name text not null,
+  type text not null check (type in ('board', 'event')), -- 'board' = 执委团, 'event' = 筹委团
+  session text not null,                                 -- e.g. '2026/2027'
+  is_archived boolean not null default false,
+  start_date date,
+  end_date date,
+  created_at timestamp with time zone default timezone('utc'::text, now()) not null
+);
+
+-- 5. Create Team Members Table (Junction)
+create table public.team_members (
+  team_id uuid references public.teams on delete cascade not null,
+  user_id uuid references public.users on delete cascade not null,
+  position text not null,                                -- e.g. '主席', '秘书', '副主席', '筹委主席', '普通成员'
+  joined_at timestamp with time zone default timezone('utc'::text, now()) not null,
+  primary key (team_id, user_id)
+);
+
+-- 6. Create Tasks Table
+create table public.tasks (
+  id uuid default gen_random_uuid() primary key,
+  title text not null,
+  description text,
+  assigned_to uuid[] not null default '{}',             -- List of user IDs
+  created_by uuid references public.users not null,
+  team_id uuid references public.teams on delete cascade not null,
+  due_date timestamp with time zone,
+  priority text not null check (priority in ('high', 'medium', 'low')),
+  status text not null check (status in ('pending', 'in_progress', 'completed', 'need_help')) default 'pending',
+  created_at timestamp with time zone default timezone('utc'::text, now()) not null,
+  updated_at timestamp with time zone default timezone('utc'::text, now()) not null
+);
+
+-- 7. Create Task Comments Table
+create table public.task_comments (
+  id uuid default gen_random_uuid() primary key,
+  task_id uuid references public.tasks on delete cascade not null,
+  user_id uuid references public.users on delete cascade not null,
+  content text not null,
+  created_at timestamp with time zone default timezone('utc'::text, now()) not null
+);
+
+-- 8. Create Events Table (Calendar)
+create table public.events (
+  id uuid default gen_random_uuid() primary key,
+  title text not null,
+  date date not null,
+  type text not null check (type in ('event', 'meeting', 'deadline')), -- 'event'=学会活动 (blue), 'meeting'=内部会议 (green), 'deadline'=截止日期 (red)
+  color text not null check (color in ('blue', 'green', 'red')),
+  team_id uuid references public.teams on delete cascade not null,
+  drive_link text,
+  created_at timestamp with time zone default timezone('utc'::text, now()) not null
+);
+
+-- 9. Create Notifications Table
+create table public.notifications (
+  id uuid default gen_random_uuid() primary key,
+  user_id uuid references public.users on delete cascade not null,
+  type text not null,
+  title text not null,
+  body text not null,
+  dedupe_key text unique,
+  sent_at timestamp with time zone default timezone('utc'::text, now()) not null,
+  read_at timestamp with time zone
+);
+
+-- 10. Enable Row Level Security (RLS) on public.users
+alter table public.users enable row level security;
+alter table public.teams enable row level security;
+alter table public.team_members enable row level security;
+alter table public.tasks enable row level security;
+alter table public.task_comments enable row level security;
+alter table public.events enable row level security;
+alter table public.notifications enable row level security;
+
+-- 11. Create basic RLS Policies (allows authenticated users full read, restricted writes)
+-- For simplicity & full usability:
+-- Users policies:
+create policy "Users are viewable by all authenticated users." on public.users
+  for select to authenticated using (true);
+
+create policy "Advisors and Chairpersons can insert users." on public.users
+  for insert to authenticated with check (
+    exists (
+      select 1 from public.users
+      where id = auth.uid() and role in ('convener_teacher', 'advisor_teacher', 'chairperson', 'vice_chairperson')
+    )
+  );
+
+create policy "Advisors and Chairpersons can update users." on public.users
+  for update to authenticated using (
+    exists (
+      select 1 from public.users
+      where id = auth.uid() and role in ('convener_teacher', 'advisor_teacher', 'chairperson', 'vice_chairperson')
+    )
+  );
+
+create policy "Advisors and Chairpersons can delete users." on public.users
+  for delete to authenticated using (
+    exists (
+      select 1 from public.users
+      where id = auth.uid() and role in ('convener_teacher', 'advisor_teacher', 'chairperson', 'vice_chairperson')
+    )
+  );
+
+-- Teams policies:
+create policy "Teams are viewable by all authenticated users." on public.teams
+  for select to authenticated using (true);
+
+create policy "Advisors and Chairpersons can manage teams." on public.teams
+  for all to authenticated using (
+    exists (
+      select 1 from public.users
+      where id = auth.uid() and role in ('convener_teacher', 'advisor_teacher', 'chairperson', 'vice_chairperson')
+    )
+  );
+
+-- Team members policies:
+create policy "Team members are viewable by all authenticated users." on public.team_members
+  for select to authenticated using (true);
+
+create policy "Advisors and Chairpersons can manage team members." on public.team_members
+  for all to authenticated using (
+    exists (
+      select 1 from public.users
+      where id = auth.uid() and role in ('convener_teacher', 'advisor_teacher', 'chairperson', 'vice_chairperson')
+    )
+  );
+
+-- Tasks policies:
+create policy "Tasks are viewable by all authenticated users." on public.tasks
+  for select to authenticated using (true);
+
+create policy "Task managers can create tasks." on public.tasks
+  for insert to authenticated with check (
+    auth.uid() = created_by and
+    exists (
+      select 1 from public.users
+      where id = auth.uid() and role in ('convener_teacher', 'advisor_teacher', 'chairperson', 'vice_chairperson', 'secretary', 'vice_secretary', 'treasurer', 'vice_treasurer', 'general_affairs', 'vice_general_affairs', 'activity_lead', 'vice_activity_lead', 'media_lead', 'vice_media_lead')
+    )
+  );
+
+create policy "Task managers and assignees can update tasks." on public.tasks
+  for update to authenticated using (
+    auth.uid() = created_by or 
+    auth.uid() = any(assigned_to) or
+    exists (
+      select 1 from public.users
+      where id = auth.uid() and role in ('convener_teacher', 'advisor_teacher', 'chairperson', 'vice_chairperson', 'secretary', 'vice_secretary', 'treasurer', 'vice_treasurer', 'general_affairs', 'vice_general_affairs', 'activity_lead', 'vice_activity_lead', 'media_lead', 'vice_media_lead')
+    )
+  );
+
+create policy "Task managers can delete tasks." on public.tasks
+  for delete to authenticated using (
+    exists (
+      select 1 from public.users
+      where id = auth.uid() and role in ('convener_teacher', 'advisor_teacher', 'chairperson', 'vice_chairperson', 'secretary', 'vice_secretary', 'treasurer', 'vice_treasurer', 'general_affairs', 'vice_general_affairs', 'activity_lead', 'vice_activity_lead', 'media_lead', 'vice_media_lead')
+    )
+  );
+
+-- Comments policies:
+create policy "Comments are viewable by all authenticated users." on public.task_comments
+  for select to authenticated using (true);
+
+create policy "Authenticated users can create comments." on public.task_comments
+  for insert to authenticated with check (auth.uid() = user_id);
+
+create policy "Users can delete their own comments." on public.task_comments
+  for delete to authenticated using (auth.uid() = user_id);
+
+-- Events policies:
+create policy "Events are viewable by all authenticated users." on public.events
+  for select to authenticated using (true);
+
+create policy "Advisors, chairpersons, secretaries, and treasurers can manage events." on public.events
+  for all to authenticated using (
+    exists (
+      select 1 from public.users
+      where id = auth.uid() and role in ('convener_teacher', 'advisor_teacher', 'chairperson', 'vice_chairperson', 'secretary', 'vice_secretary', 'treasurer', 'vice_treasurer', 'general_affairs', 'vice_general_affairs', 'activity_lead', 'vice_activity_lead', 'media_lead', 'vice_media_lead')
+    )
+  );
+
+-- Notifications policies:
+create policy "Notifications are viewable by recipient." on public.notifications
+  for select to authenticated using (auth.uid() = user_id);
+
+create policy "Authenticated users can create notifications." on public.notifications
+  for insert to authenticated with check (auth.uid() is not null);
+
+create policy "Recipient can update (mark read) notifications." on public.notifications
+  for update to authenticated using (auth.uid() = user_id);
+
+
+-- 12. Trigger function to handle new registered user in auth.users
+create or replace function public.handle_new_user()
+returns trigger as $$
+begin
+  insert into public.users (id, name, email, custom_role_label, role, is_active)
+  values (
+    new.id,
+    coalesce(new.raw_user_meta_data->>'name', split_part(new.email, '@', 1)),
+    new.email,
+    nullif(trim(coalesce(new.raw_user_meta_data->>'custom_role_label', '')), ''),
+    coalesce(new.raw_user_meta_data->>'role', 'activity_member'),
+    true
+  );
+  return new;
+end;
+$$ language plpgsql security definer;
+
+
+-- Allow each logged-in user to save their own push-notification token without opening role updates.
+create or replace function public.update_my_notification_settings(
+  p_fcm_token text,
+  p_notification_enabled boolean default true
+)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  update public.users
+  set fcm_token = p_fcm_token,
+      notification_enabled = p_notification_enabled
+  where id = auth.uid();
+end;
+$$;
+
+grant execute on function public.update_my_notification_settings(text, boolean) to authenticated;
+
+-- Trigger to sync auth users with public.users
+create trigger on_auth_user_created
+  after insert on auth.users
+  for each row execute procedure public.handle_new_user();
