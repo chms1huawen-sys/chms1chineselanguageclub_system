@@ -1,591 +1,522 @@
-﻿import React, { useState, useEffect } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { supabase } from '../supabaseClient'
 import {
-  LayoutDashboard, CheckSquare, Calendar, Users,
-  ArrowUpRight, AlertTriangle, TrendingUp, Clock,
-  Loader, HelpCircle, ChevronRight, FolderGit, ExternalLink,
-  CheckCircle2
+  AlertCircle,
+  Bell,
+  Calendar,
+  Cake,
+  CheckSquare,
+  ClipboardList,
+  ExternalLink,
+  HelpCircle,
+  Loader,
+  Megaphone,
+  Plus,
+  Send,
+  Sparkles,
+  TrendingUp,
+  Users,
 } from 'lucide-react'
-import { useNavigate } from 'react-router-dom'
 
-const ROLE_OPTIONS = [
-  { value: 'convener_teacher', zh: '召集老师', en: 'Convener Teacher', bg: '#ffe4ec', color: '#be185d', border: '#FFB3C6' },
-  { value: 'advisor_teacher', zh: '指导老师', en: 'Advisor Teacher', bg: '#fff1f2', color: '#e11d48', border: '#fecdd3' },
-  { value: 'chairperson', zh: '主席', en: 'Chairperson', bg: '#e0f1ff', color: '#2E86C1', border: '#95CBFF' },
-  { value: 'vice_chairperson', zh: '副主席', en: 'Vice Chairperson', bg: '#ede9fe', color: '#7c3aed', border: '#c4b5fd' },
-  { value: 'secretary', zh: '正文书', en: 'Secretary', bg: '#dcfce7', color: '#16a34a', border: '#86efac' },
-  { value: 'vice_secretary', zh: '副文书', en: 'Vice Secretary', bg: '#f0fdf4', color: '#15803d', border: '#bbf7d0' },
-  { value: 'treasurer', zh: '正财政', en: 'Treasurer', bg: '#fef9c3', color: '#ca8a04', border: '#fde047' },
-  { value: 'vice_treasurer', zh: '副财政', en: 'Vice Treasurer', bg: '#fffbeb', color: '#b45309', border: '#fde68a' },
-  { value: 'general_affairs', zh: '正总务', en: 'General Affairs', bg: '#e0f2fe', color: '#0369a1', border: '#7dd3fc' },
-  { value: 'vice_general_affairs', zh: '副总务', en: 'Vice General Affairs', bg: '#f0f9ff', color: '#0284c7', border: '#bae6fd' },
-  { value: 'activity_lead', zh: '活动组组长', en: 'Activity Lead', bg: '#fef3c7', color: '#d97706', border: '#fcd34d' },
-  { value: 'vice_activity_lead', zh: '活动组副组长', en: 'Vice Activity Lead', bg: '#fff7ed', color: '#ea580c', border: '#fed7aa' },
-  { value: 'activity_member', zh: '活动组组员', en: 'Activity Member', bg: '#f5f5f5', color: '#6b7280', border: '#d1d5db' },
-  { value: 'media_lead', zh: '媒体组组长', en: 'Media Lead', bg: '#fce7f3', color: '#db2777', border: '#f9a8d4' },
-  { value: 'vice_media_lead', zh: '媒体组副组长', en: 'Vice Media Lead', bg: '#fdf2f8', color: '#be185d', border: '#fbcfe8' },
-  { value: 'custom', zh: '自定义', en: 'Custom', bg: '#f3f4f6', color: '#4b5563', border: '#d1d5db' }
-]
+const MANAGER_ROLES = ['convener_teacher', 'advisor_teacher', 'chairperson', 'secretary', 'vice_secretary']
+const ANNOUNCEMENT_ROLES = ['convener_teacher', 'advisor_teacher', 'chairperson']
 
-const ROLE_LABELS = Object.fromEntries(ROLE_OPTIONS.map(role => [role.value, role]))
-const getUserRoleLabel = (user) => {
-  const base = ROLE_LABELS[user?.role] || { zh: user?.role, en: user?.role }
-  if (user?.role === 'custom' && user?.custom_role_label) return { ...base, zh: user.custom_role_label, en: user.custom_role_label }
-  return base
+const EVENT_TYPE_LABELS = {
+  event: { zh: '活动', en: 'Event', bg: '#eff6ff', color: '#2563eb', border: '#bfdbfe' },
+  meeting: { zh: '会议', en: 'Meeting', bg: '#ecfdf5', color: '#059669', border: '#a7f3d0' },
+  deadline: { zh: '截止', en: 'Deadline', bg: '#fef2f2', color: '#dc2626', border: '#fca5a5' },
 }
-const BOARD_MANAGER_ROLES = ['convener_teacher', 'advisor_teacher', 'chairperson', 'vice_chairperson', 'advisor']
-const TASK_MANAGER_ROLES = [...BOARD_MANAGER_ROLES, 'secretary', 'vice_secretary', 'treasurer', 'vice_treasurer', 'general_affairs', 'vice_general_affairs', 'activity_lead', 'vice_activity_lead', 'media_lead', 'vice_media_lead']
-// ─── Exec Google Drive Card ─────────────────────────────────────────────────
-// Stored in the `events` table as a special placeholder with title 'EXEC_DRIVE_LINK'.
-// Only advisor / chairperson can write; everyone can read. Persists across session changes.
-function ExecDriveCard({ isAdmin, lang }) {
-  const [driveLink, setDriveLink] = useState('')
-  const [eventId, setEventId] = useState(null)
-  const [teamId, setTeamId] = useState(null)
-  const [editing, setEditing] = useState(false)
-  const [draft, setDraft] = useState('')
-  const [saving, setSaving] = useState(false)
-  const [saved, setSaved] = useState(false)
 
-  useEffect(() => { fetchLink() }, [])
-
-  const fetchLink = async () => {
-    try {
-      const { data: boardData } = await supabase
-        .from('teams')
-        .select('id')
-        .eq('type', 'board')
-        .eq('is_archived', false)
-        .limit(1)
-        .maybeSingle()
-      setTeamId(boardData?.id || null)
-
-      const { data } = await supabase
-        .from('events')
-        .select('id, drive_link')
-        .eq('title', 'EXEC_DRIVE_LINK')
-        .limit(1)
-      if (data && data.length > 0) {
-        setEventId(data[0].id)
-        setDriveLink(data[0].drive_link || '')
-        setDraft(data[0].drive_link || '')
-      }
-    } catch (e) {
-      console.error('ExecDriveCard fetch:', e)
-    }
-  }
-
-  const handleSave = async () => {
-    setSaving(true)
-    try {
-      if (!eventId && !teamId) {
-        throw new Error('No active board team found for executive Drive link.')
-      }
-
-      if (eventId) {
-        const { error } = await supabase.from('events').update({ drive_link: draft }).eq('id', eventId)
-        if (error) throw error
-      } else {
-        const { data, error } = await supabase.from('events').insert({
-          title: 'EXEC_DRIVE_LINK',
-          date: '2000-01-01',   // sentinel date — never rendered on calendar
-          type: 'event',
-          color: 'blue',
-          team_id: teamId,
-          drive_link: draft
-        }).select().single()
-        if (error) throw error
-        if (data) setEventId(data.id)
-      }
-      setDriveLink(draft)
-      setSaved(true)
-      setEditing(false)
-      setTimeout(() => setSaved(false), 2000)
-    } catch (e) {
-      console.error('ExecDriveCard save:', e)
-    } finally {
-      setSaving(false)
-    }
-  }
-
-  const label = lang === 'zh'
-    ? '📁 执委团 Google Drive 共享目录'
-    : '📁 Executive Committee Google Drive Folder'
-
-  return (
-    <div className="p-5 rounded-3xl text-left"
-      style={{ background: 'white', border: '1.5px solid #e0f1ff', boxShadow: '0 4px 16px rgba(149,203,255,0.06)' }}>
-      <div className="flex items-center justify-between gap-2 mb-3">
-        <div className="flex items-center gap-2">
-          <FolderGit size={18} style={{ color: '#95CBFF' }} />
-          <h3 className="font-black text-sm text-gray-800">{label}</h3>
-        </div>
-        {isAdmin && !editing && (
-          <button
-            onClick={() => { setDraft(driveLink); setEditing(true) }}
-            className="text-[10px] font-black px-3 py-1 rounded-xl cursor-pointer transition"
-            style={{ background: '#f0f7ff', border: '1.5px solid #e0f1ff', color: '#6db8ff' }}
-          >
-            {lang === 'zh' ? '编辑' : 'Edit'}
-          </button>
-        )}
-      </div>
-
-      {isAdmin && editing ? (
-        <div className="space-y-2">
-          <input
-            type="url"
-            value={draft}
-            onChange={e => setDraft(e.target.value)}
-            placeholder="https://drive.google.com/..."
-            className="w-full px-3.5 py-2.5 rounded-2xl text-xs outline-none transition"
-            style={{ background: '#f0f7ff', border: '1.5px solid #95CBFF', color: '#1a1a1a', fontWeight: 700 }}
-            autoFocus
-          />
-          <div className="flex gap-2 justify-end">
-            <button
-              onClick={() => setEditing(false)}
-              className="px-4 py-2 rounded-2xl text-xs font-bold cursor-pointer"
-              style={{ background: '#f0f7ff', border: '1.5px solid #e0f1ff', color: '#6b7280' }}
-            >
-              {lang === 'zh' ? '取消' : 'Cancel'}
-            </button>
-            <button
-              onClick={handleSave}
-              disabled={saving}
-              className="px-4 py-2 rounded-2xl text-xs font-black cursor-pointer text-white"
-              style={{ background: '#95CBFF', opacity: saving ? 0.7 : 1 }}
-            >
-              {saved ? '✓' : saving ? '...' : (lang === 'zh' ? '保存' : 'Save')}
-            </button>
-          </div>
-        </div>
-      ) : driveLink ? (
-        <a
-          href={driveLink}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="inline-flex items-center gap-1.5 text-xs font-black text-blue-600 bg-blue-50 px-3.5 py-2 rounded-2xl border border-blue-200 hover:bg-blue-100 transition cursor-pointer"
-        >
-          {lang === 'zh' ? '点击打开 Google Drive 目录' : 'Open Google Drive Folder'}
-          <ExternalLink size={12} />
-        </a>
-      ) : (
-        <p className="text-xs font-semibold text-gray-400 border border-dashed border-gray-200 rounded-2xl p-3 bg-gray-50/50">
-          {isAdmin
-            ? (lang === 'zh' ? '点击「编辑」设置执委团共享文件夹链接。' : 'Click "Edit" to set the shared folder link.')
-            : (lang === 'zh' ? '🔒 召集老师、指导老师、主席或副主席尚未设置执委团共享文件夹。' : '🔒 Shared folder not yet set by Convener Teacher, Advisor Teacher, Chairperson or Vice Chairperson.')}
-        </p>
-      )}
-    </div>
-  )
+const LEAVE_TYPE_LABELS = {
+  sick: { zh: '病假', en: 'Sick Leave' },
+  official: { zh: '公假', en: 'Official Leave' },
+  personal: { zh: '事假', en: 'Personal Leave' },
+  custom: { zh: '自定义', en: 'Custom' },
 }
-// ────────────────────────────────────────────────────────────────────────────
+
+const STATUS_LABELS = {
+  pending: { zh: '待审批', en: 'Pending', bg: '#fffbeb', color: '#ca8a04', border: '#fde047' },
+  approved: { zh: '已批准', en: 'Approved', bg: '#ecfdf5', color: '#059669', border: '#a7f3d0' },
+  rejected: { zh: '已驳回', en: 'Rejected', bg: '#fef2f2', color: '#dc2626', border: '#fca5a5' },
+  recorded: { zh: '已记录', en: 'Recorded', bg: '#eff6ff', color: '#2563eb', border: '#bfdbfe' },
+}
+
+const cardStyle = {
+  background: 'white',
+  border: '1.5px solid #e0f1ff',
+  borderRadius: 24,
+  boxShadow: '0 4px 20px rgba(149,203,255,0.14)',
+}
+
+const inputStyle = {
+  background: '#f0f7ff',
+  border: '1.5px solid #95CBFF',
+  color: '#1a1a1a',
+  borderRadius: 16,
+  fontFamily: "'Nunito', sans-serif",
+  fontWeight: 700,
+  padding: '10px 14px',
+  outline: 'none',
+}
+
+const getLocalDate = (date = new Date()) => (
+  `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
+)
+
+const formatDate = (date, lang = 'zh') => {
+  if (!date) return '-'
+  return new Date(`${String(date).split('T')[0]}T00:00:00`).toLocaleDateString(lang === 'zh' ? 'zh-CN' : 'en-US', {
+    month: 'short',
+    day: 'numeric',
+  })
+}
+
+function CountUpNumber({ value }) {
+  const [display, setDisplay] = useState(0)
+
+  useEffect(() => {
+    const target = Number(value) || 0
+    const start = display
+    const startTime = performance.now()
+    const duration = 450
+    let frame = 0
+
+    const tick = (now) => {
+      const progress = Math.min((now - startTime) / duration, 1)
+      setDisplay(Math.round(start + (target - start) * progress))
+      if (progress < 1) frame = requestAnimationFrame(tick)
+    }
+
+    frame = requestAnimationFrame(tick)
+    return () => cancelAnimationFrame(frame)
+  }, [value])
+
+  return display
+}
+
+const getLeaveTypeText = (leave, lang) => {
+  if (leave?.leave_type === 'custom' && leave.custom_leave_type) return leave.custom_leave_type
+  const label = LEAVE_TYPE_LABELS[leave?.leave_type]
+  return label ? (lang === 'zh' ? label.zh : label.en) : (leave?.leave_type || '-')
+}
 
 export default function Dashboard({ currentUserProfile, lang = 'zh', onShowTutorial }) {
   const navigate = useNavigate()
-  const [statsData, setStatsData] = useState({ pending: 0, events: 0, members: 0, needHelp: 0 })
-  const [myTasks, setMyTasks] = useState([])
-  const [memberStats, setMemberStats] = useState([])
-  const [recentDone, setRecentDone] = useState([])   // recently completed tasks for updates feed
   const [loading, setLoading] = useState(true)
+  const [stats, setStats] = useState({ myPendingTasks: 0, monthEvents: 0, activeMembers: 0, pendingLeaves: 0 })
+  const [weekEvents, setWeekEvents] = useState([])
+  const [leaveApplications, setLeaveApplications] = useState([])
+  const [birthdays, setBirthdays] = useState([])
+  const [announcements, setAnnouncements] = useState([])
+  const [activityFeed, setActivityFeed] = useState([])
+  const [activeTab, setActiveTab] = useState('announcements')
+  const [showAnnouncementModal, setShowAnnouncementModal] = useState(false)
+  const [announcementForm, setAnnouncementForm] = useState({ title: '', body: '', is_pinned: false })
+  const [announcementSubmitting, setAnnouncementSubmitting] = useState(false)
+  const [errorMsg, setErrorMsg] = useState('')
 
-  const isAdmin = BOARD_MANAGER_ROLES.includes(currentUserProfile?.role)
+  const isLeaveManager = MANAGER_ROLES.includes(currentUserProfile?.role)
+  const canPublishAnnouncements = ANNOUNCEMENT_ROLES.includes(currentUserProfile?.role)
 
-  const isPowerUser = TASK_MANAGER_ROLES.includes(currentUserProfile?.role)
-
-  // Initial load + realtime subscription
   useEffect(() => {
-    if (!currentUserProfile) return
+    if (!currentUserProfile?.id) return
     fetchDashboardData()
 
     const channel = supabase
-      .channel('dashboard-tasks-changes')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'tasks' }, () => {
-        fetchDashboardData()
-      })
+      .channel('dashboard-realtime')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'tasks' }, fetchDashboardData)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'events' }, fetchDashboardData)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'users' }, fetchDashboardData)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'leave_applications' }, fetchDashboardData)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'announcements' }, fetchDashboardData)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'activity_log' }, fetchDashboardData)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'notifications' }, fetchDashboardData)
       .subscribe()
 
     return () => { supabase.removeChannel(channel) }
-  }, [currentUserProfile])
+  }, [currentUserProfile?.id, currentUserProfile?.role])
 
   const fetchDashboardData = async () => {
     setLoading(true)
+    setErrorMsg('')
     try {
-      const today = new Date()
-      const todayStr = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`
-      const weekEnd = new Date(today); weekEnd.setDate(today.getDate() + 7)
-      const weekEndStr = `${weekEnd.getFullYear()}-${String(weekEnd.getMonth()+1).padStart(2,'0')}-${String(weekEnd.getDate()).padStart(2,'0')}`
+      const now = new Date()
+      const todayStr = getLocalDate(now)
+      const weekEnd = new Date(now)
+      weekEnd.setDate(now.getDate() + 7)
+      const weekEndStr = getLocalDate(weekEnd)
+      const monthStart = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`
+      const monthEnd = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate()).padStart(2, '0')}`
 
-      // 1. My pending tasks
-      const { data: allTasks } = await supabase
-        .from('tasks')
-        .select('*')
-        .contains('assigned_to', [currentUserProfile.id])
+      const [
+        tasksResult,
+        monthEventsResult,
+        weekEventsResult,
+        membersResult,
+        leavesResult,
+        birthdaysResult,
+        announcementsResult,
+        activityResult,
+        notificationsResult,
+      ] = await Promise.all([
+        supabase.from('tasks').select('id, status, assigned_to').contains('assigned_to', [currentUserProfile.id]),
+        supabase.from('events').select('id', { count: 'exact', head: true }).gte('date', monthStart).lte('date', monthEnd).neq('title', 'EXEC_DRIVE_LINK'),
+        supabase.from('events').select('*').gte('date', todayStr).lte('date', weekEndStr).neq('title', 'EXEC_DRIVE_LINK').order('date', { ascending: true }),
+        supabase.from('users').select('*', { count: 'exact', head: true }).eq('is_active', true),
+        isLeaveManager
+          ? supabase.from('leave_applications').select('*, applicant:users(id, name, email)').order('created_at', { ascending: false }).limit(5)
+          : Promise.resolve({ data: [] }),
+        supabase.from('users').select('id, name, birthday').eq('is_active', true).not('birthday', 'is', null),
+        supabase.from('announcements').select('*, author:users(id, name)').order('is_pinned', { ascending: false }).order('created_at', { ascending: false }).limit(8),
+        supabase.from('activity_log').select('*, actor:users(id, name)').order('created_at', { ascending: false }).limit(10),
+        supabase.from('notifications').select('id, title, body, sent_at').order('sent_at', { ascending: false }).limit(10),
+      ])
 
-      const pending = (allTasks || []).filter(t => t.status !== 'completed').length
-      const needHelp = (allTasks || []).filter(t => t.status === 'need_help').length
-      setMyTasks((allTasks || []).filter(t => t.status !== 'completed').slice(0, 5))
+      const myPendingTasks = (tasksResult.data || []).filter(task => task.status !== 'completed').length
+      const latestLeaves = leavesResult.data || []
+      const pendingLeaves = latestLeaves.filter(leave => (leave.status || 'pending') === 'pending').length
+      const monthNumber = now.getMonth() + 1
+      const thisMonthBirthdays = (birthdaysResult.data || [])
+        .filter(user => {
+          if (!user.birthday) return false
+          const [, month] = user.birthday.split('-').map(Number)
+          return month === monthNumber
+        })
+        .sort((a, b) => a.birthday.localeCompare(b.birthday))
 
-      // 2. Upcoming events this week — exclude Drive binder placeholders
-      const { data: events } = await supabase
-        .from('events')
-        .select('*')
-        .gte('date', todayStr)
-        .lte('date', weekEndStr)
-        .neq('title', 'EXEC_DRIVE_LINK')
-        .not('title', 'ilike', 'Google Drive 文件夹%')
+      const notificationFeed = (notificationsResult.data || []).map(item => ({
+        id: `notification-${item.id}`,
+        message: `${item.title}${item.body ? ` - ${item.body}` : ''}`,
+        created_at: item.sent_at,
+      }))
 
-      // 3. Active members
-      const { count: membersCount } = await supabase
-        .from('users')
-        .select('*', { count: 'exact', head: true })
-        .eq('is_active', true)
-
-      setStatsData({
-        pending,
-        events: (events || []).length,
-        members: membersCount || 0,
-        needHelp
+      setStats({
+        myPendingTasks,
+        monthEvents: monthEventsResult.count || 0,
+        activeMembers: membersResult.count || 0,
+        pendingLeaves,
       })
-
-      // 4. Recently completed tasks (last 10) for updates feed
-      const { data: doneTasks } = await supabase
-        .from('tasks')
-        .select('id, title, updated_at')
-        .eq('status', 'completed')
-        .order('updated_at', { ascending: false })
-        .limit(6)
-      setRecentDone(doneTasks || [])
-
-      // 5. Power users: member analytics
-      if (isPowerUser) {
-        const { data: activeUsers } = await supabase
-          .from('users').select('id, name, role, custom_role_label').eq('is_active', true).not('role', 'in', '(convener_teacher,advisor_teacher,advisor)')
-        const { data: allTasksData } = await supabase
-          .from('tasks').select('assigned_to, status, due_date')
-
-        const now = new Date()
-        const userStats = (activeUsers || []).map(user => {
-          const userTasks = (allTasksData || []).filter(t =>
-            Array.isArray(t.assigned_to) && t.assigned_to.includes(user.id))
-          const total = userTasks.length
-          const completed = userTasks.filter(t => t.status === 'completed').length
-          const overdue = userTasks.filter(t =>
-            t.due_date && new Date(t.due_date) < now && t.status !== 'completed').length
-          const needHelpCount = userTasks.filter(t => t.status === 'need_help').length
-          const rate = total > 0 ? Math.round((completed / total) * 100) : null
-          return { ...user, total, completed, overdue, needHelp: needHelpCount, rate }
-        }).filter(u => u.total > 0).sort((a, b) => (b.rate ?? -1) - (a.rate ?? -1))
-        setMemberStats(userStats)
-      }
+      setWeekEvents(weekEventsResult.data || [])
+      setLeaveApplications(latestLeaves)
+      setBirthdays(thisMonthBirthdays)
+      setAnnouncements(announcementsResult.data || [])
+      setActivityFeed((activityResult.data?.length ? activityResult.data : notificationFeed).slice(0, 10))
     } catch (err) {
       console.error('Dashboard fetch error:', err)
+      setErrorMsg(err.message || 'Dashboard loading failed.')
     } finally {
       setLoading(false)
     }
   }
 
-  const isOverdue = task => task.due_date && new Date(task.due_date) < new Date()
+  const handlePublishAnnouncement = async (event) => {
+    event.preventDefault()
+    if (!canPublishAnnouncements) return
+    setAnnouncementSubmitting(true)
+    setErrorMsg('')
+    try {
+      const { data, error } = await supabase
+        .from('announcements')
+        .insert({
+          title: announcementForm.title.trim(),
+          body: announcementForm.body.trim(),
+          is_pinned: announcementForm.is_pinned,
+          created_by: currentUserProfile.id,
+        })
+        .select()
+        .single()
 
-  const T = {
-    zh: {
-      greeting: `你好，${currentUserProfile?.name || '华文学会成员'}！`,
-      subtitle: '欢迎使用一中华文学会系统。你当前拥有的身份是：',
-      system: '学会内部系统已激活',
-      tasks_desc: '所有分配给你的任务将在下方展示，请及时更新进度状态。',
-      pending: '待完成任务', events: '本周近期活动', members: '活跃干部总数',
-      my_tasks: '我的任务 My Tasks', view_all: '查看看板',
-      no_tasks: '目前暂无分配给你的待办任务。',
-      overdue_badge: '已逾期',
-      member_stats: '干部执行力报表 Committee Analytics',
-      total: '任务总数', done: '完成率', overdue_col: '逾期次数', help_col: '需协助',
-      no_stats: '暂无任务数据，待任务指派后自动生成报表。',
-      updates: '系统动态 Updates',
-      tutorial_btn: '重看使用引导',
-      task_done_label: '任务完成',
-    },
-    en: {
-      greeting: `Hello, ${currentUserProfile?.name || 'CLS Member'}!`,
-      subtitle: 'Welcome to the CLS System. Your current role is:',
-      system: 'CLS Internal System Active',
-      tasks_desc: 'All tasks assigned to you are shown below. Please update your progress status.',
-      pending: 'Pending Tasks', events: 'Events This Week', members: 'Active Members',
-      my_tasks: 'My Tasks', view_all: 'View Board',
-      no_tasks: 'No pending tasks assigned to you.',
-      overdue_badge: 'Overdue',
-      member_stats: 'Committee Performance Analytics',
-      total: 'Total', done: 'Done %', overdue_col: 'Overdue', help_col: 'Need Help',
-      no_stats: 'No task data yet. Reports auto-generate once tasks are assigned.',
-      updates: 'System Updates',
-      tutorial_btn: 'View Tutorial Again',
-      task_done_label: 'Task Completed',
+      if (error) throw error
+
+      await supabase.from('activity_log').insert({
+        actor_id: currentUserProfile.id,
+        action_type: 'announcement_created',
+        message: `${currentUserProfile.name} 发布了公告《${data.title}》`,
+      })
+
+      setAnnouncementForm({ title: '', body: '', is_pinned: false })
+      setShowAnnouncementModal(false)
+      fetchDashboardData()
+    } catch (err) {
+      setErrorMsg(err.message || '发布公告失败 Failed to publish announcement.')
+    } finally {
+      setAnnouncementSubmitting(false)
     }
   }
-  const t = T[lang] || T.zh
-  const roleLabel = currentUserProfile
-    ? getUserRoleLabel(currentUserProfile)
-    : null
 
-  const statsCards = [
-    { label: t.pending, value: statsData.pending, icon: <CheckSquare size={20} color="#95CBFF" />, sub: `${lang === 'zh' ? '需协助' : 'Need help'}: ${statsData.needHelp}`, accent: '#95CBFF', onClick: () => navigate('/tasks') },
-    { label: t.events, value: statsData.events, icon: <Calendar size={20} color="#4ade80" />, sub: lang === 'zh' ? '未来7天' : 'Next 7 days', accent: '#4ade80', onClick: () => navigate('/calendar') },
-    { label: t.members, value: statsData.members, icon: <Users size={20} color="#FFB3C6" />, sub: lang === 'zh' ? '已激活账号' : 'Active accounts', accent: '#FFB3C6', onClick: () => navigate('/members') },
-  ]
+  const statsCards = useMemo(() => {
+    const cards = [
+      { label: '我的待完成任务 / My Pending Tasks', value: stats.myPendingTasks, icon: CheckSquare, color: '#95CBFF', path: '/tasks' },
+      { label: '本月活动 / Events This Month', value: stats.monthEvents, icon: Calendar, color: '#4ade80', path: '/calendar' },
+      { label: '本届执委人数 / Active Members', value: stats.activeMembers, icon: Users, color: '#FFB3C6', path: '/members' },
+    ]
+    if (isLeaveManager) {
+      cards.push({ label: '待审批请假 / Pending Leave', value: stats.pendingLeaves, icon: ClipboardList, color: '#f59e0b', path: '/leave' })
+    }
+    return cards
+  }, [isLeaveManager, stats])
 
-  // Static system announcements
-  const systemAnnouncements = [
-    {
-      date: '2026-05-25',
-      title: lang === 'zh' ? '系统第三阶段全面上线' : 'Phase 3 Launch Complete',
-      body: lang === 'zh'
-        ? '新增月历行事历、干部执行力报表、中英双语切换与首次登录使用引导。'
-        : 'New: monthly calendar, member analytics, bilingual UI and onboarding tutorial.'
-    },
-    {
-      date: '2026-05-24',
-      title: lang === 'zh' ? '第二阶段任务与筹委功能上线' : 'Phase 2 Tasks & Committees Live',
-      body: lang === 'zh'
-        ? '任务看板、筹委团管理、换届归档与历年名册全部上线。'
-        : 'Task kanban, event committees, handover & historical records now available.'
-    },
-  ]
+  const todayKey = getLocalDate()
 
   return (
-    <div className="space-y-8 animate-[fadeIn_0.4s_ease]" style={{ fontFamily: "'Nunito', sans-serif" }}>
-
-      {/* ── Welcome Banner ──────────────────────────────── */}
-      <div className="relative p-6 sm:p-8 rounded-3xl overflow-hidden"
-        style={{ background: '#95CBFF', boxShadow: '0 4px 24px rgba(149,203,255,0.35)' }}>
-        <div className="absolute top-[-20px] right-[-20px] w-32 h-32 rounded-full pointer-events-none opacity-30" style={{ background: '#FFB3C6' }} />
-        <div className="absolute bottom-[-10px] right-[80px] w-20 h-20 rounded-full pointer-events-none opacity-20" style={{ background: '#FFB3C6' }} />
-        <svg className="absolute right-[130px] bottom-2 opacity-20 pointer-events-none" width="80" height="80" viewBox="0 0 80 80" fill="none">
-          <polygon points="40,6 48,28 72,28 54,44 62,66 40,52 18,66 26,44 8,28 32,28" stroke="white" strokeWidth="2" strokeLinejoin="round" fill="none" />
-          <circle cx="12" cy="12" r="4" stroke="white" strokeWidth="1.5" fill="none" />
-          <circle cx="68" cy="68" r="3" stroke="white" strokeWidth="1.5" fill="none" />
-        </svg>
-
-        <div className="relative z-10 max-w-2xl space-y-2">
-          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black"
-            style={{ background: 'rgba(255,255,255,0.25)', color: 'white' }}>
-            <LayoutDashboard size={12} />
-            {t.system}
+    <div className="space-y-6" style={{ fontFamily: "'Nunito', sans-serif" }}>
+      <section className="relative overflow-hidden p-6 md:p-8 rounded-3xl" style={{ background: '#95CBFF', boxShadow: '0 4px 24px rgba(149,203,255,0.35)' }}>
+        <img
+          src="/cls-cartoon.png"
+          alt=""
+          className="absolute right-4 top-2 w-44 md:w-72 opacity-28 pointer-events-none select-none"
+          style={{ mixBlendMode: 'multiply' }}
+        />
+        <div className="absolute -right-10 -bottom-10 w-36 h-36 rounded-full opacity-30" style={{ background: '#FFB3C6' }} />
+        <div className="relative z-10 max-w-2xl">
+          <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-black" style={{ background: 'rgba(255,255,255,0.25)', color: 'white' }}>
+            <Sparkles size={13} />
+            CLS System Dashboard
           </span>
-          <h1 className="text-2xl sm:text-3xl font-black pt-1" style={{ color: 'white' }}>{t.greeting}</h1>
-          <p className="text-sm sm:text-base font-semibold leading-relaxed" style={{ color: 'rgba(255,255,255,0.85)' }}>
-            {t.subtitle}
-            {roleLabel && (
-              <strong className="font-black mx-1" style={{ color: 'white' }}>
-                {lang === 'zh' ? roleLabel.zh : roleLabel.en}
-              </strong>
-            )}
-            。{t.tasks_desc}
+          <h1 className="text-2xl md:text-3xl font-black mt-3" style={{ color: 'white' }}>
+            {lang === 'zh' ? `你好，${currentUserProfile?.name || '成员'}！` : `Hello, ${currentUserProfile?.name || 'Member'}!`}
+          </h1>
+          <p className="text-sm md:text-base font-semibold mt-2" style={{ color: 'rgba(255,255,255,0.86)' }}>
+            {lang === 'zh' ? '这里是今天需要关注的任务、活动、请假与学会动态。' : 'Here are the tasks, events, leave records and society updates that need attention today.'}
           </p>
         </div>
-
         {onShowTutorial && (
-          <button
-            onClick={onShowTutorial}
-            className="absolute top-4 right-4 flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-black transition cursor-pointer"
-            style={{ background: 'rgba(255,255,255,0.2)', color: 'white', border: '1px solid rgba(255,255,255,0.3)' }}
-          >
-            <HelpCircle size={12} /> {t.tutorial_btn}
+          <button onClick={onShowTutorial} className="absolute top-4 right-4 flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-black cursor-pointer" style={{ background: 'rgba(255,255,255,0.2)', color: 'white' }}>
+            <HelpCircle size={12} /> Tutorial
           </button>
         )}
-      </div>
+      </section>
 
-      {/* ── Stats Cards ─────────────────────────────────── */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {statsCards.map((s, i) => (
-          <div key={i} onClick={s.onClick}
-            className="relative p-6 rounded-3xl overflow-hidden transition-all hover:scale-[1.02] hover:shadow-lg cursor-pointer"
-            style={{ background: 'white', boxShadow: '0 4px 20px rgba(149,203,255,0.18)', border: '1.5px solid #e0f1ff' }}>
-            <div className="absolute top-0 left-0 right-0 h-1 rounded-t-3xl" style={{ background: s.accent }} />
-            <div className="absolute bottom-[-12px] right-[-12px] w-16 h-16 rounded-full opacity-15 pointer-events-none" style={{ background: s.accent }} />
-            <div className="flex items-start justify-between">
-              <div className="space-y-3">
-                <span className="text-xs font-black uppercase tracking-wider block" style={{ color: '#6b7280' }}>{s.label}</span>
-                <span className="text-3xl font-black block" style={{ color: '#1a1a1a' }}>{loading ? '—' : s.value}</span>
-                <span className="text-xs font-semibold block" style={{ color: '#6b7280' }}>{s.sub}</span>
-              </div>
-              <div className="p-3 rounded-2xl" style={{ background: '#f0f7ff', border: '1.5px solid #e0f1ff' }}>
-                {s.icon}
-              </div>
-            </div>
-          </div>
-        ))}
-      </div>
-
-      {/* ── Exec Drive Card ─────────────────────────────── */}
-      <ExecDriveCard isAdmin={isAdmin} lang={lang} />
-
-      {/* ── Main Body ───────────────────────────────────── */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-
-        {/* My Tasks Panel */}
-        <div className="lg:col-span-2 p-6 rounded-3xl space-y-4"
-          style={{ background: 'white', boxShadow: '0 4px 20px rgba(149,203,255,0.15)', border: '1.5px solid #e0f1ff' }}>
-          <div className="flex items-center justify-between pb-3" style={{ borderBottom: '1.5px solid #f0f7ff' }}>
-            <h3 className="font-black text-base" style={{ color: '#1a1a1a' }}>{t.my_tasks}</h3>
-            <button onClick={() => navigate('/tasks')}
-              className="text-xs font-bold flex items-center gap-1 transition hover:opacity-70 cursor-pointer"
-              style={{ color: '#6db8ff' }}>
-              {t.view_all} <ArrowUpRight size={12} />
-            </button>
-          </div>
-
-          {loading ? (
-            <div className="flex items-center justify-center py-12 gap-2 text-gray-400">
-              <Loader size={20} style={{ color: '#95CBFF', animation: 'spin 1s linear infinite' }} />
-              <span className="text-xs font-bold">{lang === 'zh' ? '加载中...' : 'Loading...'}</span>
-            </div>
-          ) : myTasks.length === 0 ? (
-            <div className="py-12 text-center text-sm font-semibold" style={{ color: '#6b7280' }}>{t.no_tasks}</div>
-          ) : (
-            <div className="space-y-3">
-              {myTasks.map(task => {
-                const overdue = isOverdue(task)
-                const statusColors = {
-                  pending: { bg: '#eff6ff', color: '#3b82f6' },
-                  in_progress: { bg: '#eef2ff', color: '#6366f1' },
-                  need_help: { bg: '#fffbeb', color: '#f59e0b' },
-                  completed: { bg: '#ecfdf5', color: '#10b981' }
-                }
-                const sc = statusColors[task.status] || statusColors.pending
-                return (
-                  <div key={task.id} onClick={() => navigate('/tasks')}
-                    className="flex items-center justify-between gap-4 p-4 rounded-2xl border cursor-pointer hover:bg-[#f8fbff] transition"
-                    style={{ borderColor: overdue ? '#fca5a5' : '#e0f1ff', borderWidth: overdue ? '2px' : '1.5px' }}>
-                    <div className="space-y-1 flex-1 min-w-0">
-                      <p className="text-sm font-black text-gray-800 truncate">{task.title}</p>
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span className="text-[9px] font-black px-2 py-0.5 rounded-full"
-                          style={{ background: sc.bg, color: sc.color }}>
-                          {task.status === 'pending' ? (lang === 'zh' ? '待开始' : 'Pending')
-                            : task.status === 'in_progress' ? (lang === 'zh' ? '进行中' : 'In Progress')
-                            : task.status === 'need_help' ? (lang === 'zh' ? '需协助' : 'Need Help')
-                            : (lang === 'zh' ? '已完成' : 'Completed')}
-                        </span>
-                        {task.due_date && (
-                          <span className="text-[9px] font-bold text-gray-400 flex items-center gap-0.5">
-                            <Clock size={9} />
-                            {new Date(task.due_date).toLocaleDateString(lang === 'zh' ? 'zh-CN' : 'en-US', { month: 'short', day: 'numeric' })}
-                          </span>
-                        )}
-                        {overdue && (
-                          <span className="text-[9px] font-black text-red-600 bg-red-50 px-1.5 py-0.5 rounded-full border border-red-200 animate-pulse flex items-center gap-0.5">
-                            <AlertTriangle size={9} /> {t.overdue_badge}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                    <ChevronRight size={14} className="text-gray-300 shrink-0" />
-                  </div>
-                )
-              })}
-            </div>
-          )}
-        </div>
-
-        {/* System Updates panel */}
-        <div className="space-y-4 p-6 rounded-3xl"
-          style={{ background: 'white', boxShadow: '0 4px 20px rgba(149,203,255,0.15)', border: '1.5px solid #e0f1ff' }}>
-          <div className="pb-3" style={{ borderBottom: '1.5px solid #f0f7ff' }}>
-            <h3 className="font-black text-base" style={{ color: '#1a1a1a' }}>{t.updates}</h3>
-          </div>
-          <div className="space-y-3 max-h-[380px] overflow-y-auto pr-0.5">
-
-            {/* Dynamic: recently completed tasks */}
-            {recentDone.map(task => (
-              <div key={`done-${task.id}`} className="p-3.5 rounded-2xl text-xs leading-relaxed space-y-1"
-                style={{ background: '#f0fdf4', border: '1.5px solid #a7f3d0' }}>
-                <div className="flex items-center gap-1.5">
-                  <CheckCircle2 size={10} style={{ color: '#10b981' }} />
-                  <span className="text-[10px] font-black" style={{ color: '#10b981' }}>
-                    {task.updated_at
-                      ? new Date(task.updated_at).toLocaleDateString(lang === 'zh' ? 'zh-CN' : 'en-US', { month: 'short', day: 'numeric' })
-                      : '—'}
-                  </span>
-                  <span className="text-[10px] font-bold text-green-600">
-                    {t.task_done_label}
-                  </span>
-                </div>
-                <p className="font-black truncate" style={{ color: '#065f46' }}>{task.title}</p>
-              </div>
-            ))}
-
-            {/* Static system announcements */}
-            {systemAnnouncements.map((u, i) => (
-              <div key={`ann-${i}`} className="p-3.5 rounded-2xl text-xs leading-relaxed space-y-1"
-                style={{ background: '#f0f7ff', border: '1.5px solid #e0f1ff' }}>
-                <span className="text-[10px] font-black" style={{ color: '#6db8ff' }}>{u.date}</span>
-                <p className="font-black" style={{ color: '#1a1a1a' }}>{u.title}</p>
-                <p className="font-semibold" style={{ color: '#6b7280' }}>{u.body}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      {/* ── Member Performance Report (Power Users Only) ── */}
-      {isPowerUser && (
-        <div className="p-6 rounded-3xl space-y-5"
-          style={{ background: 'white', boxShadow: '0 4px 20px rgba(149,203,255,0.15)', border: '1.5px solid #e0f1ff' }}>
-          <div className="flex items-center gap-2 pb-3" style={{ borderBottom: '1.5px solid #f0f7ff' }}>
-            <TrendingUp size={18} style={{ color: '#95CBFF' }} />
-            <h3 className="font-black text-base" style={{ color: '#1a1a1a' }}>{t.member_stats}</h3>
-          </div>
-          {loading ? (
-            <div className="flex justify-center py-10">
-              <Loader size={24} style={{ color: '#95CBFF', animation: 'spin 1s linear infinite' }} />
-            </div>
-          ) : memberStats.length === 0 ? (
-            <p className="text-xs font-semibold text-gray-400 text-center py-8">{t.no_stats}</p>
-          ) : (
-            <div className="space-y-4">
-              {memberStats.map(m => {
-                const rate = m.rate ?? 0
-                const barColor = rate >= 80 ? '#10b981' : rate >= 50 ? '#f59e0b' : '#ef4444'
-                return (
-                  <div key={m.id} className="space-y-2">
-                    <div className="flex items-center justify-between gap-4 flex-wrap">
-                      <div className="flex items-center gap-2 min-w-0">
-                        <div className="w-7 h-7 rounded-xl flex items-center justify-center font-black text-[10px] shrink-0"
-                          style={{ background: '#f0f7ff', color: '#6db8ff', border: '1.5px solid #e0f1ff' }}>
-                          {m.name.slice(0, 2)}
-                        </div>
-                        <div>
-                          <span className="text-xs font-black text-gray-800">{m.name}</span>
-                          <span className="text-[9px] font-bold text-gray-400 ml-2">
-                            {getUserRoleLabel(m)?.[lang] || m.role}
-                          </span>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-3 text-[10px] font-bold text-gray-500 shrink-0 flex-wrap">
-                        <span>{t.total}: <strong className="text-gray-700">{m.total}</strong></span>
-                        <span style={{ color: barColor }}>{m.rate !== null ? `${m.rate}%` : '—'}</span>
-                        {m.overdue > 0 && (
-                          <span className="text-red-500 flex items-center gap-0.5">
-                            <AlertTriangle size={9} /> {m.overdue}
-                          </span>
-                        )}
-                        {m.needHelp > 0 && (
-                          <span className="text-amber-500">{t.help_col}: {m.needHelp}</span>
-                        )}
-                      </div>
-                    </div>
-                    <div className="w-full h-2 rounded-full overflow-hidden" style={{ background: '#f0f7ff', border: '1px solid #e0f1ff' }}>
-                      <div className="h-full rounded-full transition-all duration-700"
-                        style={{ width: `${rate}%`, background: barColor }} />
-                    </div>
-                  </div>
-                )
-              })}
-            </div>
-          )}
+      {errorMsg && (
+        <div className="flex items-start gap-2 p-4 rounded-2xl text-sm font-semibold" style={{ background: '#fee2e2', border: '1.5px solid #fca5a5', color: '#dc2626' }}>
+          <AlertCircle size={18} /> {errorMsg}
         </div>
       )}
 
+      <section className={`grid grid-cols-1 ${isLeaveManager ? 'md:grid-cols-4' : 'md:grid-cols-3'} gap-4`}>
+      {statsCards.map(card => {
+          const Icon = card.icon
+          return (
+            <button key={card.label} onClick={() => navigate(card.path)} className="text-left p-5 transition hover:scale-[1.02]" style={cardStyle}>
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="text-xs font-black uppercase tracking-wider" style={{ color: '#5f6f87' }}>{card.label}</p>
+                  <p className="text-3xl font-black mt-3" style={{ color: '#1a1a1a' }}>{loading ? '-' : <CountUpNumber value={card.value} />}</p>
+                </div>
+                <span className="p-3 rounded-2xl" style={{ background: '#f0f7ff', border: '1.5px solid #e0f1ff' }}>
+                  <Icon size={20} color={card.color} />
+                </span>
+              </div>
+            </button>
+          )
+        })}
+      </section>
+
+      <section className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="p-5 space-y-4" style={cardStyle}>
+          <div className="flex items-center justify-between gap-3">
+            <h2 className="font-black text-base flex items-center gap-2" style={{ color: '#1a1a1a' }}>
+              <Calendar size={18} color="#95CBFF" /> 本周行事历 / This Week
+            </h2>
+            <button onClick={() => navigate('/calendar')} className="text-xs font-black flex items-center gap-1" style={{ color: '#6db8ff' }}>
+              查看完整行事历 <ExternalLink size={12} />
+            </button>
+          </div>
+          {loading ? (
+            <SkeletonLines />
+          ) : weekEvents.length === 0 ? (
+            <EmptyText text="本周暂无活动安排 / No events this week" />
+          ) : (
+            <div className="space-y-3">
+              {weekEvents.map(event => {
+                const type = EVENT_TYPE_LABELS[event.type] || EVENT_TYPE_LABELS.event
+                return (
+                  <div key={event.id} className="flex items-center justify-between gap-3 p-3 rounded-2xl" style={{ background: '#f0f7ff', border: '1.5px solid #e0f1ff' }}>
+                    <div>
+                      <p className="text-sm font-black" style={{ color: '#1a1a1a' }}>{event.title}</p>
+                      <p className="text-xs font-bold mt-1" style={{ color: '#6b7280' }}>{formatDate(event.date, lang)}</p>
+                    </div>
+                    <span className="px-2.5 py-1 rounded-full text-[10px] font-black" style={{ background: type.bg, color: type.color, border: `1.5px solid ${type.border}` }}>
+                      {type.zh} / {type.en}
+                    </span>
+                  </div>
+                )
+              })}
+            </div>
+          )}
+        </div>
+
+        <div className="p-5 space-y-4" style={cardStyle}>
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex gap-2">
+              <TabButton active={activeTab === 'announcements'} onClick={() => setActiveTab('announcements')}>公告 Announcements</TabButton>
+              <TabButton active={activeTab === 'activity'} onClick={() => setActiveTab('activity')}>动态 Feed</TabButton>
+            </div>
+            {canPublishAnnouncements && (
+              <button onClick={() => setShowAnnouncementModal(true)} className="px-3 py-2 rounded-2xl text-xs font-black flex items-center gap-1" style={{ background: '#FFB3C6', color: 'white' }}>
+                <Plus size={13} /> 发布
+              </button>
+            )}
+          </div>
+          {activeTab === 'announcements' ? (
+            announcements.length === 0 ? <EmptyText text="暂无系统公告 / No announcements" /> : (
+              <div className="space-y-3">
+                {announcements.map(item => (
+                  <div key={item.id} className="p-3 rounded-2xl" style={{ background: item.is_pinned ? '#fff7fb' : '#f0f7ff', border: `1.5px solid ${item.is_pinned ? '#FFB3C6' : '#e0f1ff'}` }}>
+                    <p className="text-sm font-black" style={{ color: '#1a1a1a' }}>{item.is_pinned ? '置顶 Pin · ' : ''}{item.title}</p>
+                    <p className="text-xs font-semibold mt-1" style={{ color: '#6b7280' }}>{item.body}</p>
+                    <p className="text-[10px] font-bold mt-2" style={{ color: '#9ca3af' }}>{item.author?.name || '-'} · {new Date(item.created_at).toLocaleString()}</p>
+                  </div>
+                ))}
+              </div>
+            )
+          ) : (
+            activityFeed.length === 0 ? <EmptyText text="暂无系统动态 / No activity yet" /> : (
+              <div className="space-y-3">
+                {activityFeed.map(item => (
+                  <div key={item.id} className="flex gap-3 p-3 rounded-2xl" style={{ background: '#f0f7ff', border: '1.5px solid #e0f1ff' }}>
+                    <Bell size={15} style={{ color: '#95CBFF', flexShrink: 0, marginTop: 2 }} />
+                    <div>
+                      <p className="text-xs font-black" style={{ color: '#1a1a1a' }}>{item.message}</p>
+                      <p className="text-[10px] font-bold mt-1" style={{ color: '#9ca3af' }}>{new Date(item.created_at).toLocaleString()}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )
+          )}
+        </div>
+      </section>
+
+      <section className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {isLeaveManager && (
+          <div className="p-5 space-y-4" style={cardStyle}>
+            <h2 className="font-black text-base flex items-center gap-2" style={{ color: '#1a1a1a' }}>
+              <ClipboardList size={18} color="#95CBFF" /> 最新请假状态 / Latest Leave
+            </h2>
+            {leaveApplications.length === 0 || leaveApplications.every(item => (item.status || 'pending') !== 'pending') ? (
+              <EmptyText text="暂无待审批请假 / No pending leave applications" />
+            ) : (
+              <div className="space-y-3">
+                {leaveApplications.map(leave => {
+                  const status = STATUS_LABELS[leave.status || 'pending'] || STATUS_LABELS.pending
+                  return (
+                    <div key={leave.id} className="p-3 rounded-2xl" style={{ background: '#f0f7ff', border: '1.5px solid #e0f1ff' }}>
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <p className="text-sm font-black" style={{ color: '#1a1a1a' }}>{leave.applicant?.name || '-'}</p>
+                          <p className="text-xs font-bold mt-1" style={{ color: '#6b7280' }}>{getLeaveTypeText(leave, lang)} · {formatDate(leave.leave_date, lang)} · 1 天</p>
+                        </div>
+                        <span className="px-2.5 py-1 rounded-full text-[10px] font-black" style={{ background: status.bg, color: status.color, border: `1.5px solid ${status.border}` }}>
+                          {status.zh} / {status.en}
+                        </span>
+                      </div>
+                      {(leave.status || 'pending') === 'pending' && (
+                        <button onClick={() => navigate('/leave')} className="mt-3 text-xs font-black" style={{ color: '#6db8ff' }}>
+                          立即审批 →
+                        </button>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+          </div>
+        )}
+
+        <div className="p-5 space-y-4" style={cardStyle}>
+          <h2 className="font-black text-base flex items-center gap-2" style={{ color: '#1a1a1a' }}>
+            <Cake size={18} color="#FFB3C6" /> 本月生日 / Birthdays
+          </h2>
+          {birthdays.length === 0 ? (
+            <EmptyText text="本月暂无生日 / No birthdays this month" />
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {birthdays.map(user => {
+                const birthdayKey = user.birthday?.slice(5)
+                const isToday = birthdayKey === todayKey.slice(5)
+                return (
+                  <div key={user.id} className="flex items-center gap-3 p-3 rounded-2xl" style={{ background: isToday ? '#fff7fb' : '#f0f7ff', border: `1.5px solid ${isToday ? '#FFB3C6' : '#e0f1ff'}` }}>
+                    <div className="w-10 h-10 rounded-2xl flex items-center justify-center font-black" style={{ background: 'white', color: '#6db8ff' }}>
+                      {user.name?.slice(0, 2)}
+                    </div>
+                    <div>
+                      <p className="text-sm font-black" style={{ color: '#1a1a1a' }}>{isToday ? '🎂 ' : ''}{user.name}</p>
+                      <p className="text-xs font-bold" style={{ color: '#6b7280' }}>{formatDate(user.birthday, lang)}</p>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          )}
+        </div>
+      </section>
+
+      <section className="p-5" style={cardStyle}>
+        <h2 className="font-black text-base flex items-center gap-2 mb-4" style={{ color: '#1a1a1a' }}>
+          <TrendingUp size={18} color="#95CBFF" /> 快捷入口 / Quick Actions
+        </h2>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-3">
+          <QuickButton icon={<Plus size={16} />} label="新建任务 / New Task" onClick={() => navigate('/tasks')} />
+          <QuickButton icon={<ClipboardList size={16} />} label="提交请假 / Submit Leave" onClick={() => navigate('/leave')} />
+          <QuickButton icon={<Calendar size={16} />} label="查看行事历 / Calendar" onClick={() => navigate('/calendar')} />
+          {isLeaveManager && <QuickButton icon={<CheckSquare size={16} />} label="审批请假 / Review Leave" onClick={() => navigate('/leave')} />}
+          {isLeaveManager && <QuickButton icon={<Users size={16} />} label="管理成员 / Accounts" onClick={() => navigate('/members')} />}
+          {canPublishAnnouncements && <QuickButton icon={<Megaphone size={16} />} label="发布公告 / Announce" onClick={() => setShowAnnouncementModal(true)} />}
+        </div>
+      </section>
+
+      {showAnnouncementModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: 'rgba(149,203,255,0.18)', backdropFilter: 'blur(4px)' }}>
+          <form onSubmit={handlePublishAnnouncement} className="w-full max-w-lg p-6 space-y-4" style={cardStyle}>
+            <h3 className="font-black text-lg flex items-center gap-2" style={{ color: '#1a1a1a' }}>
+              <Megaphone size={18} color="#95CBFF" /> 发布公告 / Publish Announcement
+            </h3>
+            <input required value={announcementForm.title} onChange={e => setAnnouncementForm(prev => ({ ...prev, title: e.target.value }))} placeholder="公告标题 Title" className="w-full text-sm" style={inputStyle} />
+            <textarea required value={announcementForm.body} onChange={e => setAnnouncementForm(prev => ({ ...prev, body: e.target.value }))} placeholder="公告内容 Content" rows={5} className="w-full text-sm resize-none" style={inputStyle} />
+            <label className="flex items-center gap-2 text-xs font-bold" style={{ color: '#6b7280' }}>
+              <input type="checkbox" checked={announcementForm.is_pinned} onChange={e => setAnnouncementForm(prev => ({ ...prev, is_pinned: e.target.checked }))} />
+              置顶公告 / Pin announcement
+            </label>
+            <div className="flex justify-end gap-3">
+              <button type="button" onClick={() => setShowAnnouncementModal(false)} className="px-4 py-2 rounded-2xl text-sm font-bold" style={{ background: '#f0f7ff', color: '#6b7280' }}>取消</button>
+              <button disabled={announcementSubmitting} className="px-4 py-2 rounded-2xl text-sm font-black flex items-center gap-2" style={{ background: '#95CBFF', color: 'white' }}>
+                {announcementSubmitting ? <Loader size={14} className="animate-spin" /> : <Send size={14} />} 发布
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
     </div>
+  )
+}
+
+function SkeletonLines() {
+  return (
+    <div className="space-y-3">
+      {[1, 2, 3].map(item => <div key={item} className="h-16 rounded-2xl animate-pulse" style={{ background: '#f0f7ff' }} />)}
+    </div>
+  )
+}
+
+function EmptyText({ text }) {
+  return <div className="py-10 text-center text-sm font-bold" style={{ color: '#9ca3af' }}>{text}</div>
+}
+
+function TabButton({ active, onClick, children }) {
+  return (
+    <button onClick={onClick} className="px-3 py-2 rounded-2xl text-xs font-black" style={{ background: active ? '#95CBFF' : '#f0f7ff', color: active ? 'white' : '#6b7280' }}>
+      {children}
+    </button>
+  )
+}
+
+function QuickButton({ icon, label, onClick }) {
+  return (
+    <button onClick={onClick} className="flex items-center justify-center gap-2 px-4 py-3 rounded-2xl text-xs font-black transition hover:scale-[1.02]" style={{ background: '#f0f7ff', color: '#1a1a1a', border: '1.5px solid #e0f1ff' }}>
+      <span style={{ color: '#95CBFF' }}>{icon}</span>
+      {label}
+    </button>
   )
 }

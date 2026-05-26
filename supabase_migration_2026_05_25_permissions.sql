@@ -41,10 +41,10 @@ set role = case role
 end;
 
 alter table public.users
-  add constraint users_role_check check (role in ('convener_teacher', 'advisor_teacher', 'chairperson', 'vice_chairperson', 'secretary', 'vice_secretary', 'treasurer', 'vice_treasurer', 'general_affairs', 'vice_general_affairs', 'activity_lead', 'vice_activity_lead', 'activity_member', 'media_lead', 'vice_media_lead', 'custom'));
+  add constraint users_role_check check (role in ('convener_teacher', 'advisor_teacher', 'chairperson', 'vice_chairperson', 'secretary', 'vice_secretary', 'treasurer', 'vice_treasurer', 'general_affairs', 'vice_general_affairs', 'activity_lead', 'vice_activity_lead', 'activity_member', 'media_lead', 'vice_media_lead', 'ordinary_member', 'custom'));
 
 alter table public.users
-  alter column role set default 'activity_member';
+  alter column role set default 'ordinary_member';
 
 drop policy if exists "Advisors and Chairpersons can insert users." on public.users;
 drop policy if exists "Advisors and Chairpersons can update users." on public.users;
@@ -122,7 +122,7 @@ begin
     coalesce(new.raw_user_meta_data->>'name', split_part(new.email, '@', 1)),
     new.email,
     nullif(trim(coalesce(new.raw_user_meta_data->>'custom_role_label', '')), ''),
-    coalesce(new.raw_user_meta_data->>'role', 'activity_member'),
+    coalesce(new.raw_user_meta_data->>'role', 'ordinary_member'),
     true
   );
   return new;

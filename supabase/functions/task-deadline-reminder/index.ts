@@ -1,6 +1,6 @@
 // supabase/functions/task-deadline-reminder/index.ts
 // 部署方式：supabase functions deploy task-deadline-reminder
-// 定时触发：Supabase Dashboard > Edge Functions > Schedules
+// 建议定时：每天至少一次，最好每小时一次；函数会用 task_reminder_logs 防止同一天重复提醒。
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
@@ -8,6 +8,23 @@ type ServiceAccount = {
   client_email: string
   private_key: string
   project_id?: string
+}
+
+type Task = {
+  id: string
+  title: string
+  due_date: string | null
+  assigned_to: string[] | string | null
+  priority: 'high' | 'medium' | 'low' | null
+  status: 'pending' | 'in_progress' | 'completed' | 'need_help'
+  created_at: string
+}
+
+type ReminderDecision = {
+  type: string
+  title: string
+  body: string
+  reminder_key: string
 }
 
 type ReminderNotification = {
@@ -18,7 +35,15 @@ type ReminderNotification = {
   dedupe_key: string
 }
 
+type ReminderLog = {
+  task_id: string
+  user_id: string
+  reminder_key: string
+}
+
 const textEncoder = new TextEncoder()
+const DAY_MS = 24 * 60 * 60 * 1000
+const MALAYSIA_OFFSET_MS = 8 * 60 * 60 * 1000
 
 const base64UrlEncode = (input: string | Uint8Array) => {
   const bytes = typeof input === 'string' ? textEncoder.encode(input) : input
@@ -103,10 +128,10 @@ const sendFcmNotification = async (
         data: {
           type: notification.type,
           dedupe_key: notification.dedupe_key,
-          url: '/',
+          url: '/tasks',
         },
         webpush: {
-          fcm_options: { link: '/' },
+          fcm_options: { link: '/tasks' },
           notification: {
             icon: '/logo-192.png',
             badge: '/logo-192.png',
@@ -120,6 +145,100 @@ const sendFcmNotification = async (
     const errorText = await response.text()
     throw new Error(errorText || `FCM send failed with ${response.status}`)
   }
+}
+
+const localDateKey = (date: Date) => new Date(date.getTime() + MALAYSIA_OFFSET_MS).toISOString().split('T')[0]
+
+const daysBetweenLocalDates = (fromDateKey: string, toDateKey: string) => {
+  const from = new Date(`${fromDateKey}T00:00:00+08:00`).getTime()
+  const to = new Date(`${toDateKey}T00:00:00+08:00`).getTime()
+  return Math.round((to - from) / DAY_MS)
+}
+
+const formatDueDate = (dueDate: string | null) => {
+  if (!dueDate) return '未设置截止日期'
+  return new Date(dueDate).toLocaleString('zh-CN', {
+    timeZone: 'Asia/Kuala_Lumpur',
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  })
+}
+
+const getAssignedUsers = (assignedTo: Task['assigned_to']) => {
+  if (!assignedTo) return []
+  return [...new Set(Array.isArray(assignedTo) ? assignedTo : [assignedTo])].filter(Boolean)
+}
+
+const getReminderDecision = (task: Task, todayKey: string): ReminderDecision | null => {
+  if (task.status === 'completed') return null
+  if (!task.due_date) return null
+
+  const priority = task.priority || 'medium'
+  const dueKey = localDateKey(new Date(task.due_date))
+  const createdKey = localDateKey(new Date(task.created_at))
+  const daysLeft = daysBetweenLocalDates(todayKey, dueKey)
+  const daysSinceCreated = daysBetweenLocalDates(createdKey, todayKey)
+  const dueText = formatDueDate(task.due_date)
+
+  if (daysLeft < 0) {
+    return {
+      type: 'task_overdue_daily',
+      title: `任务已逾期：${task.title}`,
+      body: `「${task.title}」已逾期，截止时间：${dueText}。请今天处理或更新进度。`,
+      reminder_key: `overdue-${todayKey}`,
+    }
+  }
+
+  if (task.status === 'pending' && daysSinceCreated >= 3) {
+    return {
+      type: 'task_pending_daily',
+      title: `任务还未开始：${task.title}`,
+      body: `「${task.title}」已经分配超过 3 天，状态仍是待开始。截止时间：${dueText}。`,
+      reminder_key: `pending-3days-${todayKey}`,
+    }
+  }
+
+  if (priority === 'high') {
+    if (task.status === 'pending' && daysLeft <= 3 && daysLeft >= 0) {
+      return {
+        type: 'task_high_final_daily',
+        title: `高优先级任务需要马上开始：${task.title}`,
+        body: `「${task.title}」距离截止只剩 ${daysLeft} 天，状态仍是待开始。截止时间：${dueText}。`,
+        reminder_key: `high-final-${todayKey}`,
+      }
+    }
+
+    if (daysLeft >= 4 && daysLeft <= 14 && (14 - daysLeft) % 3 === 0) {
+      return {
+        type: 'task_high_cycle',
+        title: `高优先级任务提醒：${task.title}`,
+        body: `「${task.title}」距离截止还有 ${daysLeft} 天。截止时间：${dueText}。`,
+        reminder_key: `high-cycle-${todayKey}`,
+      }
+    }
+  }
+
+  if (priority === 'medium' && [7, 4, 1].includes(daysLeft)) {
+    return {
+      type: 'task_medium_checkpoint',
+      title: `中优先级任务提醒：${task.title}`,
+      body: `「${task.title}」距离截止还有 ${daysLeft} 天。截止时间：${dueText}。`,
+      reminder_key: `medium-${daysLeft}d-${todayKey}`,
+    }
+  }
+
+  if (priority === 'low' && [1, 0].includes(daysLeft)) {
+    return {
+      type: daysLeft === 0 ? 'task_low_due_today' : 'task_low_due_tomorrow',
+      title: daysLeft === 0 ? `低优先级任务今天截止：${task.title}` : `低优先级任务明天截止：${task.title}`,
+      body: `「${task.title}」截止时间：${dueText}。`,
+      reminder_key: `low-${daysLeft}d-${todayKey}`,
+    }
+  }
+
+  return null
 }
 
 Deno.serve(async () => {
@@ -144,82 +263,74 @@ Deno.serve(async () => {
     return new Response(JSON.stringify({ error: 'Missing FIREBASE_PROJECT_ID secret.' }), { status: 500 })
   }
 
-  // 使用马来西亚标准时间 (UTC+8) 计算日期，避免 UTC 日期边界偏差。
-  const now = new Date()
-  const malaysiaOffset = 8 * 60 * 60 * 1000
-  const localTime = new Date(now.getTime() + malaysiaOffset)
-  const todayStr = localTime.toISOString().split('T')[0]
-  const tomorrowTime = new Date(localTime.getTime() + (24 * 60 * 60 * 1000))
-  const tomorrowStr = tomorrowTime.toISOString().split('T')[0]
+  const todayKey = localDateKey(new Date())
 
   const { data: tasks, error } = await supabase
     .from('tasks')
-    .select('id, title, due_date, assigned_to')
-    .in('status', ['pending', 'in_progress'])
-    .gte('due_date', `${todayStr}T00:00:00Z`)
-    .lte('due_date', `${tomorrowStr}T23:59:59Z`)
+    .select('id, title, due_date, assigned_to, priority, status, created_at')
+    .neq('status', 'completed')
+    .not('due_date', 'is', null)
 
   if (error) {
     return new Response(JSON.stringify({ error: error.message }), { status: 500 })
   }
 
-  if (!tasks?.length) {
-    return new Response(JSON.stringify({ message: '没有即将截止的任务' }), { status: 200 })
-  }
-
   const notifications: ReminderNotification[] = []
+  const logs: ReminderLog[] = []
 
-  for (const task of tasks) {
-    if (!task.due_date) continue
+  for (const task of (tasks || []) as Task[]) {
+    const decision = getReminderDecision(task, todayKey)
+    if (!decision) continue
 
-    const taskDueDateLocal = new Date(new Date(task.due_date).getTime() + malaysiaOffset)
-    const taskDueDateStr = taskDueDateLocal.toISOString().split('T')[0]
-    const isToday = taskDueDateStr === todayStr
-    const isTomorrow = taskDueDateStr === tomorrowStr
-
-    if (!isToday && !isTomorrow) continue
-
-    const assignedUsers = Array.isArray(task.assigned_to) ? task.assigned_to : [task.assigned_to]
-
-    for (const userId of assignedUsers) {
-      if (!userId) continue
-
-      const actionType = isToday ? 'deadline_today' : 'deadline_tomorrow'
-      const dedupeKey = `${userId}-${task.id}-${actionType}-${todayStr}`
-
-      const { data: existing } = await supabase
-        .from('notifications')
-        .select('id')
-        .eq('dedupe_key', dedupeKey)
-        .maybeSingle()
-
-      if (existing) continue
-
+    for (const userId of getAssignedUsers(task.assigned_to)) {
+      const reminderKey = `${decision.reminder_key}-${userId}`
+      const dedupeKey = `task-${task.id}-${reminderKey}`
       notifications.push({
         user_id: userId,
-        type: actionType,
-        title: isToday ? '⚠️ 任务今天截止！' : '📅 任务明天截止',
-        body: isToday
-          ? `「${task.title}」今天到期，请尽快完成。`
-          : `「${task.title}」明天到期，请尽快完成。`,
+        type: decision.type,
+        title: decision.title,
+        body: decision.body,
         dedupe_key: dedupeKey,
+      })
+      logs.push({
+        task_id: task.id,
+        user_id: userId,
+        reminder_key: reminderKey,
       })
     }
   }
 
   if (notifications.length === 0) {
-    return new Response(JSON.stringify({ message: '无需发送新提醒' }), { status: 200 })
+    return new Response(JSON.stringify({ message: '今天没有符合规则的任务提醒。' }), { status: 200 })
+  }
+
+  const { data: insertedLogs, error: logError } = await supabase
+    .from('task_reminder_logs')
+    .upsert(logs, { onConflict: 'task_id,user_id,reminder_key', ignoreDuplicates: true })
+    .select('task_id, user_id, reminder_key')
+
+  if (logError) {
+    return new Response(JSON.stringify({ error: logError.message }), { status: 500 })
+  }
+
+  const allowedKeys = new Set(
+    (insertedLogs || []).map((log) => `task-${log.task_id}-${log.reminder_key}`),
+  )
+  const freshNotifications = notifications.filter((notification) => allowedKeys.has(notification.dedupe_key))
+
+  if (freshNotifications.length === 0) {
+    return new Response(JSON.stringify({ message: '今天的任务提醒已经发送过。' }), { status: 200 })
   }
 
   const { error: insertError } = await supabase
     .from('notifications')
-    .insert(notifications)
+    .upsert(freshNotifications, { onConflict: 'dedupe_key', ignoreDuplicates: true })
 
   if (insertError) {
     return new Response(JSON.stringify({ error: insertError.message }), { status: 500 })
   }
 
-  const userIds = [...new Set(notifications.map((notification) => notification.user_id))]
+  const userIds = [...new Set(freshNotifications.map((notification) => notification.user_id))]
   const { data: users, error: usersError } = await supabase
     .from('users')
     .select('id, fcm_token, notification_enabled')
@@ -232,7 +343,7 @@ Deno.serve(async () => {
   const usersById = new Map((users || []).map((user) => [user.id, user]))
   const accessToken = await getFirebaseAccessToken(serviceAccount)
   const pushResults = await Promise.allSettled(
-    notifications.map(async (notification) => {
+    freshNotifications.map(async (notification) => {
       const user = usersById.get(notification.user_id)
       if (!user?.notification_enabled || !user.fcm_token) return 'skipped'
       await sendFcmNotification(accessToken, firebaseProjectId, user.fcm_token, notification)
@@ -248,8 +359,8 @@ Deno.serve(async () => {
 
   return new Response(
     JSON.stringify({
-      message: `成功建立 ${notifications.length} 条截止提醒，手机推送 ${sentCount} 条。`,
-      in_app_notifications: notifications.length,
+      message: `成功建立 ${freshNotifications.length} 条任务提醒，手机推送 ${sentCount} 条。`,
+      in_app_notifications: freshNotifications.length,
       push_sent: sentCount,
       push_skipped: skippedCount,
       push_failed: failed.length,

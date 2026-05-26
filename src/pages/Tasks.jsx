@@ -43,8 +43,9 @@ const TASK_ROLE_LABELS = {
   activity_lead: '活动组组长',
   vice_activity_lead: '活动组副组长',
   activity_member: '活动组组员',
-  media_lead: '媒体组组长',
-  vice_media_lead: '媒体组副组长',
+  media_lead: '正摄影',
+  vice_media_lead: '副摄影',
+  ordinary_member: '普通会员',
   custom: '自定义',
   advisor: '指导老师',
   committee: '自定义',
@@ -210,7 +211,6 @@ export default function Tasks({ currentUserProfile }) {
 
       if (error) throw error
       setTasks(data || [])
-      await createDueReminderNotifications(data || [])
     } catch (err) {
       setErrorMsg(err.message || '获取任务列表失败 Failed to load tasks.')
     }

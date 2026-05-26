@@ -18,8 +18,9 @@ const ROLE_OPTIONS = [
   { value: 'activity_lead', zh: '活动组组长', en: 'Activity Lead', bg: '#fef3c7', color: '#d97706', border: '#fcd34d' },
   { value: 'vice_activity_lead', zh: '活动组副组长', en: 'Vice Activity Lead', bg: '#fff7ed', color: '#ea580c', border: '#fed7aa' },
   { value: 'activity_member', zh: '活动组组员', en: 'Activity Member', bg: '#f5f5f5', color: '#6b7280', border: '#d1d5db' },
-  { value: 'media_lead', zh: '媒体组组长', en: 'Media Lead', bg: '#fce7f3', color: '#db2777', border: '#f9a8d4' },
-  { value: 'vice_media_lead', zh: '媒体组副组长', en: 'Vice Media Lead', bg: '#fdf2f8', color: '#be185d', border: '#fbcfe8' },
+  { value: 'media_lead', zh: '正摄影', en: 'Photographer', bg: '#fce7f3', color: '#db2777', border: '#f9a8d4' },
+  { value: 'vice_media_lead', zh: '副摄影', en: 'Vice Photographer', bg: '#fdf2f8', color: '#be185d', border: '#fbcfe8' },
+  { value: 'ordinary_member', zh: '普通会员', en: 'Ordinary Member', bg: '#eef2ff', color: '#4f46e5', border: '#c7d2fe' },
   { value: 'custom', zh: '自定义', en: 'Custom', bg: '#f3f4f6', color: '#4b5563', border: '#d1d5db' }
 ]
 
@@ -62,7 +63,7 @@ export default function Members({ currentUserProfile }) {
   const [showAddModal, setShowAddModal] = useState(false)
   const [showEditModal, setShowEditModal] = useState(false)
   const [selectedMember, setSelectedMember] = useState(null)
-  const [formData, setFormData] = useState({ name: '', email: '', role: 'activity_member', custom_role_label: '', password: '', is_active: true })
+  const [formData, setFormData] = useState({ name: '', email: '', role: 'ordinary_member', custom_role_label: '', birthday: '', password: '', is_active: true })
   const [formSubmitting, setFormSubmitting] = useState(false)
 
   const isPowerUser = BOARD_MANAGER_ROLES.includes(currentUserProfile?.role)
@@ -126,9 +127,16 @@ export default function Members({ currentUserProfile }) {
         options: { data: { name: formData.name, role: formData.role, custom_role_label: formData.role === 'custom' ? formData.custom_role_label.trim() : null } }
       })
       if (error) throw error
-      setSuccessMsg(`成功添加成员 ${formData.name}，账号已创建。\nMember ${formData.name} added successfully.`)
+      if (formData.birthday && data?.user?.id) {
+        const { error: birthdayError } = await supabase
+          .from('users')
+          .update({ birthday: formData.birthday })
+          .eq('id', data.user.id)
+        if (birthdayError) throw birthdayError
+      }
+      setSuccessMsg(`成功添加账号 ${formData.name}。\nAccount ${formData.name} added successfully.`)
       setShowAddModal(false)
-      setFormData({ name: '', email: '', role: 'activity_member', custom_role_label: '', password: '', is_active: true })
+      setFormData({ name: '', email: '', role: 'ordinary_member', custom_role_label: '', birthday: '', password: '', is_active: true })
       fetchMembers()
     } catch (err) {
       setErrorMsg(err.message)
@@ -143,9 +151,9 @@ export default function Members({ currentUserProfile }) {
     setErrorMsg('')
     setSuccessMsg('')
     try {
-      const { error } = await supabase.from('users').update({ name: formData.name, role: formData.role, custom_role_label: formData.role === 'custom' ? formData.custom_role_label.trim() : null }).eq('id', selectedMember.id)
+      const { error } = await supabase.from('users').update({ name: formData.name, role: formData.role, custom_role_label: formData.role === 'custom' ? formData.custom_role_label.trim() : null, birthday: formData.birthday || null }).eq('id', selectedMember.id)
       if (error) throw error
-      setSuccessMsg(`成功修改成员 ${formData.name} 的信息。\nMember ${formData.name} updated.`)
+      setSuccessMsg(`成功修改账号 ${formData.name} 的信息。\nAccount ${formData.name} updated.`)
       setShowEditModal(false)
       fetchMembers()
     } catch (err) {
@@ -157,7 +165,7 @@ export default function Members({ currentUserProfile }) {
 
   const openEditModal = (member) => {
     setSelectedMember(member)
-    setFormData({ name: member.name, email: member.email, role: member.role, custom_role_label: member.custom_role_label || '', is_active: member.is_active })
+    setFormData({ name: member.name, email: member.email, role: member.role, custom_role_label: member.custom_role_label || '', birthday: member.birthday || '', is_active: member.is_active })
     setShowEditModal(true)
   }
 
@@ -180,19 +188,19 @@ export default function Members({ currentUserProfile }) {
         <div>
           <h1 className="text-2xl font-black flex items-center gap-2" style={{ color: '#1a1a1a' }}>
             <Shield style={{ color: '#95CBFF' }} />
-            当届执委成员名单
+            系统账号管理
           </h1>
           <p className="text-sm mt-1 font-semibold" style={{ color: '#6b7280' }}>
-            Current Committee Members (Session list and roles management)
+            User Accounts (teachers, committee members and ordinary members)
           </p>
         </div>
         {isPowerUser && (
           <button
-            onClick={() => { setFormData({ name: '', email: '', role: 'activity_member', custom_role_label: '', password: '', is_active: true }); setShowAddModal(true) }}
+            onClick={() => { setFormData({ name: '', email: '', role: 'ordinary_member', custom_role_label: '', birthday: '', password: '', is_active: true }); setShowAddModal(true) }}
             className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-2xl text-sm font-black transition cursor-pointer"
             style={{ background: '#95CBFF', color: 'white', boxShadow: '0 4px 16px rgba(149,203,255,0.4)' }}>
             <UserPlus size={16} />
-            添加执委成员
+            添加账号
           </button>
         )}
       </div>
@@ -391,7 +399,7 @@ export default function Members({ currentUserProfile }) {
             <div className="px-6 py-4 flex items-center justify-between"
               style={{ borderBottom: '1.5px solid #e0f1ff' }}>
               <h3 className="font-black text-lg flex items-center gap-2" style={{ color: '#1a1a1a' }}>
-                <UserPlus size={18} style={{ color: '#95CBFF' }} />添加执委成员
+                <UserPlus size={18} style={{ color: '#95CBFF' }} />添加账号
               </h3>
               <button onClick={() => setShowAddModal(false)}
                 className="text-lg transition cursor-pointer font-black" style={{ color: '#6b7280' }}>✕</button>
@@ -415,6 +423,12 @@ export default function Members({ currentUserProfile }) {
                 onCustomLabelChange={(label) => setFormData({ ...formData, custom_role_label: label })}
                 lang="zh"
               />
+              <div>
+                <label className="block text-xs font-black uppercase tracking-wider mb-1.5" style={{ color: '#6b7280' }}>生日 Birthday</label>
+                <input type="date" value={formData.birthday}
+                  onChange={(e) => setFormData({ ...formData, birthday: e.target.value })}
+                  className="w-full px-3 py-2 text-sm outline-none transition" style={inputStyle} />
+              </div>
               <div>
                 <label className="block text-xs font-black uppercase tracking-wider mb-1.5" style={{ color: '#6b7280' }}>初始登录密码 Password</label>
                 <input type="password" required value={formData.password}
@@ -449,7 +463,7 @@ export default function Members({ currentUserProfile }) {
             <div className="px-6 py-4 flex items-center justify-between"
               style={{ borderBottom: '1.5px solid #e0f1ff' }}>
               <h3 className="font-black text-lg flex items-center gap-2" style={{ color: '#1a1a1a' }}>
-                <Edit2 size={18} style={{ color: '#95CBFF' }} />修改成员信息
+                <Edit2 size={18} style={{ color: '#95CBFF' }} />修改账号信息
               </h3>
               <button onClick={() => setShowEditModal(false)}
                 className="text-lg transition cursor-pointer font-black" style={{ color: '#6b7280' }}>✕</button>
@@ -475,6 +489,12 @@ export default function Members({ currentUserProfile }) {
                 disabled={selectedMember.id === currentUserProfile.id}
                 lang="zh"
               />
+              <div>
+                <label className="block text-xs font-black uppercase tracking-wider mb-1.5" style={{ color: '#6b7280' }}>生日 Birthday</label>
+                <input type="date" value={formData.birthday}
+                  onChange={(e) => setFormData({ ...formData, birthday: e.target.value })}
+                  className="w-full px-3 py-2 text-sm outline-none transition" style={inputStyle} />
+              </div>
               {selectedMember.id === currentUserProfile.id && (
                 <p className="text-[10px] mt-1 font-semibold" style={{ color: '#9ca3af' }}>
                   不可更改你自己的系统角色，以防止系统锁定。

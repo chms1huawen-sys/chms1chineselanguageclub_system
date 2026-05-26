@@ -19,8 +19,9 @@ const ROLE_OPTIONS = [
   { value: 'activity_lead',         zh: '活动组组长', en: 'Activity Lead' },
   { value: 'vice_activity_lead',    zh: '活动组副组长', en: 'Vice Activity Lead' },
   { value: 'activity_member',       zh: '活动组组员', en: 'Activity Member' },
-  { value: 'media_lead',            zh: '媒体组组长', en: 'Media Lead' },
-  { value: 'vice_media_lead',       zh: '媒体组副组长', en: 'Vice Media Lead' },
+  { value: 'media_lead',            zh: '正摄影', en: 'Photographer' },
+  { value: 'vice_media_lead',       zh: '副摄影', en: 'Vice Photographer' },
+  { value: 'ordinary_member',       zh: '普通会员', en: 'Ordinary Member' },
 ]
 
 // 'custom' 是数据库合法值，单独列出作为自定义触发项
@@ -80,7 +81,7 @@ export default function PositionSelect({ value, onChange, customLabel = '', onCu
     }
   }
 
-  const selectValue = mode === 'custom' ? CUSTOM_TRIGGER : (value || 'activity_member')
+  const selectValue = mode === 'custom' ? CUSTOM_TRIGGER : (value || 'ordinary_member')
 
   const label = lang === 'zh' ? '系统角色 / 职务 Role' : 'Role'
   const customPlaceholder = lang === 'zh'

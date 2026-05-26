@@ -10,12 +10,14 @@ import Committees from './pages/Committees'
 import Handover from './pages/Handover'
 import HistoricalMembers from './pages/HistoricalMembers'
 import CalendarPage from './pages/CalendarPage'
+import LeaveApplications from './pages/LeaveApplications'
 import Settings from './pages/Settings'
 import TutorialModal from './components/TutorialModal'
 import {
   LayoutDashboard, Users, LogOut, Menu, X, Shield,
   Calendar, CheckSquare, FolderGit, Loader, CircleAlert,
-  History, ShieldAlert, Globe, HelpCircle, Bell, Settings as SettingsIcon
+  History, ShieldAlert, Globe, HelpCircle, Bell, Settings as SettingsIcon,
+  ClipboardList
 } from 'lucide-react'
 
 const APP_ROLE_LABELS = {
@@ -32,8 +34,9 @@ const APP_ROLE_LABELS = {
   activity_lead: { zh: '活动组组长', en: 'Activity Lead' },
   vice_activity_lead: { zh: '活动组副组长', en: 'Vice Activity Lead' },
   activity_member: { zh: '活动组组员', en: 'Activity Member' },
-  media_lead: { zh: '媒体组组长', en: 'Media Lead' },
-  vice_media_lead: { zh: '媒体组副组长', en: 'Vice Media Lead' },
+  media_lead: { zh: '正摄影', en: 'Photographer' },
+  vice_media_lead: { zh: '副摄影', en: 'Vice Photographer' },
+  ordinary_member: { zh: '普通会员', en: 'Ordinary Member' },
   custom: { zh: '自定义', en: 'Custom' },
   advisor: { zh: '指导老师', en: 'Advisor Teacher' },
   committee: { zh: '自定义', en: 'Custom' },
@@ -223,19 +226,21 @@ function AppShell({ user, profile, onLogout, lang, setLang }) {
     { name: '仪表板 Dashboard', path: '/', icon: <LayoutDashboard size={18} />, allowed: true },
     { name: '任务看板 Tasks', path: '/tasks', icon: <CheckSquare size={18} />, allowed: true },
     { name: '筹委管理 Committees', path: '/committees', icon: <FolderGit size={18} />, allowed: true },
-    { name: '执委管理 Members', path: '/members', icon: <Users size={18} />, allowed: isBoardManager },
+    { name: '账号管理 Accounts', path: '/members', icon: <Users size={18} />, allowed: isBoardManager },
     { name: '历年名册 History', path: '/historical-members', icon: <History size={18} />, allowed: true },
     { name: '执委换届 Handover', path: '/handover', icon: <ShieldAlert size={18} />, allowed: isBoardManager },
     { name: '活动行事历 Calendar', path: '/calendar', icon: <Calendar size={18} />, allowed: true },
+    { name: '请假申请 Leave', path: '/leave', icon: <ClipboardList size={18} />, allowed: true },
     { name: '个人设置 Settings', path: '/settings', icon: <SettingsIcon size={18} />, allowed: true },
   ] : [
     { name: 'Dashboard', path: '/', icon: <LayoutDashboard size={18} />, allowed: true },
     { name: 'Tasks Board', path: '/tasks', icon: <CheckSquare size={18} />, allowed: true },
     { name: 'Committees', path: '/committees', icon: <FolderGit size={18} />, allowed: true },
-    { name: 'Members', path: '/members', icon: <Users size={18} />, allowed: isBoardManager },
+    { name: 'Accounts', path: '/members', icon: <Users size={18} />, allowed: isBoardManager },
     { name: 'History', path: '/historical-members', icon: <History size={18} />, allowed: true },
     { name: 'Handover', path: '/handover', icon: <ShieldAlert size={18} />, allowed: isBoardManager },
     { name: 'Calendar', path: '/calendar', icon: <Calendar size={18} />, allowed: true },
+    { name: 'Leave Application', path: '/leave', icon: <ClipboardList size={18} />, allowed: true },
     { name: 'Settings', path: '/settings', icon: <SettingsIcon size={18} />, allowed: true },
   ]
 
@@ -256,9 +261,11 @@ function AppShell({ user, profile, onLogout, lang, setLang }) {
       <div className="md:hidden flex items-center justify-between px-5 py-4 shrink-0"
         style={{ background: '#95CBFF', borderBottom: '1.5px solid #6db8ff' }}>
         <div className="flex items-center gap-2">
-          <div className="w-9 h-9 rounded-2xl flex items-center justify-center font-black text-sm"
-            style={{ background: 'white', color: '#6db8ff' }}>华</div>
-          <span className="font-black text-sm tracking-wide" style={{ color: 'white' }}>一中华文学会</span>
+          <div className="w-9 h-9 rounded-full flex items-center justify-center overflow-hidden"
+            style={{ background: 'transparent', boxShadow: '0 3px 10px rgba(40, 96, 150, 0.18)' }}>
+            <img src="/logo-192.png" alt="CLS" className="w-full h-full object-cover rounded-full" />
+          </div>
+          <span className="font-black text-sm tracking-wide" style={{ color: 'white', textShadow: '0 1px 2px rgba(40, 96, 150, 0.65)' }}>一中华文学会</span>
         </div>
         <div className="flex items-center gap-2">
           {/* Mobile lang toggle */}
@@ -290,13 +297,13 @@ function AppShell({ user, profile, onLogout, lang, setLang }) {
           {/* Logo + Language toggle */}
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="w-11 h-11 rounded-2xl flex items-center justify-center font-black text-base"
-                style={{ background: 'white', color: '#6db8ff', boxShadow: '0 4px 12px rgba(0,0,0,0.08)' }}>
-                华
+              <div className="w-11 h-11 rounded-full flex items-center justify-center overflow-hidden"
+                style={{ background: 'transparent', boxShadow: '0 4px 12px rgba(0,0,0,0.08)' }}>
+                <img src="/logo-192.png" alt="CLS" className="w-full h-full object-cover rounded-full" />
               </div>
               <div>
-                <h2 className="font-black text-sm leading-tight" style={{ color: 'white' }}>一中华文学会</h2>
-                <span className="text-[10px] font-bold uppercase tracking-wide" style={{ color: 'rgba(255,255,255,0.65)' }}>
+                <h2 className="font-black text-sm leading-tight" style={{ color: 'white', textShadow: '0 1px 2px rgba(40, 96, 150, 0.75)' }}>一中华文学会</h2>
+                <span className="text-[10px] font-bold uppercase tracking-wide" style={{ color: 'white', textShadow: '0 1px 2px rgba(40, 96, 150, 0.75)' }}>
                   CLS System V3.0
                 </span>
               </div>
@@ -324,13 +331,14 @@ function AppShell({ user, profile, onLogout, lang, setLang }) {
                   className="w-full flex items-center gap-3.5 px-4 py-3 rounded-2xl text-sm font-bold transition cursor-pointer text-left"
                   style={{
                     background: isActive ? 'white' : 'transparent',
-                    color: isActive ? '#6db8ff' : 'rgba(255,255,255,0.85)',
+                    color: isActive ? '#6db8ff' : 'white',
+                    textShadow: isActive ? 'none' : '0 1px 2px rgba(40, 96, 150, 0.8), 0 0 1px rgba(40, 96, 150, 0.85)',
                     boxShadow: isActive ? '0 2px 12px rgba(149,203,255,0.2)' : 'none',
                     border: isActive ? 'none' : '1.5px solid transparent'
                   }}
                   onMouseEnter={e => { if (!isActive) e.currentTarget.style.background = 'rgba(255,255,255,0.18)' }}
                   onMouseLeave={e => { if (!isActive) e.currentTarget.style.background = 'transparent' }}>
-                  <span style={{ color: isActive ? '#95CBFF' : 'rgba(255,255,255,0.75)' }}>{item.icon}</span>
+                  <span style={{ color: isActive ? '#95CBFF' : 'white', filter: isActive ? 'none' : 'drop-shadow(0 1px 2px rgba(40, 96, 150, 0.75))' }}>{item.icon}</span>
                   {item.name}
                 </button>
               )
@@ -393,6 +401,7 @@ function AppShell({ user, profile, onLogout, lang, setLang }) {
           <Route path="/tasks" element={<Tasks currentUserProfile={profile} lang={lang} />} />
           <Route path="/committees" element={<Committees currentUserProfile={profile} lang={lang} />} />
           <Route path="/calendar" element={<CalendarPage currentUserProfile={profile} lang={lang} />} />
+          <Route path="/leave" element={<LeaveApplications currentUserProfile={profile} lang={lang} />} />
           <Route path="/settings" element={<Settings currentUserProfile={profile} lang={lang} />} />
           <Route path="/historical-members" element={<HistoricalMembers lang={lang} />} />
           <Route path="/handover" element={
