@@ -14,7 +14,7 @@ import {
 } from 'lucide-react'
 
 const EVENT_TYPE_LABELS = {
-  event: { zh: '学会活动', en: 'CLS Event', color: '#3b82f6', bg: '#eff6ff', border: '#bfdbfe' },
+  event: { zh: '学会活动', en: 'CLC_sys Event', color: '#3b82f6', bg: '#eff6ff', border: '#bfdbfe' },
   meeting: { zh: '内部会议', en: 'Committee Meeting', color: '#10b981', bg: '#ecfdf5', border: '#a7f3d0' },
   deadline: { zh: '截止日期', en: 'Task Deadline', color: '#ef4444', bg: '#fef2f2', border: '#fca5a5' }
 }
@@ -131,7 +131,7 @@ export default function CalendarPage({ currentUserProfile, lang }) {
       setTasks(tasksData || [])
 
     } catch (err) {
-      setErrorMsg(err.message || '获取日程数据失败 Failed to load calendar.')
+      setErrorMsg(err.message || (lang === 'zh' ? '获取日程数据失败' : 'Failed to load calendar data.'))
     } finally {
       if (!isSilent) setLoading(false)
     }
@@ -387,7 +387,7 @@ export default function CalendarPage({ currentUserProfile, lang }) {
             <div className="flex flex-wrap gap-4 mt-6 pt-4 border-t border-[#f0f7ff] text-[10px] font-black text-gray-400">
               <span className="flex items-center gap-1.5">
                 <span className="w-2.5 h-2.5 rounded-full" style={{ background: '#3b82f6' }} />
-                {lang === 'zh' ? '学会活动' : 'CLS Event'}
+                {lang === 'zh' ? '学会活动' : 'CLC_sys Event'}
               </span>
               <span className="flex items-center gap-1.5">
                 <span className="w-2.5 h-2.5 rounded-full" style={{ background: '#10b981' }} />
@@ -517,7 +517,7 @@ export default function CalendarPage({ currentUserProfile, lang }) {
             <form onSubmit={handleAddEventSubmit} className="p-6 space-y-4">
               <div>
                 <label className="block text-xs font-black uppercase tracking-wider mb-1.5 text-gray-500">
-                  {lang === 'zh' ? '活动主题 / 日程名称' : 'Event Title / Name'}
+                  {lang === 'zh' ? '活动主题' : 'Event Title'}
                 </label>
                 <input
                   type="text"
@@ -540,9 +540,9 @@ export default function CalendarPage({ currentUserProfile, lang }) {
                   className="w-full text-sm outline-none py-2.5 transition cursor-pointer"
                   style={{ ...inputStyle, background: 'white' }}
                 >
-                  <option value="event">🔵 {lang === 'zh' ? '学会活动 CLS Event' : 'CLS Event'}</option>
-                  <option value="meeting">🟢 {lang === 'zh' ? '内部会议 Meeting' : 'Committee Meeting'}</option>
-                  <option value="deadline">🔴 {lang === 'zh' ? '任务截止期 Task Deadline' : 'Task Deadline'}</option>
+                  <option value="event">🔵 {lang === 'zh' ? '学会活动' : 'CLC_sys Event'}</option>
+                  <option value="meeting">🟢 {lang === 'zh' ? '内部会议' : 'Committee Meeting'}</option>
+                  <option value="deadline">🔴 {lang === 'zh' ? '任务截止期' : 'Task Deadline'}</option>
                 </select>
               </div>
 

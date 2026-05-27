@@ -1,5 +1,6 @@
 ﻿import React, { useState, useEffect } from 'react'
 import { supabase } from '../supabaseClient'
+import { createNotificationsAndPush } from '../utils/pushNotifications'
 import {
   CheckSquare,
   Plus,
@@ -23,37 +24,38 @@ const PRIORITY_LABELS = {
 }
 
 const STATUS_COLUMNS = [
-  { id: 'pending', title: '待开始 Pending', color: '#3b82f6', bg: '#eff6ff' },
-  { id: 'in_progress', title: '进行中 In Progress', color: '#6366f1', bg: '#eef2ff' },
-  { id: 'need_help', title: '需协助 Need Help', color: '#f59e0b', bg: '#fffbeb' },
-  { id: 'completed', title: '已完成 Completed', color: '#10b981', bg: '#ecfdf5' }
+  { id: 'pending', title: { zh: '待开始', en: 'Pending' }, color: '#3b82f6', bg: '#eff6ff' },
+  { id: 'in_progress', title: { zh: '进行中', en: 'In Progress' }, color: '#6366f1', bg: '#eef2ff' },
+  { id: 'need_help', title: { zh: '需协助', en: 'Needs Help' }, color: '#f59e0b', bg: '#fffbeb' },
+  { id: 'completed', title: { zh: '已完成', en: 'Completed' }, color: '#10b981', bg: '#ecfdf5' }
 ]
 
 const TASK_ROLE_LABELS = {
-  convener_teacher: '召集老师',
-  advisor_teacher: '指导老师',
-  chairperson: '主席',
-  vice_chairperson: '副主席',
-  secretary: '正文书',
-  vice_secretary: '副文书',
-  treasurer: '正财政',
-  vice_treasurer: '副财政',
-  general_affairs: '正总务',
-  vice_general_affairs: '副总务',
-  activity_lead: '活动组组长',
-  vice_activity_lead: '活动组副组长',
-  activity_member: '活动组组员',
-  media_lead: '正摄影',
-  vice_media_lead: '副摄影',
-  ordinary_member: '普通会员',
-  custom: '自定义',
-  advisor: '指导老师',
-  committee: '自定义',
-  event_member: '活动组组员'
+  convener_teacher: { zh: '召集老师', en: 'Convener' },
+  advisor_teacher: { zh: '指导老师', en: 'Advisor' },
+  chairperson: { zh: '主席', en: 'President' },
+  vice_chairperson: { zh: '副主席', en: 'Vice President' },
+  secretary: { zh: '正文书', en: 'Secretary' },
+  vice_secretary: { zh: '副文书', en: 'Vice Secretary' },
+  treasurer: { zh: '正财政', en: 'Treasurer' },
+  vice_treasurer: { zh: '副财政', en: 'Vice Treasurer' },
+  general_affairs: { zh: '正总务', en: 'General Affairs' },
+  vice_general_affairs: { zh: '副总务', en: 'Vice General Affairs' },
+  activity_lead: { zh: '活动组组长', en: 'Activity Lead' },
+  vice_activity_lead: { zh: '活动组副组长', en: 'Vice Activity Lead' },
+  activity_member: { zh: '活动组组员', en: 'Activity Member' },
+  media_lead: { zh: '正摄影', en: 'Media Lead' },
+  vice_media_lead: { zh: '副摄影', en: 'Vice Media Lead' },
+  ordinary_member: { zh: '普通会员', en: 'Member' },
+  custom: { zh: '自定义', en: 'Custom' },
+  advisor: { zh: '指导老师', en: 'Advisor' },
+  committee: { zh: '自定义', en: 'Custom' },
+  event_member: { zh: '活动组组员', en: 'Activity Member' }
 }
-const getTaskUserRoleLabel = (user) => {
+const getTaskUserRoleLabel = (user, lang) => {
   if (user?.role === 'custom' && user.custom_role_label) return user.custom_role_label
-  return TASK_ROLE_LABELS[user?.role] || '干部'
+  const label = TASK_ROLE_LABELS[user?.role]
+  return label ? label[lang] : (lang === 'zh' ? '干部' : 'Board')
 }
 const BOARD_MANAGER_ROLES = ['convener_teacher', 'advisor_teacher', 'chairperson', 'vice_chairperson', 'advisor']
 const TASK_MANAGER_ROLES = [...BOARD_MANAGER_ROLES, 'secretary', 'vice_secretary', 'treasurer', 'vice_treasurer', 'general_affairs', 'vice_general_affairs', 'activity_lead', 'vice_activity_lead', 'media_lead', 'vice_media_lead']
@@ -68,7 +70,8 @@ const inputStyle = {
   padding: '10px 14px'
 }
 
-export default function Tasks({ currentUserProfile }) {
+export default function Tasks({ currentUserProfile, lang }) {
+  const _ = (zh, en) => lang === 'zh' ? zh : en
   const [tasks, setTasks] = useState([])
   const [teams, setTeams] = useState([])
   const [activeTeam, setActiveTeam] = useState(null)
@@ -166,7 +169,7 @@ export default function Tasks({ currentUserProfile }) {
       setUsers(usersData || [])
 
     } catch (err) {
-      setErrorMsg(err.message || '获取初始化数据失败 Failed to load initial data.')
+      setErrorMsg(err.message || _('获取初始化数据失败', 'Failed to load initial data.'))
     } finally {
       setLoading(false)
     }
@@ -176,22 +179,51 @@ export default function Tasks({ currentUserProfile }) {
     setLoading(true)
     setErrorMsg('')
     try {
-      const year = new Date().getFullYear()
-      const sessionString = `${year}/${year + 1}`
+      const now = new Date()
+      const year = now.getFullYear()
+      const half = now.getMonth() < 6 ? '上半年' : '下半年'
+      const sessionLabel = `${year} ${half}`
+      const sessionCode = `${year}-${half === '上半年' ? 'H1' : 'H2'}`
+      const today = now.toISOString().split('T')[0]
+
+      const { data: activeUsers, error: usersError } = await supabase
+        .from('users')
+        .select('id, name, role, custom_role_label')
+        .eq('is_active', true)
+
+      if (usersError) throw usersError
+
+      const rosterUsers = activeUsers || []
+
       const { data, error } = await supabase
         .from('teams')
         .insert({
-          name: `第 ${year - 1970} 届执委团`,
+          name: `一中华文学会 ${sessionLabel} 名单`,
           type: 'board',
-          session: sessionString,
+          session: sessionCode,
           is_archived: false,
-          start_date: new Date().toISOString().split('T')[0]
+          start_date: today
         })
         .select()
         .single()
 
       if (error) throw error
-      setSuccessMsg(`成功初始化 ${sessionString} 届执委团！`)
+
+      const rosterRows = rosterUsers.map(user => ({
+        team_id: data.id,
+        user_id: user.id,
+        position: getTaskUserRoleLabel(user, 'zh'),
+      }))
+
+      if (rosterRows.length > 0) {
+        const { error: memberError } = await supabase
+          .from('team_members')
+          .insert(rosterRows)
+
+        if (memberError) throw memberError
+      }
+
+      setSuccessMsg(_(`已根据账号管理建立 ${sessionLabel} 执委名单，共 ${rosterRows.length} 人。`, `${sessionLabel} board roster created (${rosterRows.length} members).`))
       fetchInitialData()
     } catch (err) {
       setErrorMsg(err.message)
@@ -212,34 +244,29 @@ export default function Tasks({ currentUserProfile }) {
       if (error) throw error
       setTasks(data || [])
     } catch (err) {
-      setErrorMsg(err.message || '获取任务列表失败 Failed to load tasks.')
+      setErrorMsg(err.message || _('获取任务列表失败', 'Failed to load tasks.'))
     }
   }
 
 
   const formatTaskDueText = (dueDate) => (
     dueDate
-      ? new Date(dueDate).toLocaleString('zh-CN', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
-      : '未设置截止日期'
+      ? new Date(dueDate).toLocaleString(lang === 'zh' ? 'zh-CN' : 'en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
+      : _('未设置截止日期', 'No due date')
   )
 
   const getStatusLabel = (status) => ({
-    pending: '待开始',
-    in_progress: '进行中',
-    need_help: '需协助',
-    completed: '已完成'
+    pending: _('待开始', 'Pending'),
+    in_progress: _('进行中', 'In Progress'),
+    need_help: _('需协助', 'Needs Help'),
+    completed: _('已完成', 'Completed')
   }[status] || status)
 
   const insertNotifications = async (notifications, options = {}) => {
     const rows = (notifications || []).filter(Boolean)
     if (rows.length === 0) return
 
-    const query = options.dedupe
-      ? supabase.from('notifications').upsert(rows, { onConflict: 'dedupe_key', ignoreDuplicates: true })
-      : supabase.from('notifications').insert(rows)
-
-    const { error } = await query
-    if (error) console.error('Create notifications failed:', error.message)
+    await createNotificationsAndPush(rows, '/tasks')
   }
 
   const createTaskNotifications = async (task) => {
@@ -252,8 +279,8 @@ export default function Tasks({ currentUserProfile }) {
     await insertNotifications(recipients.map(userId => ({
       user_id: userId,
       type: 'task_assigned',
-      title: '新任务：' + task.title,
-      body: (currentUserProfile?.name || '负责人') + ' 指派了任务给你。截止：' + dueText
+      title: _('新任务：', 'New task: ') + task.title,
+      body: _('负责人', 'Assigner') + _(' 指派了任务给你。截止：', ' assigned a task to you. Due: ') + dueText
     })))
   }
 
@@ -282,18 +309,16 @@ export default function Tasks({ currentUserProfile }) {
 
       if (daysLeft === 1) {
         type = 'task_due_tomorrow'
-        title = '任务明天到期：' + task.title
+        title = _('任务明天到期：', 'Due tomorrow: ') + task.title
       } else if (daysLeft === 0) {
         type = 'task_due_today'
-        title = '任务今天到期：' + task.title
+        title = _('任务今天到期：', 'Due today: ') + task.title
       } else if (daysLeft < 0) {
         type = 'task_overdue'
-        title = '任务已逾期：' + task.title
-      } else {
-        return
+        title = _('任务已逾期：', 'Overdue: ') + task.title
       }
 
-      const body = '截止时间：' + formatTaskDueText(task.due_date) + '。请尽快更新任务状态。'
+      const body = _('截止时间：', 'Due: ') + formatTaskDueText(task.due_date) + _('。请尽快更新任务状态。', '. Please update the task status.')
       ;[...new Set(task.assigned_to)].filter(Boolean).forEach(userId => {
         notifications.push({
           user_id: userId,
@@ -354,7 +379,7 @@ export default function Tasks({ currentUserProfile }) {
           .eq('id', selectedTask.id)
         
         if (error) throw error
-        setSuccessMsg('任务已成功更新 Task updated successfully.')
+        setSuccessMsg(_('任务已成功更新', 'Task updated.'))
       } else if (formData.repeat_enabled) {
         const occurrences = getNextWeeklyOccurrences()
         const payloads = occurrences.map(date => buildTaskPayload(date))
@@ -365,7 +390,7 @@ export default function Tasks({ currentUserProfile }) {
 
         if (error) throw error
         await Promise.all((data || []).map(task => createTaskNotifications(task)))
-        setSuccessMsg('已成功创建 ' + (data?.length || payloads.length) + ' 个重复任务 Recurring tasks created.')
+        setSuccessMsg(_('已成功创建 ', 'Created ') + (data?.length || payloads.length) + _(' 个重复任务', ' recurring tasks.'))
       } else {
         const { data, error } = await supabase
           .from('tasks')
@@ -375,7 +400,7 @@ export default function Tasks({ currentUserProfile }) {
 
         if (error) throw error
         await createTaskNotifications(data)
-        setSuccessMsg('任务已成功创建 Task created successfully.')
+        setSuccessMsg(_('任务已成功创建', 'Task created.'))
       }
 
       setShowCreateModal(false)
@@ -423,7 +448,7 @@ export default function Tasks({ currentUserProfile }) {
   }
 
   const handleDeleteTask = async (taskId) => {
-    if (!window.confirm('确定要删除这个任务吗？此操作无法撤销。\nAre you sure you want to delete this task?')) return
+    if (!window.confirm(_('确定要删除这个任务吗？此操作无法撤销。', 'Delete this task? This action cannot be undone.'))) return
     setErrorMsg('')
     setSuccessMsg('')
     try {
@@ -433,7 +458,7 @@ export default function Tasks({ currentUserProfile }) {
         .eq('id', taskId)
 
       if (error) throw error
-      setSuccessMsg('任务已成功删除 Task deleted.')
+      setSuccessMsg(_('任务已成功删除', 'Task deleted.'))
       setShowDetailModal(false)
       fetchTasks(activeTeam.id)
     } catch (err) {
@@ -454,8 +479,8 @@ export default function Tasks({ currentUserProfile }) {
       await notifyTaskCreator(
         task,
         'task_status_updated',
-        '任务状态更新：' + task.title,
-        (currentUserProfile?.name || '成员') + ' 将任务状态改为「' + getStatusLabel(newStatus) + '」。'
+        _('任务状态更新：', 'Task status updated: ') + task.title,
+        (currentUserProfile?.name || _('成员', 'Member')) + _(' 将任务状态改为「', ' changed status to 「') + getStatusLabel(newStatus) + '」。'
       )
       
       // Update local state for immediate feedback
@@ -518,8 +543,8 @@ export default function Tasks({ currentUserProfile }) {
       await notifyTaskCreator(
         selectedTask,
         'task_commented',
-        '任务有新留言：' + selectedTask.title,
-        (currentUserProfile?.name || '成员') + '：' + newCommentText.trim()
+        _('任务有新留言：', 'New comment on: ') + selectedTask.title,
+        (currentUserProfile?.name || _('成员', 'Member')) + '：' + newCommentText.trim()
       )
       setNewCommentText('')
       fetchComments(selectedTask.id)
@@ -570,10 +595,10 @@ export default function Tasks({ currentUserProfile }) {
         <div>
           <h1 className="text-2xl font-black flex items-center gap-2" style={{ color: '#1a1a1a' }}>
             <CheckSquare style={{ color: '#95CBFF' }} />
-            任务分配与追踪看板
+            {_('任务分配与追踪看板', 'Task Board')}
           </h1>
           <p className="text-sm mt-1 font-semibold" style={{ color: '#6b7280' }}>
-            Tasks Board (Assign duties, trace progress, communicate issues)
+            {_('任务看板 — 分配职务、追踪进度、沟通问题', 'Assign duties, track progress, communicate issues')}
           </p>
         </div>
 
@@ -594,7 +619,7 @@ export default function Tasks({ currentUserProfile }) {
               >
                 {teams.map(t => (
                   <option key={t.id} value={t.id}>
-                    {t.type === 'board' ? '📅 执委团: ' : '🏆 筹委: '} {t.name} ({t.session})
+                    {t.type === 'board' ? _('📅 执委团: ', '📅 Board: ') : _('🏆 筹委: ', '🏆 Committee: ')} {t.name} ({t.session})
                   </option>
                 ))}
               </select>
@@ -608,7 +633,7 @@ export default function Tasks({ currentUserProfile }) {
                 onClick={handleCreateDefaultSession}
                 className="px-4 py-2 text-xs font-black rounded-2xl bg-amber-100 text-amber-700 border border-amber-300 hover:bg-amber-200 transition cursor-pointer"
               >
-                ⚠️ 初始化当前执委团
+                {_('⚠️ 根据账号身份建立执委名单', '⚠️ Create board roster from accounts')}
               </button>
             )
           )}
@@ -620,7 +645,7 @@ export default function Tasks({ currentUserProfile }) {
               style={{ background: '#95CBFF', boxShadow: '0 4px 16px rgba(149,203,255,0.4)' }}
             >
               <Plus size={16} />
-              发布任务
+              {_('发布任务', 'Create Task')}
             </button>
           )}
         </div>
@@ -650,7 +675,7 @@ export default function Tasks({ currentUserProfile }) {
             type="text"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            placeholder="搜索任务名称或描述 Search task..."
+            placeholder={_('搜索任务名称或描述', 'Search tasks by name or description')}
             className="w-full pl-4 pr-4 py-2.5 text-sm outline-none transition"
             style={{ ...inputStyle, background: 'white' }}
           />
@@ -662,10 +687,10 @@ export default function Tasks({ currentUserProfile }) {
             className="w-full px-3 py-2.5 text-sm outline-none transition cursor-pointer"
             style={{ ...inputStyle, background: 'white' }}
           >
-            <option value="all">所有优先级 / All Priorities</option>
-            <option value="high">🔴 高优先级 / High</option>
-            <option value="medium">🟡 中优先级 / Medium</option>
-            <option value="low">⚪ 低优先级 / Low</option>
+            <option value="all">{_('所有优先级', 'All Priorities')}</option>
+            <option value="high">{_('🔴 高优先级', '🔴 High Priority')}</option>
+            <option value="medium">{_('🟡 中优先级', '🟡 Medium Priority')}</option>
+            <option value="low">{_('⚪ 低优先级', '⚪ Low Priority')}</option>
           </select>
         </div>
       </div>
@@ -674,12 +699,12 @@ export default function Tasks({ currentUserProfile }) {
       {loading ? (
         <div className="flex flex-col items-center justify-center py-20 gap-3 text-gray-500">
           <Loader size={32} style={{ color: '#95CBFF', animation: 'spin 1s linear infinite' }} />
-          <p className="font-bold">加载任务列表中 Loading tasks...</p>
+          <p className="font-bold">{_('加载任务列表中...', 'Loading tasks...')}</p>
         </div>
       ) : !activeTeam ? (
         <div className="text-center py-20 rounded-3xl font-semibold"
           style={{ background: '#f0f7ff', border: '1.5px solid #e0f1ff', color: '#6b7280' }}>
-          ⚠️ 系统暂无执委团数据。请联系顾问老师或主席点击上方“初始化当前执委团”按钮建立第一届团队。
+          {_('⚠️ 系统暂无执委名单。请联系顾问老师或主席点击上方按钮，系统会根据账号管理里的身份自动建立当前执委名单。', '⚠️ No board roster found. Ask the convener teacher or president to create one using the button above.')}
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 items-start">
@@ -691,7 +716,7 @@ export default function Tasks({ currentUserProfile }) {
                 
                 {/* Column Title */}
                 <div className="flex items-center justify-between pb-2" style={{ borderBottom: `2.5px solid ${col.color}` }}>
-                  <span className="font-black text-sm" style={{ color: '#1a1a1a' }}>{col.title}</span>
+                  <span className="font-black text-sm" style={{ color: '#1a1a1a' }}>{col.title[lang]}</span>
                   <span className="w-6 h-6 rounded-full text-xs font-black flex items-center justify-center text-white"
                     style={{ background: col.color }}>{colTasks.length}</span>
                 </div>
@@ -700,7 +725,7 @@ export default function Tasks({ currentUserProfile }) {
                 <div className="flex flex-col gap-3.5 overflow-y-auto max-h-[600px] pr-1">
                   {colTasks.length === 0 ? (
                     <div className="text-center py-10 text-xs font-bold text-gray-400 border-2 border-dashed border-gray-200 rounded-2xl">
-                      暂无任务 No tasks
+                      {_('暂无任务', 'No tasks yet')}
                     </div>
                   ) : (
                     colTasks.map(task => {
@@ -725,13 +750,13 @@ export default function Tasks({ currentUserProfile }) {
                             <div className="flex flex-wrap items-center justify-between gap-2">
                               <span className="px-2 py-0.5 text-[10px] font-black rounded-full shrink-0"
                                 style={{ background: priority.bg, color: priority.color, border: `1px solid ${priority.border}` }}>
-                                {priority.zh} / {priority.en}
+                                {priority[lang]}
                               </span>
 
                               {overdue && (
                                 <span className="flex items-center gap-1 text-[9px] font-black bg-red-100 text-red-600 px-2 py-0.5 rounded-full border border-red-200 animate-pulse">
                                   <Clock size={10} />
-                                  已逾期 Overdue
+                                  {_('已逾期', 'Overdue')}
                                 </span>
                               )}
                             </div>
@@ -747,7 +772,7 @@ export default function Tasks({ currentUserProfile }) {
                             {/* Assignee circles */}
                             <div className="flex -space-x-1.5 overflow-hidden">
                               {assignees.length === 0 ? (
-                                <div className="w-6 h-6 rounded-full bg-gray-100 border border-gray-200 flex items-center justify-center" title="未分配 Unassigned">
+                                <div className="w-6 h-6 rounded-full bg-gray-100 border border-gray-200 flex items-center justify-center" title={_('未分配', 'Unassigned')}>
                                   <User size={10} className="text-gray-400" />
                                 </div>
                               ) : (
@@ -774,7 +799,7 @@ export default function Tasks({ currentUserProfile }) {
                             {task.due_date && (
                               <span className="text-[10px] font-bold text-gray-400 flex items-center gap-1">
                                 <Calendar size={11} />
-                                {new Date(task.due_date).toLocaleDateString('zh-CN', { month: 'short', day: 'numeric' })}
+                                {new Date(task.due_date).toLocaleDateString(lang === 'zh' ? 'zh-CN' : 'en-US', { month: 'short', day: 'numeric' })}
                               </span>
                             )}
                           </div>
@@ -797,31 +822,31 @@ export default function Tasks({ currentUserProfile }) {
             <div className="px-6 py-4 flex items-center justify-between shrink-0" style={{ borderBottom: '1.5px solid #e0f1ff' }}>
               <h3 className="font-black text-lg flex items-center gap-2" style={{ color: '#1a1a1a' }}>
                 <CheckSquare size={18} style={{ color: '#95CBFF' }} />
-                {isEditing ? '修改任务详情 Edit Task' : '发布新任务 Publish Task'}
+                {isEditing ? _('修改任务详情', 'Edit Task') : _('发布新任务', 'Create Task')}
               </h3>
               <button onClick={() => setShowCreateModal(false)} className="text-lg transition cursor-pointer font-black text-gray-400 hover:text-gray-600">✕</button>
             </div>
             
             <form onSubmit={handleCreateOrEditTask} className="p-6 space-y-4 flex-1">
               <div>
-                <label className="block text-xs font-black uppercase tracking-wider mb-1.5 text-gray-500">任务名称 Title</label>
+                <label className="block text-xs font-black uppercase tracking-wider mb-1.5 text-gray-500">{_('任务名称', 'Task Name')}</label>
                 <input
                   type="text"
                   required
                   value={formData.title}
                   onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                  placeholder="例如: 制作国庆活动海报"
+                  placeholder={_('例如: 制作国庆活动海报', 'e.g. Design National Day poster')}
                   className="w-full px-3 py-2.5 text-sm outline-none transition"
                   style={inputStyle}
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-black uppercase tracking-wider mb-1.5 text-gray-500">详细描述 Description</label>
+                <label className="block text-xs font-black uppercase tracking-wider mb-1.5 text-gray-500">{_('详细描述', 'Description')}</label>
                 <textarea
                   value={formData.description}
                   onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                  placeholder="写明任务的具体细节与交付物标准..."
+                  placeholder={_('写明任务的具体细节与交付物标准...', 'Describe the details and deliverables...')}
                   rows={3}
                   className="w-full px-3 py-2.5 text-sm outline-none transition"
                   style={{ ...inputStyle, borderRadius: 20 }}
@@ -830,7 +855,7 @@ export default function Tasks({ currentUserProfile }) {
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-black uppercase tracking-wider mb-1.5 text-gray-500">截止时间 Due Date</label>
+                  <label className="block text-xs font-black uppercase tracking-wider mb-1.5 text-gray-500">{_('截止时间', 'Due Date')}</label>
                   <input
                     type="datetime-local"
                     value={formData.due_date}
@@ -840,33 +865,33 @@ export default function Tasks({ currentUserProfile }) {
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-black uppercase tracking-wider mb-1.5 text-gray-500">优先级 Priority</label>
+                  <label className="block text-xs font-black uppercase tracking-wider mb-1.5 text-gray-500">{_('优先级', 'Priority')}</label>
                   <select
                     value={formData.priority}
                     onChange={(e) => setFormData({ ...formData, priority: e.target.value })}
                     className="w-full px-3 py-2.5 text-sm outline-none transition"
                     style={selectStyle}
                   >
-                    <option value="high">🔴 高 Priority High</option>
-                    <option value="medium">🟡 中 Priority Medium</option>
-                    <option value="low">⚪ 低 Priority Low</option>
+                    <option value="high">{_('🔴 高', '🔴 High')}</option>
+                    <option value="medium">{_('🟡 中', '🟡 Medium')}</option>
+                    <option value="low">{_('⚪ 低', '⚪ Low')}</option>
                   </select>
                 </div>
               </div>
 
               {isEditing && (
                 <div>
-                  <label className="block text-xs font-black uppercase tracking-wider mb-1.5 text-gray-500">任务状态 Status</label>
+                  <label className="block text-xs font-black uppercase tracking-wider mb-1.5 text-gray-500">{_('任务状态', 'Status')}</label>
                   <select
                     value={formData.status}
                     onChange={(e) => setFormData({ ...formData, status: e.target.value })}
                     className="w-full px-3 py-2.5 text-sm outline-none transition"
                     style={selectStyle}
                   >
-                    <option value="pending">待开始 Pending</option>
-                    <option value="in_progress">进行中 In Progress</option>
-                    <option value="need_help">需协助 Need Help</option>
-                    <option value="completed">已完成 Completed</option>
+                    <option value="pending">{_('待开始', 'Pending')}</option>
+                    <option value="in_progress">{_('进行中', 'In Progress')}</option>
+                    <option value="need_help">{_('需协助', 'Needs Help')}</option>
+                    <option value="completed">{_('已完成', 'Completed')}</option>
                   </select>
                 </div>
               )}
@@ -880,29 +905,29 @@ export default function Tasks({ currentUserProfile }) {
                       onChange={(e) => setFormData({ ...formData, repeat_enabled: e.target.checked })}
                       className="h-4 w-4 accent-[#95CBFF]"
                     />
-                    重复发布 Recurring weekly task
+                    {_('重复发布', 'Repeat Weekly')}
                   </label>
                   {formData.repeat_enabled && (
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                       <div>
-                        <label className="block text-[10px] font-black uppercase tracking-wider mb-1 text-gray-400">星期 Weekday</label>
+                        <label className="block text-[10px] font-black uppercase tracking-wider mb-1 text-gray-400">{_('星期', 'Day')}</label>
                         <select
                           value={formData.repeat_weekday}
                           onChange={(e) => setFormData({ ...formData, repeat_weekday: e.target.value })}
                           className="w-full px-3 py-2 text-xs outline-none transition"
                           style={selectStyle}
                         >
-                          <option value="1">星期一</option>
-                          <option value="2">星期二</option>
-                          <option value="3">星期三</option>
-                          <option value="4">星期四</option>
-                          <option value="5">星期五</option>
-                          <option value="6">星期六</option>
-                          <option value="0">星期日</option>
+                          <option value="1">{_('星期一', 'Monday')}</option>
+                          <option value="2">{_('星期二', 'Tuesday')}</option>
+                          <option value="3">{_('星期三', 'Wednesday')}</option>
+                          <option value="4">{_('星期四', 'Thursday')}</option>
+                          <option value="5">{_('星期五', 'Friday')}</option>
+                          <option value="6">{_('星期六', 'Saturday')}</option>
+                          <option value="0">{_('星期日', 'Sunday')}</option>
                         </select>
                       </div>
                       <div>
-                        <label className="block text-[10px] font-black uppercase tracking-wider mb-1 text-gray-400">时间 Time</label>
+                        <label className="block text-[10px] font-black uppercase tracking-wider mb-1 text-gray-400">{_('时间', 'Time')}</label>
                         <input
                           type="time"
                           value={formData.repeat_time}
@@ -912,7 +937,7 @@ export default function Tasks({ currentUserProfile }) {
                         />
                       </div>
                       <div>
-                        <label className="block text-[10px] font-black uppercase tracking-wider mb-1 text-gray-400">次数 Times</label>
+                        <label className="block text-[10px] font-black uppercase tracking-wider mb-1 text-gray-400">{_('次数', 'Count')}</label>
                         <input
                           type="number"
                           min="1"
@@ -927,7 +952,7 @@ export default function Tasks({ currentUserProfile }) {
                   )}
                   {formData.repeat_enabled && (
                     <p className="text-[11px] font-bold text-gray-500 leading-relaxed">
-                      系统会一次建立未来 {formData.repeat_count || 1} 周的任务，并把截止时间设为你选择的星期与时间。
+                      {_('系统会一次建立未来 ' + (formData.repeat_count || 1) + ' 周的任务，并把截止时间设为你选择的星期与时间。', 'Will create ' + (formData.repeat_count || 1) + ' weeks of tasks, each due on the selected day and time.')}
                     </p>
                   )}
                 </div>
@@ -935,7 +960,7 @@ export default function Tasks({ currentUserProfile }) {
 
               <div>
                 <label className="block text-xs font-black uppercase tracking-wider mb-1.5 text-gray-500">
-                  指派负责人 Assignees ({formData.assigned_to.length})
+                  {_('指派负责人', 'Assign To')} ({formData.assigned_to.length})
                 </label>
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 p-3.5 rounded-2xl max-h-[160px] overflow-y-auto"
                   style={{ background: '#f0f7ff', border: '1.5px solid #95CBFF' }}>
@@ -965,12 +990,12 @@ export default function Tasks({ currentUserProfile }) {
                 <button type="button" onClick={() => setShowCreateModal(false)}
                   className="px-4 py-2.5 rounded-2xl text-sm font-bold transition cursor-pointer"
                   style={{ background: '#f0f7ff', border: '1.5px solid #e0f1ff', color: '#6b7280' }}>
-                  取消
+                  {_('取消', 'Cancel')}
                 </button>
                 <button type="submit" disabled={formSubmitting}
                   className="px-5 py-2.5 rounded-2xl text-sm font-black transition cursor-pointer text-white"
                   style={{ background: '#95CBFF', opacity: formSubmitting ? 0.7 : 1 }}>
-                  {formSubmitting ? '提交中...' : (isEditing ? '确认更新' : (formData.repeat_enabled ? '确认重复发布' : '确认发布'))}
+                  {formSubmitting ? _('提交中...', 'Submitting...') : (isEditing ? _('确认更新', 'Update') : (formData.repeat_enabled ? _('确认重复发布', 'Create Recurring') : _('确认发布', 'Create')))}
                 </button>
               </div>
             </form>
@@ -986,7 +1011,7 @@ export default function Tasks({ currentUserProfile }) {
             {/* Header info */}
             <div className="px-6 py-4 flex items-center justify-between shrink-0" style={{ borderBottom: '1.5px solid #f0f7ff' }}>
               <div className="space-y-1">
-                <span className="text-[10px] font-black text-gray-400 uppercase tracking-wider">任务详情 Task Details</span>
+                <span className="text-[10px] font-black text-gray-400 uppercase tracking-wider">{_('任务详情', 'Task Details')}</span>
                 <h3 className="font-black text-base text-gray-900 line-clamp-1">{selectedTask.title}</h3>
               </div>
               <button onClick={() => setShowDetailModal(false)} className="text-lg transition cursor-pointer font-black text-gray-400 hover:text-gray-600">✕</button>
@@ -996,7 +1021,7 @@ export default function Tasks({ currentUserProfile }) {
               {/* Top details cards */}
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div className="p-3.5 rounded-2xl bg-[#f0f7ff] border border-[#e0f1ff] space-y-1">
-                  <span className="text-[10px] font-black text-gray-400 block uppercase">负责人 Assignees</span>
+                  <span className="text-[10px] font-black text-gray-400 block uppercase">{_('负责人', 'Assignees')}</span>
                   <div className="flex -space-x-1.5 overflow-hidden">
                     {users.filter(u => selectedTask.assigned_to?.includes(u.id)).map(u => (
                       <div key={u.id} className="w-6 h-6 rounded-full flex items-center justify-center font-black text-[9px] border border-white"
@@ -1007,21 +1032,21 @@ export default function Tasks({ currentUserProfile }) {
                       </div>
                     ))}
                     {users.filter(u => selectedTask.assigned_to?.includes(u.id)).length === 0 && (
-                      <span className="text-xs font-bold text-gray-500">未指派人员</span>
+                      <span className="text-xs font-bold text-gray-500">{_('未指派人员', 'Unassigned')}</span>
                     )}
                   </div>
                 </div>
 
                 <div className="p-3.5 rounded-2xl bg-[#f0f7ff] border border-[#e0f1ff] space-y-1">
-                  <span className="text-[10px] font-black text-gray-400 block uppercase">截止日期 Due Date</span>
+                  <span className="text-[10px] font-black text-gray-400 block uppercase">{_('截止日期', 'Due Date')}</span>
                   <span className="text-xs font-black text-gray-700 flex items-center gap-1">
                     <Calendar size={13} />
-                    {selectedTask.due_date ? new Date(selectedTask.due_date).toLocaleString('zh-CN', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : '无限期'}
+                    {selectedTask.due_date ? new Date(selectedTask.due_date).toLocaleString(lang === 'zh' ? 'zh-CN' : 'en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : _('无限期', 'No deadline')}
                   </span>
                 </div>
 
                 <div className="p-3.5 rounded-2xl bg-[#f0f7ff] border border-[#e0f1ff] space-y-1">
-                  <span className="text-[10px] font-black text-gray-400 block uppercase">状态 Status</span>
+                  <span className="text-[10px] font-black text-gray-400 block uppercase">{_('状态', 'Status')}</span>
                   
                   {/* Status Dropdown selector for everyone who has access */}
                   <div className="relative">
@@ -1030,10 +1055,10 @@ export default function Tasks({ currentUserProfile }) {
                       onChange={(e) => handleUpdateStatus(selectedTask, e.target.value)}
                       className="appearance-none pr-8 pl-0.5 py-0.5 text-xs font-black rounded-lg bg-transparent text-gray-800 transition outline-none cursor-pointer"
                     >
-                      <option value="pending">待开始 Pending</option>
-                      <option value="in_progress">进行中 In Progress</option>
-                      <option value="need_help">需协助 Need Help</option>
-                      <option value="completed">已完成 Completed</option>
+                      <option value="pending">{_('待开始', 'Pending')}</option>
+                      <option value="in_progress">{_('进行中', 'In Progress')}</option>
+                      <option value="need_help">{_('需协助', 'Needs Help')}</option>
+                      <option value="completed">{_('已完成', 'Completed')}</option>
                     </select>
                     <div className="absolute right-0.5 top-1.5 pointer-events-none text-gray-400">
                       <ChevronDown size={11} />
@@ -1044,9 +1069,9 @@ export default function Tasks({ currentUserProfile }) {
 
               {/* Task Description */}
               <div className="space-y-1.5 p-4 rounded-2xl bg-[#f8fbff] border border-[#e0f1ff]">
-                <span className="text-[10px] font-black text-gray-400 block uppercase">任务描述 Description</span>
+                <span className="text-[10px] font-black text-gray-400 block uppercase">{_('任务描述', 'Description')}</span>
                 <p className="text-sm font-semibold text-gray-700 whitespace-pre-wrap leading-relaxed">
-                  {selectedTask.description || '无详细描述。 No details provided.'}
+                  {selectedTask.description || _('无详细描述。', 'No description.')}
                 </p>
               </div>
 
@@ -1058,14 +1083,14 @@ export default function Tasks({ currentUserProfile }) {
                     className="flex items-center gap-1 px-3.5 py-2 rounded-xl text-xs font-black border border-[#e0f1ff] bg-white text-gray-600 hover:bg-[#f8fbff] transition cursor-pointer"
                   >
                     <Edit2 size={12} />
-                    修改详情
+                    {_('修改详情', 'Edit')}
                   </button>
                   <button
                     onClick={() => handleDeleteTask(selectedTask.id)}
                     className="flex items-center gap-1 px-3.5 py-2 rounded-xl text-xs font-black border border-red-200 bg-red-50 text-red-600 hover:bg-red-100 transition cursor-pointer"
                   >
                     <Trash2 size={12} />
-                    删除任务
+                    {_('删除任务', 'Delete')}
                   </button>
                 </div>
               )}
@@ -1074,15 +1099,15 @@ export default function Tasks({ currentUserProfile }) {
               <div className="space-y-4 pt-1">
                 <span className="text-xs font-black text-gray-500 block uppercase flex items-center gap-1.5">
                   <MessageSquare size={13} style={{ color: '#95CBFF' }} />
-                  进展与留言沟通备注 ({comments.length})
+                  {_('进展与留言沟通备注', 'Progress & Comments')} ({comments.length})
                 </span>
 
                 <div className="space-y-3 max-h-[220px] overflow-y-auto pr-1">
                   {comments.length === 0 ? (
-                    <p className="text-xs text-gray-400 font-bold text-center py-6">目前暂无进度备注，请在此输入最新留言。</p>
+                    <p className="text-xs text-gray-400 font-bold text-center py-6">{_('目前暂无进度备注，请在此输入最新留言。', 'No comments yet. Type your progress update below.')}</p>
                   ) : (
                     comments.map(c => {
-                      const userDetails = c.users || { name: '未知成员', role: 'custom' }
+                      const userDetails = c.users || { name: _('未知成员', 'Unknown'), role: 'custom' }
                       const isMe = c.user_id === currentUserProfile.id
                       return (
                         <div key={c.id} className="p-3 rounded-2xl flex flex-col gap-1 text-xs border border-[#e0f1ff]"
@@ -1095,11 +1120,11 @@ export default function Tasks({ currentUserProfile }) {
                             <div className="flex items-center gap-1.5">
                               <span className="font-black text-gray-800">{userDetails.name}</span>
                               <span className="text-[8px] font-bold px-1.5 py-0.5 rounded-full bg-white text-gray-400 border border-gray-100">
-                                {getTaskUserRoleLabel(userDetails)}
+                                {getTaskUserRoleLabel(userDetails, lang)}
                               </span>
                             </div>
                             <span className="text-[8px] font-semibold text-gray-400">
-                              {new Date(c.created_at).toLocaleString('zh-CN', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })}
+                              {new Date(c.created_at).toLocaleString(lang === 'zh' ? 'zh-CN' : 'en-US', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })}
                             </span>
                           </div>
                           <p className="text-gray-600 font-semibold leading-relaxed mt-0.5">{c.content}</p>
@@ -1116,7 +1141,7 @@ export default function Tasks({ currentUserProfile }) {
                     required
                     value={newCommentText}
                     onChange={(e) => setNewCommentText(e.target.value)}
-                    placeholder="输入最新进展或提问，按下回车发送..."
+                    placeholder={_('输入最新进展或提问，按下回车发送...', 'Type your update and press Enter to send...')}
                     className="flex-1 px-4 py-2.5 text-xs outline-none transition"
                     style={{ ...inputStyle, borderRadius: 20 }}
                   />
@@ -1126,7 +1151,7 @@ export default function Tasks({ currentUserProfile }) {
                     className="px-4 rounded-full text-xs font-black bg-[#95CBFF] text-white flex items-center justify-center gap-1 transition cursor-pointer select-none"
                     style={{ opacity: submittingComment ? 0.7 : 1 }}
                   >
-                    发送 <ArrowRight size={12} />
+                    {_('发送', 'Send')} <ArrowRight size={12} />
                   </button>
                 </form>
               </div>

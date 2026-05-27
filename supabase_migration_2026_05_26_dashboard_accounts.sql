@@ -39,9 +39,18 @@ create table if not exists public.announcements (
   title text not null,
   body text not null,
   is_pinned boolean not null default false,
+  target_type text not null default 'all' check (target_type in ('all', 'board', 'committee')),
+  target_team_id uuid references public.teams(id) on delete set null,
   created_by uuid references public.users on delete set null,
   created_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
+
+alter table public.announcements
+  add column if not exists target_type text not null default 'all'
+  check (target_type in ('all', 'board', 'committee'));
+
+alter table public.announcements
+  add column if not exists target_team_id uuid references public.teams(id) on delete set null;
 
 alter table public.announcements enable row level security;
 

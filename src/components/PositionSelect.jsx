@@ -8,8 +8,8 @@ import { useState, useEffect } from 'react'
 const ROLE_OPTIONS = [
   { value: 'convener_teacher', zh: '召集老师', en: 'Convener Teacher' },
   { value: 'advisor_teacher',  zh: '指导老师', en: 'Advisor Teacher' },
-  { value: 'chairperson',      zh: '主席',     en: 'Chairperson' },
-  { value: 'vice_chairperson', zh: '副主席',   en: 'Vice Chairperson' },
+  { value: 'chairperson',      zh: '主席',     en: 'President' },
+  { value: 'vice_chairperson', zh: '副主席',   en: 'Vice President' },
   { value: 'secretary',        zh: '正文书',   en: 'Secretary' },
   { value: 'vice_secretary',   zh: '副文书',   en: 'Vice Secretary' },
   { value: 'treasurer',        zh: '正财政',   en: 'Treasurer' },
@@ -83,7 +83,7 @@ export default function PositionSelect({ value, onChange, customLabel = '', onCu
 
   const selectValue = mode === 'custom' ? CUSTOM_TRIGGER : (value || 'ordinary_member')
 
-  const label = lang === 'zh' ? '系统角色 / 职务 Role' : 'Role'
+  const label = lang === 'zh' ? '系统角色与职务' : 'Role'
   const customPlaceholder = lang === 'zh'
     ? '输入自定义职称，如：宣传组组长、美食节主任...'
     : 'Custom title, e.g. Publicity Lead, Event Director...'
@@ -91,7 +91,7 @@ export default function PositionSelect({ value, onChange, customLabel = '', onCu
     ? `预览职称：「${customLabel}」（会保存为显示职称）`
     : `Preview: "${customLabel}" (saved as display title)`
   const customNote = lang === 'zh'
-    ? '系统权限类型会保存为「自定义 Custom」，这里输入的文字会作为成员职称显示。'
+    ? '系统权限类型会保存为「自定义」，这里输入的文字会作为成员职称显示。'
     : 'The permission role is stored as "custom"; this text is saved as the displayed title.'
 
   return (
@@ -110,7 +110,7 @@ export default function PositionSelect({ value, onChange, customLabel = '', onCu
       >
         {ROLE_OPTIONS.map(r => (
           <option key={r.value} value={r.value}>
-            {r.zh} / {r.en}
+            {r.zh}
           </option>
         ))}
         {/* 自定义选项 */}

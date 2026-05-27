@@ -6,8 +6,8 @@ const LOGIN_PHOTO_URL = 'https://images.unsplash.com/photo-1523050854058-8df9011
 
 const TRANSLATIONS = {
   zh: {
-    title: '一中华文学会系统(CLS sys)',
-    subtitle: '内部管理与任务提醒平台',
+    title: '一中华文学会系统',
+    subtitle: '华文学会内部管理平台',
     email: '电子邮箱',
     emailPlaceholder: '请输入电子邮箱',
     password: '登录密码',
@@ -16,11 +16,11 @@ const TRANSLATIONS = {
     loggingIn: '正在登录...',
     errorTitle: '登录失败',
     invalidCreds: '邮箱或密码不正确，请重新输入。',
-    installNotice: '请根据主席及老师给予的账号及密码登入。',
-    footer: '一中华文学会系统(CLS sys)'
+    installNotice: '请依据主席及老师给予的账号及密码登入。',
+    footer: '一中华文学会系统'
   },
   en: {
-    title: 'SMJK Yoke Kuan CLS System (CLS sys)',
+    title: 'CHMS1 Chinese Language Club System',
     subtitle: 'Internal Management & Task Reminder Platform',
     email: 'Email Address',
     emailPlaceholder: 'Enter your email',
@@ -30,8 +30,8 @@ const TRANSLATIONS = {
     loggingIn: 'Signing in...',
     errorTitle: 'Sign In Failed',
     invalidCreds: 'Incorrect email or password. Please try again.',
-    installNotice: 'Please log in with the account and password given by the chairperson and teachers.',
-    footer: 'SMJK Yoke Kuan CLS System (CLS sys)'
+    installNotice: 'Please log in with the account and password given by the president and teachers.',
+    footer: 'CHMS1 Chinese Language Club System'
   }
 }
 
@@ -109,7 +109,7 @@ export default function Login({ onLoginSuccess }) {
         <div className="hidden md:flex relative p-10 items-end">
           <div className="max-w-md text-white">
             <p className="text-xs font-black uppercase tracking-[0.2em]" style={{ textShadow: '0 2px 10px rgba(38, 88, 132, 0.45)' }}>
-              Chinese Language Club
+              {lang === 'zh' ? '中华文学会系统' : 'Chinese Language Club'}
             </p>
             <p className="text-3xl font-black mt-2" style={{ textShadow: '0 2px 14px rgba(38, 88, 132, 0.5)' }}>
               一中华文学会系统
@@ -124,14 +124,14 @@ export default function Login({ onLoginSuccess }) {
             className="absolute top-5 right-5 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-bold transition cursor-pointer"
             style={{ background: '#f0f7ff', border: '1.5px solid #e0f1ff', color: '#6db8ff' }}>
             <Globe size={14} style={{ color: '#95CBFF' }} />
-            {lang === 'zh' ? 'English' : '中文'}
+            {lang === 'zh' ? '英文' : '中文'}
           </button>
 
           <div className="text-center mb-8">
             <div
               className="inline-flex items-center justify-center w-24 h-24 rounded-full mb-5 overflow-hidden"
               style={{ boxShadow: '0 8px 24px rgba(149, 203, 255, 0.28)' }}>
-              <img src="/logo-192.png" alt="CLS" className="w-full h-full object-cover rounded-full" />
+              <img src="/logo-192.png" alt="CLC_sys" className="w-full h-full object-cover rounded-full" />
             </div>
             <h1 className="text-2xl md:text-3xl font-black mb-2" style={{ color: '#1a1a1a' }}>{t.title}</h1>
             <p className="text-sm md:text-base font-semibold" style={{ color: '#7b8498' }}>{t.subtitle}</p>

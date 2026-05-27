@@ -1,6 +1,6 @@
 {
     "name": "一中华文学会",
-    "short_name": "CLS_sys",
+    "short_name": "CLC_sys",
     "description": "一中华文学会系统 (Chms1 Chinese Language System)",
     "start_url": "/",
     "display": "standalone",

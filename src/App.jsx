@@ -23,8 +23,8 @@ import {
 const APP_ROLE_LABELS = {
   convener_teacher: { zh: '召集老师', en: 'Convener Teacher' },
   advisor_teacher: { zh: '指导老师', en: 'Advisor Teacher' },
-  chairperson: { zh: '主席', en: 'Chairperson' },
-  vice_chairperson: { zh: '副主席', en: 'Vice Chairperson' },
+  chairperson: { zh: '主席', en: 'President' },
+  vice_chairperson: { zh: '副主席', en: 'Vice President' },
   secretary: { zh: '正文书', en: 'Secretary' },
   vice_secretary: { zh: '副文书', en: 'Vice Secretary' },
   treasurer: { zh: '正财政', en: 'Treasurer' },
@@ -103,6 +103,7 @@ function NotificationCenter({ profile, lang }) {
   }
 
   const unreadCount = notifications.filter(n => !n.read_at).length
+  const sidebarTextShadow = '0 1px 2px rgba(34, 91, 145, 0.95), 0 0 2px rgba(34, 91, 145, 0.75)'
 
   const markAllRead = async () => {
     if (!profile?.id || unreadCount === 0) return
@@ -122,12 +123,12 @@ function NotificationCenter({ profile, lang }) {
       <button
         onClick={() => setOpen(o => !o)}
         className="w-full flex items-center justify-between gap-3.5 px-4 py-2.5 rounded-2xl text-xs font-bold transition cursor-pointer text-left"
-        style={{ color: 'rgba(255,255,255,0.82)', background: open ? 'rgba(255,255,255,0.16)' : 'transparent' }}
+        style={{ color: 'white', background: open ? 'rgba(255,255,255,0.16)' : 'transparent', textShadow: sidebarTextShadow }}
         onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.15)'}
         onMouseLeave={e => e.currentTarget.style.background = open ? 'rgba(255,255,255,0.16)' : 'transparent'}>
         <span className="flex items-center gap-3.5">
-          <Bell size={16} style={{ color: 'rgba(255,255,255,0.7)' }} />
-          {lang === 'zh' ? '通知 Notifications' : 'Notifications'}
+          <Bell size={16} style={{ color: 'white', filter: 'drop-shadow(0 1px 2px rgba(34, 91, 145, 0.85))' }} />
+          {lang === 'zh' ? '通知' : 'Notifications'}
         </span>
         {unreadCount > 0 && (
           <span className="min-w-5 h-5 px-1.5 rounded-full text-[10px] font-black flex items-center justify-center"
@@ -185,6 +186,7 @@ function AppShell({ user, profile, onLogout, lang, setLang }) {
   const navigate = useNavigate()
 
   const isBoardManager = BOARD_MANAGER_ROLES.includes(profile?.role)
+  const sidebarTextShadow = '0 1px 2px rgba(34, 91, 145, 0.95), 0 0 2px rgba(34, 91, 145, 0.75)'
 
   // Check for first-time login tutorial
   useEffect(() => {
@@ -223,22 +225,22 @@ function AppShell({ user, profile, onLogout, lang, setLang }) {
   }, [])
 
   const navItems = lang === 'zh' ? [
-    { name: '仪表板 Dashboard', path: '/', icon: <LayoutDashboard size={18} />, allowed: true },
-    { name: '任务看板 Tasks', path: '/tasks', icon: <CheckSquare size={18} />, allowed: true },
-    { name: '筹委管理 Committees', path: '/committees', icon: <FolderGit size={18} />, allowed: true },
-    { name: '账号管理 Accounts', path: '/members', icon: <Users size={18} />, allowed: isBoardManager },
-    { name: '历年名册 History', path: '/historical-members', icon: <History size={18} />, allowed: true },
-    { name: '执委换届 Handover', path: '/handover', icon: <ShieldAlert size={18} />, allowed: isBoardManager },
-    { name: '活动行事历 Calendar', path: '/calendar', icon: <Calendar size={18} />, allowed: true },
-    { name: '请假申请 Leave', path: '/leave', icon: <ClipboardList size={18} />, allowed: true },
-    { name: '个人设置 Settings', path: '/settings', icon: <SettingsIcon size={18} />, allowed: true },
+    { name: '仪表板', path: '/', icon: <LayoutDashboard size={18} />, allowed: true },
+    { name: '任务看板', path: '/tasks', icon: <CheckSquare size={18} />, allowed: true },
+    { name: '筹委管理', path: '/committees', icon: <FolderGit size={18} />, allowed: true },
+    { name: '账号管理', path: '/members', icon: <Users size={18} />, allowed: isBoardManager },
+    { name: '历年名单', path: '/historical-members', icon: <History size={18} />, allowed: true },
+    { name: '学期切换', path: '/handover', icon: <ShieldAlert size={18} />, allowed: isBoardManager },
+    { name: '活动行事历', path: '/calendar', icon: <Calendar size={18} />, allowed: true },
+    { name: '请假申请', path: '/leave', icon: <ClipboardList size={18} />, allowed: true },
+    { name: '个人设置', path: '/settings', icon: <SettingsIcon size={18} />, allowed: true },
   ] : [
     { name: 'Dashboard', path: '/', icon: <LayoutDashboard size={18} />, allowed: true },
-    { name: 'Tasks Board', path: '/tasks', icon: <CheckSquare size={18} />, allowed: true },
+    { name: 'Tasks', path: '/tasks', icon: <CheckSquare size={18} />, allowed: true },
     { name: 'Committees', path: '/committees', icon: <FolderGit size={18} />, allowed: true },
     { name: 'Accounts', path: '/members', icon: <Users size={18} />, allowed: isBoardManager },
-    { name: 'History', path: '/historical-members', icon: <History size={18} />, allowed: true },
-    { name: 'Handover', path: '/handover', icon: <ShieldAlert size={18} />, allowed: isBoardManager },
+    { name: 'Historical Lists', path: '/historical-members', icon: <History size={18} />, allowed: true },
+    { name: 'Term Handover', path: '/handover', icon: <ShieldAlert size={18} />, allowed: isBoardManager },
     { name: 'Calendar', path: '/calendar', icon: <Calendar size={18} />, allowed: true },
     { name: 'Leave Application', path: '/leave', icon: <ClipboardList size={18} />, allowed: true },
     { name: 'Settings', path: '/settings', icon: <SettingsIcon size={18} />, allowed: true },
@@ -250,7 +252,7 @@ function AppShell({ user, profile, onLogout, lang, setLang }) {
   }
 
   return (
-    <div className="min-h-screen flex flex-col md:flex-row" style={{ background: '#f0f7ff', fontFamily: "'Nunito', sans-serif" }}>
+    <div className="min-h-screen flex flex-col md:flex-row overflow-x-hidden" style={{ background: '#f0f7ff', fontFamily: "'Nunito', sans-serif" }}>
 
       {/* Tutorial Modal */}
       {showTutorial && (
@@ -261,19 +263,19 @@ function AppShell({ user, profile, onLogout, lang, setLang }) {
       <div className="md:hidden flex items-center justify-between px-5 py-4 shrink-0"
         style={{ background: '#95CBFF', borderBottom: '1.5px solid #6db8ff' }}>
         <div className="flex items-center gap-2">
-          <div className="w-9 h-9 rounded-full flex items-center justify-center overflow-hidden"
-            style={{ background: 'transparent', boxShadow: '0 3px 10px rgba(40, 96, 150, 0.18)' }}>
-            <img src="/logo-192.png" alt="CLS" className="w-full h-full object-cover rounded-full" />
+          <div className="w-9 h-9 rounded-full flex items-center justify-center overflow-hidden shrink-0"
+            style={{ background: 'transparent', boxShadow: '0 4px 14px rgba(74, 163, 236, 0.48), 0 0 0 2px rgba(255,255,255,0.32)' }}>
+            <img src="/logo-192.png" alt="CLC_sys" className="w-full h-full object-cover rounded-full" />
           </div>
-          <span className="font-black text-sm tracking-wide" style={{ color: 'white', textShadow: '0 1px 2px rgba(40, 96, 150, 0.65)' }}>一中华文学会</span>
+          <span className="font-black text-xs leading-tight tracking-wide max-w-[180px]" style={{ color: 'white', textShadow: sidebarTextShadow }}>{lang === 'zh' ? '\u4e00\u4e2d\u534e\u6587\u5b66\u4f1a' : 'CHMS1 Chinese Language Club'}</span>
         </div>
         <div className="flex items-center gap-2">
           {/* Mobile lang toggle */}
           <button
             onClick={() => setLang(l => l === 'zh' ? 'en' : 'zh')}
             className="text-xs font-black px-2 py-1 rounded-full transition cursor-pointer"
-            style={{ background: 'rgba(255,255,255,0.25)', color: 'white' }}>
-            {lang === 'zh' ? 'EN' : '中'}
+            style={{ background: 'rgba(255,255,255,0.25)', color: 'white', textShadow: sidebarTextShadow }}>
+            {lang === 'zh' ? '英文' : '中'}
           </button>
           <button onClick={() => setMobileMenuOpen(!mobileMenuOpen)} style={{ color: 'white' }}>
             {mobileMenuOpen ? <X size={22} /> : <Menu size={22} />}
@@ -286,7 +288,7 @@ function AppShell({ user, profile, onLogout, lang, setLang }) {
         fixed inset-y-0 left-0 z-40 w-64 p-5 flex flex-col justify-between transition-transform duration-300 ease-in-out shrink-0
         md:relative md:translate-x-0
         ${mobileMenuOpen ? 'translate-x-0' : '-translate-x-full md:flex'}
-      `} style={{ background: '#95CBFF', borderRight: '1.5px solid #6db8ff', position: 'relative', overflow: 'hidden' }}>
+      `} style={{ background: '#95CBFF', borderRight: '1.5px solid #6db8ff', overflow: 'hidden' }}>
 
         {/* Decorative circles */}
         <div style={{ position: 'absolute', bottom: -40, right: -40, width: 160, height: 160, borderRadius: '50%', background: 'rgba(255,255,255,0.1)', pointerEvents: 'none' }} />
@@ -297,26 +299,23 @@ function AppShell({ user, profile, onLogout, lang, setLang }) {
           {/* Logo + Language toggle */}
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="w-11 h-11 rounded-full flex items-center justify-center overflow-hidden"
-                style={{ background: 'transparent', boxShadow: '0 4px 12px rgba(0,0,0,0.08)' }}>
-                <img src="/logo-192.png" alt="CLS" className="w-full h-full object-cover rounded-full" />
+              <div className="w-11 h-11 rounded-full flex items-center justify-center overflow-hidden shrink-0"
+                style={{ background: 'transparent', boxShadow: '0 5px 16px rgba(74, 163, 236, 0.5), 0 0 0 2px rgba(255,255,255,0.34)' }}>
+                <img src="/logo-192.png" alt="CLC_sys" className="w-full h-full object-cover rounded-full" />
               </div>
-              <div>
-                <h2 className="font-black text-sm leading-tight" style={{ color: 'white', textShadow: '0 1px 2px rgba(40, 96, 150, 0.75)' }}>一中华文学会</h2>
-                <span className="text-[10px] font-bold uppercase tracking-wide" style={{ color: 'white', textShadow: '0 1px 2px rgba(40, 96, 150, 0.75)' }}>
-                  CLS System V3.0
-                </span>
+              <div className="min-w-0 flex-1">
+                <h2 className="font-black text-xs leading-tight break-words" style={{ color: 'white', textShadow: sidebarTextShadow }}>{lang === 'zh' ? '\u4e00\u4e2d\u534e\u6587\u5b66\u4f1a' : 'CHMS1 Chinese Language Club'}</h2>
               </div>
             </div>
             {/* Language Toggle */}
             <button
               onClick={() => setLang(l => l === 'zh' ? 'en' : 'zh')}
               className="flex items-center gap-1 px-2.5 py-1.5 rounded-full transition cursor-pointer text-xs font-black"
-              style={{ background: 'rgba(255,255,255,0.2)', color: 'white', border: '1px solid rgba(255,255,255,0.3)' }}
-              title={lang === 'zh' ? 'Switch to English' : '切换至中文'}
+              style={{ background: 'rgba(255,255,255,0.2)', color: 'white', border: '1px solid rgba(255,255,255,0.3)', textShadow: sidebarTextShadow }}
+              title={lang === 'zh' ? '切换至英文' : 'Switch to Chinese'}
             >
               <Globe size={11} />
-              {lang === 'zh' ? 'EN' : '中'}
+              {lang === 'zh' ? '英文' : '中'}
             </button>
           </div>
 
@@ -355,8 +354,8 @@ function AppShell({ user, profile, onLogout, lang, setLang }) {
               {profile?.name ? profile.name.slice(0, 2) : '会员'}
             </div>
             <div className="min-w-0 flex-1">
-              <p className="text-sm font-black truncate" style={{ color: 'white' }}>{profile?.name || (lang === 'zh' ? '未知成员' : 'Unknown')}</p>
-              <p className="text-[10px] font-semibold truncate mt-0.5" style={{ color: 'rgba(255,255,255,0.7)' }}>
+              <p className="text-sm font-black truncate" style={{ color: 'white', textShadow: sidebarTextShadow }}>{profile?.name || (lang === 'zh' ? '未知成员' : 'Unknown')}</p>
+              <p className="text-[10px] font-semibold truncate mt-0.5" style={{ color: 'white', textShadow: sidebarTextShadow }}>
                 {getProfileRoleText(profile, lang)}
               </p>
             </div>
@@ -368,21 +367,21 @@ function AppShell({ user, profile, onLogout, lang, setLang }) {
           <button
             onClick={() => setShowTutorial(true)}
             className="w-full flex items-center gap-3.5 px-4 py-2.5 rounded-2xl text-xs font-bold transition cursor-pointer text-left"
-            style={{ color: 'rgba(255,255,255,0.75)', background: 'transparent' }}
+            style={{ color: 'white', background: 'transparent', textShadow: sidebarTextShadow }}
             onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.15)'}
             onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
-            <HelpCircle size={16} style={{ color: 'rgba(255,255,255,0.6)' }} />
-            {lang === 'zh' ? '使用引导 Tutorial' : 'Tutorial Guide'}
+            <HelpCircle size={16} style={{ color: 'white', filter: 'drop-shadow(0 1px 2px rgba(34, 91, 145, 0.85))' }} />
+            {lang === 'zh' ? '使用引导' : 'Tutorial Guide'}
           </button>
 
           {/* Logout button */}
           <button onClick={onLogout}
             className="w-full flex items-center gap-3.5 px-4 py-3 rounded-2xl text-sm font-bold transition cursor-pointer text-left"
-            style={{ color: 'rgba(255,255,255,0.8)', background: 'transparent' }}
+            style={{ color: 'white', background: 'transparent', textShadow: sidebarTextShadow }}
             onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,100,100,0.2)'}
             onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
-            <LogOut size={18} style={{ color: 'rgba(255,255,255,0.6)' }} />
-            {lang === 'zh' ? '退出系统 Log Out' : 'Log Out'}
+            <LogOut size={18} style={{ color: 'white', filter: 'drop-shadow(0 1px 2px rgba(34, 91, 145, 0.85))' }} />
+            {lang === 'zh' ? '退出系统' : 'Log Out'}
           </button>
         </div>
       </aside>
@@ -395,7 +394,7 @@ function AppShell({ user, profile, onLogout, lang, setLang }) {
       )}
 
       {/* Main Content */}
-      <main className="flex-1 p-6 md:p-10 overflow-y-auto max-w-7xl mx-auto w-full">
+      <main className="flex-1 p-4 sm:p-6 md:p-10 overflow-y-auto max-w-7xl mx-auto w-full min-w-0">
         <Routes>
           <Route path="/" element={<Dashboard currentUserProfile={profile} lang={lang} onShowTutorial={() => setShowTutorial(true)} />} />
           <Route path="/tasks" element={<Tasks currentUserProfile={profile} lang={lang} />} />
@@ -507,7 +506,7 @@ export default function App() {
           <Loader size={28} color="white" style={{ animation: 'spin 1s linear infinite' }} />
         </div>
         <span className="text-sm font-black tracking-wide" style={{ color: '#6b7280' }}>
-          {lang === 'zh' ? '载入系统中 Loading System...' : 'Loading System...'}
+          {lang === 'zh' ? '载入系统中...' : 'Loading System...'}
         </span>
       </div>
     )

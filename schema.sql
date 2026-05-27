@@ -8,6 +8,8 @@ create extension if not exists "uuid-ossp";
 drop trigger if exists on_auth_user_created on auth.users;
 drop function if exists public.handle_new_user();
 drop table if exists public.notifications cascade;
+drop table if exists public.activity_log cascade;
+drop table if exists public.announcements cascade;
 drop table if exists public.task_comments cascade;
 drop table if exists public.task_reminder_logs cascade;
 drop table if exists public.tasks cascade;
@@ -109,6 +111,25 @@ create table public.notifications (
   read_at timestamp with time zone
 );
 
+create table public.announcements (
+  id uuid default gen_random_uuid() primary key,
+  title text not null,
+  body text not null,
+  is_pinned boolean not null default false,
+  target_type text not null default 'all' check (target_type in ('all', 'board', 'committee')),
+  target_team_id uuid references public.teams(id) on delete set null,
+  created_by uuid references public.users on delete set null,
+  created_at timestamp with time zone default timezone('utc'::text, now()) not null
+);
+
+create table public.activity_log (
+  id uuid default gen_random_uuid() primary key,
+  actor_id uuid references public.users on delete set null,
+  action_type text not null,
+  message text not null,
+  created_at timestamp with time zone default timezone('utc'::text, now()) not null
+);
+
 -- 11. Enable Row Level Security (RLS) on public.users
 alter table public.users enable row level security;
 alter table public.teams enable row level security;
@@ -118,6 +139,8 @@ alter table public.task_comments enable row level security;
 alter table public.task_reminder_logs enable row level security;
 alter table public.events enable row level security;
 alter table public.notifications enable row level security;
+alter table public.announcements enable row level security;
+alter table public.activity_log enable row level security;
 
 -- 12. Create basic RLS Policies (allows authenticated users full read, restricted writes)
 -- For simplicity & full usability:
@@ -239,6 +262,24 @@ create policy "Authenticated users can create notifications." on public.notifica
 
 create policy "Recipient can update (mark read) notifications." on public.notifications
   for update to authenticated using (auth.uid() = user_id);
+
+create policy "Announcements are viewable by authenticated users." on public.announcements
+  for select to authenticated using (true);
+
+create policy "Announcement managers can create announcements." on public.announcements
+  for insert to authenticated with check (
+    created_by = auth.uid()
+    and exists (
+      select 1 from public.users
+      where id = auth.uid() and role in ('convener_teacher', 'advisor_teacher', 'chairperson')
+    )
+  );
+
+create policy "Activity log is viewable by authenticated users." on public.activity_log
+  for select to authenticated using (true);
+
+create policy "Authenticated users can create activity log." on public.activity_log
+  for insert to authenticated with check (auth.uid() is not null);
 
 
 -- 13. Trigger function to handle new registered user in auth.users

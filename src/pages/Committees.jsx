@@ -28,7 +28,8 @@ const inputStyle = {
   padding: '10px 14px'
 }
 
-export default function Committees({ currentUserProfile }) {
+export default function Committees({ currentUserProfile, lang }) {
+  const _ = (zh, en) => lang === 'zh' ? zh : en
   const [committees, setCommittees] = useState([])
   const [activeTab, setActiveTab] = useState('active') // 'active' or 'archived'
   const [loading, setLoading] = useState(true)
@@ -56,7 +57,7 @@ export default function Committees({ currentUserProfile }) {
   })
   const [newMemberData, setNewMemberData] = useState({
     user_id: '',
-    position: '普通筹委'
+    position: '普通筹委'  // internal data, stored in DB as Chinese
   })
   const [newCommTask, setNewCommTask] = useState({
     title: '',
@@ -123,7 +124,7 @@ export default function Committees({ currentUserProfile }) {
 
       setCommittees(enrichedComms)
     } catch (err) {
-      setErrorMsg(err.message || '获取筹委团列表失败 Failed to fetch committees.')
+      setErrorMsg(err.message || _('获取筹委团列表失败', 'Failed to load committees.'))
     } finally {
       setLoading(false)
     }
@@ -192,7 +193,7 @@ export default function Committees({ currentUserProfile }) {
       }
 
     } catch (err) {
-      setErrorMsg(err.message || '获取筹委团详情失败 Failed to fetch details.')
+      setErrorMsg(err.message || _('获取筹委团详情失败', 'Failed to load committee details.'))
     }
   }
 
@@ -217,7 +218,7 @@ export default function Committees({ currentUserProfile }) {
 
       if (error) throw error
 
-      setSuccessMsg(`筹委团 "${newCommData.name}" 创建成功！\nCommittee created.`)
+      setSuccessMsg(_(`筹委团 "${newCommData.name}" 创建成功！`, `Committee "${newCommData.name}" created!`))
       setShowCreateModal(false)
       setNewCommData({ name: '', session: '', start_date: '', end_date: '' })
       fetchCommittees()
@@ -244,13 +245,13 @@ export default function Committees({ currentUserProfile }) {
         })
 
       if (error) throw error
-      setSuccessMsg('成功将成员招募进筹委团！')
+      setSuccessMsg(_('成功将成员招募进筹委团！', 'Member added to committee!'))
       setShowAddMemberModal(false)
       setNewMemberData({ user_id: '', position: '普通筹委' })
       fetchCommitteeDetails(selectedComm.id)
       fetchCommittees()
     } catch (err) {
-      setErrorMsg(err.message || '该成员已存在于此筹委团中。 Member already in committee.')
+      setErrorMsg(err.message || _('该成员已存在于此筹委团中。', 'Member already exists in this committee.'))
     } finally {
       setFormSubmitting(false)
     }
@@ -258,7 +259,7 @@ export default function Committees({ currentUserProfile }) {
 
   const handleRemoveMember = async (userId) => {
     if (!selectedComm) return
-    if (!window.confirm('确定要移出此筹委成员吗？\nAre you sure you want to remove this member?')) return
+    if (!window.confirm(_('确定要移出此筹委成员吗？', 'Remove this member from the committee?'))) return
     setErrorMsg('')
     setSuccessMsg('')
     try {
@@ -269,7 +270,7 @@ export default function Committees({ currentUserProfile }) {
         .eq('user_id', userId)
 
       if (error) throw error
-      setSuccessMsg('成员已成功移出筹委团。')
+      setSuccessMsg(_('成员已成功移出筹委团。', 'Member removed from committee.'))
       fetchCommitteeDetails(selectedComm.id)
       fetchCommittees()
     } catch (err) {
@@ -308,7 +309,7 @@ export default function Committees({ currentUserProfile }) {
         if (error) throw error
         if (data) setDriveEventId(data.id)
       }
-      setSuccessMsg('Google Drive 分享链接已成功绑定！')
+      setSuccessMsg(_('Google Drive 分享链接已成功绑定！', 'Google Drive link saved!'))
     } catch (err) {
       setErrorMsg(err.message)
     }
@@ -316,7 +317,7 @@ export default function Committees({ currentUserProfile }) {
 
   const handleArchiveCommittee = async () => {
     if (!selectedComm) return
-    const confirmMsg = `确定要归档筹委团 "${selectedComm.name}" 吗？\n归档后所有任务、成员配置将被锁定为只读历史档案！\nArchive this committee and lock all records to read-only?`
+    const confirmMsg = _(`确定要归档筹委团 "${selectedComm.name}" 吗？\n归档后所有任务、成员配置将被锁定为只读历史档案！`, `Archive committee "${selectedComm.name}"?\nAll tasks and members will be locked as read-only!`)
     if (!window.confirm(confirmMsg)) return
     setErrorMsg('')
     setSuccessMsg('')
@@ -327,7 +328,7 @@ export default function Committees({ currentUserProfile }) {
         .eq('id', selectedComm.id)
 
       if (error) throw error
-      setSuccessMsg('筹委团已成功归档并锁定！')
+      setSuccessMsg(_('筹委团已成功归档并锁定！', 'Committee archived and locked!'))
       setSelectedComm(null)
       fetchCommittees()
     } catch (err) {
@@ -356,7 +357,7 @@ export default function Committees({ currentUserProfile }) {
         })
 
       if (error) throw error
-      setSuccessMsg('筹委任务指派成功！')
+      setSuccessMsg(_('筹委任务指派成功！', 'Task assigned!'))
       setShowTaskShortcutModal(false)
       setNewCommTask({ title: '', description: '', assigned_to: [], due_date: '', priority: 'medium' })
       fetchCommitteeDetails(selectedComm.id)
@@ -391,10 +392,10 @@ export default function Committees({ currentUserProfile }) {
         <div>
           <h1 className="text-2xl font-black flex items-center gap-2" style={{ color: '#1a1a1a' }}>
             <FolderGit style={{ color: '#95CBFF' }} />
-            筹委团管理
+            {_('筹委团管理', 'Committees')}
           </h1>
           <p className="text-sm mt-1 font-semibold" style={{ color: '#6b7280' }}>
-            Event Committees (Assemble dynamics event teams and trace archive records)
+            {_('筹委团 — 组建活动团队，追踪归档记录', 'Assemble event teams and trace archive records')}
           </p>
         </div>
 
@@ -409,7 +410,7 @@ export default function Committees({ currentUserProfile }) {
             style={{ background: '#95CBFF', boxShadow: '0 4px 16px rgba(149,203,255,0.4)' }}
           >
             <Plus size={16} />
-            新建筹委团
+            {_('新建筹委团', 'New Committee')}
           </button>
         )}
       </div>
@@ -441,7 +442,7 @@ export default function Committees({ currentUserProfile }) {
               color: activeTab === 'active' ? '#6db8ff' : '#6b7280'
             }}
           >
-            进行中 Active ({activeCommittees.length})
+             {_('进行中', 'Active')} ({activeCommittees.length})
           </button>
           <button
             onClick={() => setActiveTab('archived')}
@@ -451,7 +452,7 @@ export default function Committees({ currentUserProfile }) {
               color: activeTab === 'archived' ? '#6db8ff' : '#6b7280'
             }}
           >
-            已归档 Archived ({archivedCommittees.length})
+             {_('已归档', 'Archived')} ({archivedCommittees.length})
           </button>
         </div>
       )}
@@ -460,7 +461,7 @@ export default function Committees({ currentUserProfile }) {
       {loading && (
         <div className="flex flex-col items-center justify-center py-20 gap-3 text-gray-500">
           <Loader size={32} style={{ color: '#95CBFF', animation: 'spin 1s linear infinite' }} />
-          <p className="font-bold">加载筹委团中 Loading committees...</p>
+           <p className="font-bold">{_('加载筹委团中...', 'Loading committees...')}</p>
         </div>
       )}
 
@@ -469,7 +470,7 @@ export default function Committees({ currentUserProfile }) {
         currentTabComms.length === 0 ? (
           <div className="text-center py-20 rounded-3xl font-semibold"
             style={{ background: '#f0f7ff', border: '1.5px solid #e0f1ff', color: '#6b7280' }}>
-            没有找到相关筹委团。 No event committees found.
+             {_('没有找到相关筹委团。', 'No committees found.')}
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 animate-[fadeIn_0.3s_ease]">
@@ -486,12 +487,12 @@ export default function Committees({ currentUserProfile }) {
 
                 <div className="space-y-3">
                   <div className="flex items-start justify-between gap-2">
-                    <span className="text-[10px] font-black text-gray-400 uppercase tracking-wider block">
-                      Session {comm.session}
-                    </span>
+                      <span className="text-[10px] font-black text-gray-400 uppercase tracking-wider block">
+                        {_('届次', 'Session')} {comm.session}
+                      </span>
                     {comm.is_archived && (
                       <span className="flex items-center gap-0.5 text-[9px] font-black bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full border border-gray-200">
-                        <Lock size={9} /> 归档 Archived
+                        <Lock size={9} /> {_('归档', 'Archived')}
                       </span>
                     )}
                   </div>
@@ -513,10 +514,10 @@ export default function Committees({ currentUserProfile }) {
                   <div className="flex justify-between items-center text-xs font-black text-gray-500">
                     <span className="flex items-center gap-1">
                       <Users size={12} style={{ color: '#95CBFF' }} />
-                      {comm.memberCount} 成员
+                      {comm.memberCount} {_('成员', 'members')}
                     </span>
                     <span>
-                      任务进度 {comm.completedTasks}/{comm.totalTasks}
+                       {_('任务进度', 'Tasks')} {comm.completedTasks}/{comm.totalTasks}
                     </span>
                   </div>
 
@@ -547,7 +548,7 @@ export default function Committees({ currentUserProfile }) {
               onClick={() => { setSelectedComm(null); fetchCommittees(); }}
               className="px-3.5 py-1.5 rounded-xl text-xs font-black border border-[#e0f1ff] bg-white text-gray-500 hover:bg-[#f0f7ff] cursor-pointer"
             >
-              ← 返回列表 Back
+              ← {_('返回列表', 'Back')}
             </button>
             <h2 className="font-black text-lg text-gray-900">{selectedComm.name}</h2>
           </div>
@@ -562,7 +563,7 @@ export default function Committees({ currentUserProfile }) {
                 <div className="flex justify-between items-center pb-3 border-b-1.5 border-[#f0f7ff]">
                   <h3 className="font-black text-sm text-gray-900 flex items-center gap-1.5">
                     <Users size={16} style={{ color: '#95CBFF' }} />
-                    筹委名册 Committee Board ({commMembers.length}人)
+                    {_('筹委名单', 'Committee Members')} ({commMembers.length}{_('人', '')})
                   </h3>
                   {isPowerUser && !selectedComm.is_archived && (
                     <button
@@ -570,7 +571,7 @@ export default function Committees({ currentUserProfile }) {
                       className="flex items-center gap-1 px-3 py-1.5 text-xs font-black rounded-xl text-white transition cursor-pointer"
                       style={{ background: '#95CBFF' }}
                     >
-                      <UserPlus size={12} /> 招募筹委
+                      <UserPlus size={12} /> {_('招募筹委', 'Add Member')}
                     </button>
                   )}
                 </div>
@@ -578,11 +579,11 @@ export default function Committees({ currentUserProfile }) {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                   {commMembers.length === 0 ? (
                     <p className="text-xs text-gray-400 font-bold col-span-2 py-6 text-center">
-                      暂无筹委成员，请点击右上角按钮招募成员。
+                      {_('暂无筹委成员，请点击右上角按钮招募成员。', 'No members yet. Click "Add Member" above.')}
                     </p>
                   ) : (
                     commMembers.map(m => {
-                      const userDetails = m.users || { name: '未知成员', email: '', role: '' }
+                      const userDetails = m.users || { name: _('未知成员', 'Unknown'), email: '', role: '' }
                       return (
                         <div key={m.user_id} className="p-3.5 rounded-2xl border border-[#e0f1ff] flex justify-between items-center bg-[#fcfcfc]">
                           <div>
@@ -595,7 +596,7 @@ export default function Committees({ currentUserProfile }) {
                             <button
                               onClick={() => handleRemoveMember(m.user_id)}
                               className="p-1.5 text-red-500 hover:bg-red-50 rounded-lg transition cursor-pointer"
-                              title="移出筹委团"
+                              title={_('移出筹委团', 'Remove')}
                             >
                               <Trash2 size={13} />
                             </button>
@@ -612,7 +613,7 @@ export default function Committees({ currentUserProfile }) {
                 <div className="flex justify-between items-center pb-3 border-b-1.5 border-[#f0f7ff]">
                   <h3 className="font-black text-sm text-gray-900 flex items-center gap-1.5">
                     <ListTodo size={16} style={{ color: '#95CBFF' }} />
-                    特定任务追踪 Committee Tasks ({commTasks.length})
+                    {_('特定任务追踪', 'Task Tracking')} ({commTasks.length})
                   </h3>
                   {isPowerUser && !selectedComm.is_archived && (
                     <button
@@ -623,7 +624,7 @@ export default function Committees({ currentUserProfile }) {
                       className="flex items-center gap-1 px-3 py-1.5 text-xs font-black rounded-xl text-white transition cursor-pointer"
                       style={{ background: '#95CBFF' }}
                     >
-                      <Plus size={12} /> 指派筹委任务
+                      <Plus size={12} /> {_('指派筹委任务', 'Assign Task')}
                     </button>
                   )}
                 </div>
@@ -631,7 +632,7 @@ export default function Committees({ currentUserProfile }) {
                 <div className="space-y-2.5 max-h-[360px] overflow-y-auto pr-1">
                   {commTasks.length === 0 ? (
                     <p className="text-xs text-gray-400 font-bold py-8 text-center border-2 border-dashed border-gray-100 rounded-2xl">
-                      此筹委目前无独立任务。点击“指派任务”开始。
+                       {_('此筹委目前无独立任务。点击“指派任务”开始。', 'No tasks for this committee. Click "Assign Task" to start.')}
                     </p>
                   ) : (
                     commTasks.map(t => (
@@ -641,7 +642,7 @@ export default function Committees({ currentUserProfile }) {
                           {t.due_date && (
                             <span className="text-[9px] font-bold text-gray-400 flex items-center gap-0.5">
                               <Calendar size={10} />
-                              {new Date(t.due_date).toLocaleDateString()} 截止
+                              {new Date(t.due_date).toLocaleDateString()} {_('截止', 'due')}
                             </span>
                           )}
                         </div>
@@ -653,7 +654,7 @@ export default function Committees({ currentUserProfile }) {
                             border: t.status === 'completed' ? '1px solid #a7f3d0' : t.status === 'need_help' ? '1px solid #fde68a' : '1px solid #bfdbfe'
                           }}
                         >
-                          {t.status === 'completed' ? '已完成' : t.status === 'need_help' ? '需协助' : t.status === 'in_progress' ? '进行中' : '待开始'}
+                          {t.status === 'completed' ? _('已完成', 'Completed') : t.status === 'need_help' ? _('需协助', 'Needs Help') : t.status === 'in_progress' ? _('进行中', 'In Progress') : _('待开始', 'Pending')}
                         </span>
                       </div>
                     ))
@@ -670,12 +671,12 @@ export default function Committees({ currentUserProfile }) {
               <div className="p-6 rounded-3xl bg-white border border-[#e0f1ff] space-y-4" style={{ boxShadow: '0 4px 20px rgba(149,203,255,0.06)' }}>
                 <h3 className="font-black text-sm text-gray-900 flex items-center gap-1.5 pb-3 border-b-1.5 border-[#f0f7ff]">
                   <ExternalLink size={16} style={{ color: '#95CBFF' }} />
-                  文件归档 Google Drive
+                  {_('文件归档 Google Drive', 'Google Drive Archive')}
                 </h3>
                 
                 <div className="space-y-3.5">
                   <p className="text-xs font-semibold text-gray-400 leading-relaxed">
-                    请将当前筹委团专属的 Google Drive 共享文件夹链接贴在下方，以便所有成员点击直达查阅。
+                    {_('请将当前筹委团专属的 Google Drive 共享文件夹链接贴在下方，以便所有成员点击直达查阅。', 'Paste the Google Drive shared folder link below for all members to access.')}
                   </p>
                   
                   <input
@@ -695,7 +696,7 @@ export default function Committees({ currentUserProfile }) {
                       rel="noopener noreferrer"
                       className="w-full py-2 px-3 text-xs font-black text-center flex items-center justify-center gap-1 rounded-xl text-blue-600 bg-blue-50 border border-blue-200 hover:bg-blue-100 transition cursor-pointer"
                     >
-                      点击打开 Drive 目录 <ExternalLink size={12} />
+                      {_('点击打开 Google Drive 目录', 'Open Google Drive Folder')} <ExternalLink size={12} />
                     </a>
                   )}
 
@@ -705,7 +706,7 @@ export default function Committees({ currentUserProfile }) {
                       className="w-full py-2.5 rounded-2xl text-xs font-black text-white cursor-pointer transition shrink-0"
                       style={{ background: '#95CBFF' }}
                     >
-                      保存并绑定链接
+                      {_('保存并绑定链接', 'Save Drive Link')}
                     </button>
                   )}
                 </div>
@@ -715,14 +716,14 @@ export default function Committees({ currentUserProfile }) {
               {isPowerUser && (
                 <div className="p-6 rounded-3xl bg-amber-50 border border-amber-200 space-y-4">
                   <h3 className="font-black text-sm text-amber-800 flex items-center gap-1.5 pb-2 border-b border-amber-100">
-                    <Lock size={15} /> 筹委团管理选项
+                    <Lock size={15} /> {_('筹委团管理选项', 'Committee Settings')}
                   </h3>
                   
                   <div className="space-y-3">
                     <p className="text-xs font-semibold text-amber-600 leading-relaxed">
                       {selectedComm.is_archived 
-                        ? '此筹委团目前已被归档锁定。所有任务和成员构成均为只读状态，无法再进行增删改查。'
-                        : '当活动成功结束、账目和文书工作交接完成时，可点击归档。归档后，此团队的数据将永久转为只读形式。'
+                        ? _('此筹委团目前已被归档锁定。所有任务和成员构成均为只读状态，无法再进行增删改查。', 'This committee is archived and locked. All data is read-only.')
+                        : _('当活动成功结束、账目和文书工作交接完成时，可点击归档。归档后，此团队的数据将永久转为只读形式。', 'When the event is completed, archive the committee. All data will become read-only.')
                       }
                     </p>
 
@@ -731,7 +732,7 @@ export default function Committees({ currentUserProfile }) {
                         onClick={handleArchiveCommittee}
                         className="w-full py-2.5 rounded-2xl text-xs font-black text-white transition bg-amber-500 hover:bg-amber-600 cursor-pointer"
                       >
-                        🔒 一键归档当前活动
+                        {_('🔒 一键归档当前活动', '🔒 Archive Committee')}
                       </button>
                     )}
                   </div>
@@ -751,33 +752,33 @@ export default function Committees({ currentUserProfile }) {
             <div className="px-6 py-4 flex items-center justify-between border-b-1.5 border-[#e0f1ff]">
               <h3 className="font-black text-base flex items-center gap-2 text-gray-900">
                 <FolderGit size={18} style={{ color: '#95CBFF' }} />
-                新建筹委活动团队
+                {_('新建筹委活动团队', 'New Committee')}
               </h3>
               <button onClick={() => setShowCreateModal(false)} className="text-lg transition cursor-pointer font-black text-gray-400 hover:text-gray-600">✕</button>
             </div>
             
             <form onSubmit={handleCreateCommittee} className="p-6 space-y-4">
               <div>
-                <label className="block text-xs font-black uppercase tracking-wider mb-1.5 text-gray-500">活动筹委团名称 Name</label>
+                <label className="block text-xs font-black uppercase tracking-wider mb-1.5 text-gray-500">{_('活动筹委团名称', 'Committee Name')}</label>
                 <input
                   type="text"
                   required
                   value={newCommData.name}
                   onChange={(e) => setNewCommData({ ...newCommData, name: e.target.value })}
-                  placeholder="例如: 华文学会50周年庆筹委团"
+                  placeholder={_('例如: 华文学会50周年庆筹委团', 'e.g. CLC_sys 50th Anniversary Committee')}
                   className="w-full text-sm font-semibold outline-none py-2.5 transition"
                   style={inputStyle}
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-black uppercase tracking-wider mb-1.5 text-gray-500">归属年度届次 Session</label>
+                <label className="block text-xs font-black uppercase tracking-wider mb-1.5 text-gray-500">{_('归属年度届次', 'Session')}</label>
                 <input
                   type="text"
                   required
                   value={newCommData.session}
                   onChange={(e) => setNewCommData({ ...newCommData, session: e.target.value })}
-                  placeholder="例如: 2026/2027"
+                  placeholder={_('例如: 2026/2027', 'e.g. 2026/2027')}
                   className="w-full text-sm font-semibold outline-none py-2.5 transition"
                   style={inputStyle}
                 />
@@ -785,7 +786,7 @@ export default function Committees({ currentUserProfile }) {
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-black uppercase tracking-wider mb-1.5 text-gray-500">筹备开始 Date</label>
+                  <label className="block text-xs font-black uppercase tracking-wider mb-1.5 text-gray-500">{_('筹备开始', 'Start Date')}</label>
                   <input
                     type="date"
                     value={newCommData.start_date}
@@ -795,7 +796,7 @@ export default function Committees({ currentUserProfile }) {
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-black uppercase tracking-wider mb-1.5 text-gray-500">活动日期 Date</label>
+                  <label className="block text-xs font-black uppercase tracking-wider mb-1.5 text-gray-500">{_('活动日期', 'Event Date')}</label>
                   <input
                     type="date"
                     value={newCommData.end_date}
@@ -810,13 +811,13 @@ export default function Committees({ currentUserProfile }) {
                 <button type="button" onClick={() => setShowCreateModal(false)}
                   className="px-4 py-2 rounded-2xl text-xs font-bold transition cursor-pointer"
                   style={{ background: '#f0f7ff', border: '1.5px solid #e0f1ff', color: '#6b7280' }}>
-                  取消
+                  {_('取消', 'Cancel')}
                 </button>
                 <button type="submit" disabled={formSubmitting}
                   className="px-4 py-2 rounded-2xl text-xs font-black text-white transition cursor-pointer"
                   style={{ background: '#95CBFF', opacity: formSubmitting ? 0.7 : 1 }}
                 >
-                  {formSubmitting ? '保存中...' : '确认创建'}
+                  {formSubmitting ? _('保存中...', 'Saving...') : _('确认创建', 'Create')}
                 </button>
               </div>
             </form>
@@ -831,14 +832,14 @@ export default function Committees({ currentUserProfile }) {
             <div className="px-6 py-4 flex items-center justify-between border-b-1.5 border-[#e0f1ff]">
               <h3 className="font-black text-base flex items-center gap-2 text-gray-900">
                 <UserPlus size={18} style={{ color: '#95CBFF' }} />
-                招募筹备干事成员
+                {_('招募筹备干事成员', 'Add Committee Member')}
               </h3>
               <button onClick={() => setShowAddMemberModal(false)} className="text-lg transition cursor-pointer font-black text-gray-400 hover:text-gray-600">✕</button>
             </div>
 
             <form onSubmit={handleAddMember} className="p-6 space-y-4">
               <div>
-                <label className="block text-xs font-black uppercase tracking-wider mb-1.5 text-gray-500">选择已有执委 Select User</label>
+                <label className="block text-xs font-black uppercase tracking-wider mb-1.5 text-gray-500">{_('选择已有执委', 'Select a Member')}</label>
                 <select
                   required
                   value={newMemberData.user_id}
@@ -846,7 +847,7 @@ export default function Committees({ currentUserProfile }) {
                   className="w-full text-sm outline-none py-2.5 transition cursor-pointer"
                   style={{ ...inputStyle, background: 'white' }}
                 >
-                  <option value="">-- 请选择一名干事 --</option>
+                  <option value="">{_('-- 请选择一名干事 --', '-- Select a member --')}</option>
                   {users.map(u => (
                     <option key={u.id} value={u.id}>{u.name} ({u.email})</option>
                   ))}
@@ -854,20 +855,20 @@ export default function Committees({ currentUserProfile }) {
               </div>
 
               <div>
-                <label className="block text-xs font-black uppercase tracking-wider mb-1.5 text-gray-500">在此筹委团内的职位 Position</label>
+                <label className="block text-xs font-black uppercase tracking-wider mb-1.5 text-gray-500">{_('在此筹委团内的职位', 'Position')}</label>
                 <select
                   value={newMemberData.position}
                   onChange={(e) => setNewMemberData({ ...newMemberData, position: e.target.value })}
                   className="w-full text-sm outline-none py-2.5 transition cursor-pointer"
                   style={{ ...inputStyle, background: 'white' }}
                 >
-                  <option value="筹委主席">筹委主席 (Event Chair)</option>
-                  <option value="筹委副主席">筹委副主席 (Event Vice-Chair)</option>
-                  <option value="文书干事">文书干事 (Secretary)</option>
-                  <option value="财政干事">财政干事 (Treasurer)</option>
-                  <option value="总务干事">总务干事 (General Duties)</option>
-                  <option value="宣传组长">宣传组长 (Publicity Lead)</option>
-                  <option value="普通筹委">普通筹委 (Committee Member)</option>
+                  <option value="筹委主席">{_('筹委主席', 'Committee President')}</option>
+                  <option value="筹委副主席">{_('筹委副主席', 'Committee Vice President')}</option>
+                  <option value="文书干事">{_('文书干事', 'Secretary')}</option>
+                  <option value="财政干事">{_('财政干事', 'Treasurer')}</option>
+                  <option value="总务干事">{_('总务干事', 'General Affairs')}</option>
+                  <option value="宣传组长">{_('宣传组长', 'Publicity Lead')}</option>
+                  <option value="普通筹委">{_('普通筹委', 'Committee Member')}</option>
                 </select>
               </div>
 
@@ -875,13 +876,13 @@ export default function Committees({ currentUserProfile }) {
                 <button type="button" onClick={() => setShowAddMemberModal(false)}
                   className="px-4 py-2 rounded-2xl text-xs font-bold transition cursor-pointer"
                   style={{ background: '#f0f7ff', border: '1.5px solid #e0f1ff', color: '#6b7280' }}>
-                  取消
+                  {_('取消', 'Cancel')}
                 </button>
                 <button type="submit" disabled={formSubmitting}
                   className="px-4 py-2 rounded-2xl text-xs font-black text-white transition cursor-pointer"
                   style={{ background: '#95CBFF', opacity: formSubmitting ? 0.7 : 1 }}
                 >
-                  {formSubmitting ? '保存中...' : '确认加入'}
+                  {formSubmitting ? _('保存中...', 'Saving...') : _('确认加入', 'Add')}
                 </button>
               </div>
             </form>
@@ -896,31 +897,31 @@ export default function Committees({ currentUserProfile }) {
             <div className="px-6 py-4 flex items-center justify-between border-b-1.5 border-[#e0f1ff] shrink-0">
               <h3 className="font-black text-base flex items-center gap-2 text-gray-900">
                 <ListTodo size={18} style={{ color: '#95CBFF' }} />
-                指派独立活动筹备任务
+                {_('指派独立活动筹备任务', 'Assign Task')}
               </h3>
               <button onClick={() => setShowTaskShortcutModal(false)} className="text-lg transition cursor-pointer font-black text-gray-400 hover:text-gray-600">✕</button>
             </div>
 
             <form onSubmit={handleCreateTaskShortcut} className="p-6 space-y-4 overflow-y-auto flex-1">
               <div>
-                <label className="block text-xs font-black uppercase tracking-wider mb-1.5 text-gray-500">任务名称 Title</label>
+                <label className="block text-xs font-black uppercase tracking-wider mb-1.5 text-gray-500">{_('任务名称', 'Task Name')}</label>
                 <input
                   type="text"
                   required
                   value={newCommTask.title}
                   onChange={(e) => setNewCommTask({ ...newCommTask, title: e.target.value })}
-                  placeholder="例如: 借用多媒体活动教室"
+                  placeholder={_('例如: 借用多媒体活动教室', 'e.g. Book multimedia room')}
                   className="w-full text-sm font-semibold outline-none py-2.5 transition"
                   style={inputStyle}
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-black uppercase tracking-wider mb-1.5 text-gray-500">详细描述 Description</label>
+                <label className="block text-xs font-black uppercase tracking-wider mb-1.5 text-gray-500">{_('详细描述', 'Description')}</label>
                 <textarea
                   value={newCommTask.description}
                   onChange={(e) => setNewCommTask({ ...newCommTask, description: e.target.value })}
-                  placeholder="描述该项任务的具体细节..."
+                  placeholder={_('描述该项任务的具体细节...', 'Describe the task details...')}
                   rows={2}
                   className="w-full text-sm font-semibold outline-none py-2 transition"
                   style={{ ...inputStyle, borderRadius: 20 }}
@@ -929,7 +930,7 @@ export default function Committees({ currentUserProfile }) {
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-black uppercase tracking-wider mb-1.5 text-gray-500">截止日期 Due Date</label>
+                  <label className="block text-xs font-black uppercase tracking-wider mb-1.5 text-gray-500">{_('截止日期', 'Due Date')}</label>
                   <input
                     type="datetime-local"
                     value={newCommTask.due_date}
@@ -939,27 +940,27 @@ export default function Committees({ currentUserProfile }) {
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-black uppercase tracking-wider mb-1.5 text-gray-500">优先级 Priority</label>
+                  <label className="block text-xs font-black uppercase tracking-wider mb-1.5 text-gray-500">{_('优先级', 'Priority')}</label>
                   <select
                     value={newCommTask.priority}
                     onChange={(e) => setNewCommTask({ ...newCommTask, priority: e.target.value })}
                     className="w-full text-sm outline-none py-2.5 transition cursor-pointer"
                     style={{ ...inputStyle, background: 'white' }}
                   >
-                    <option value="high">🔴 高 High</option>
-                    <option value="medium">🟡 中 Medium</option>
-                    <option value="low">⚪ 低 Low</option>
+                    <option value="high">{_('🔴 高', '🔴 High')}</option>
+                    <option value="medium">{_('🟡 中', '🟡 Medium')}</option>
+                    <option value="low">{_('⚪ 低', '⚪ Low')}</option>
                   </select>
                 </div>
               </div>
 
               <div>
-                <label className="block text-xs font-black uppercase tracking-wider mb-1.5 text-gray-500">指派给哪些筹委 (可多选)</label>
+                <label className="block text-xs font-black uppercase tracking-wider mb-1.5 text-gray-500">{_('指派给哪些筹委 (可多选)', 'Assign To (Multiple)')}</label>
                 {/* Only users assigned to this committee */}
                 <div className="grid grid-cols-2 gap-2 p-3 rounded-2xl max-h-[140px] overflow-y-auto"
                   style={{ background: '#f0f7ff', border: '1.5px solid #95CBFF' }}>
                   {commMembers.map(m => {
-                    const u = m.users || { name: '未知成员', email: '' }
+                    const u = m.users || { name: _('未知成员', 'Unknown'), email: '' }
                     const isChecked = newCommTask.assigned_to.includes(m.user_id)
                     return (
                       <button
@@ -979,7 +980,7 @@ export default function Committees({ currentUserProfile }) {
                     )
                   })}
                   {commMembers.length === 0 && (
-                    <p className="text-[10px] text-gray-400 font-bold py-2 col-span-2 text-center">请先往筹委名册中招募成员！</p>
+                    <p className="text-[10px] text-gray-400 font-bold py-2 col-span-2 text-center">{_('请先往筹委名单中招募成员！', 'Add members to the committee first!')}</p>
                   )}
                 </div>
               </div>
@@ -988,13 +989,13 @@ export default function Committees({ currentUserProfile }) {
                 <button type="button" onClick={() => setShowTaskShortcutModal(false)}
                   className="px-4 py-2 rounded-2xl text-xs font-bold transition cursor-pointer"
                   style={{ background: '#f0f7ff', border: '1.5px solid #e0f1ff', color: '#6b7280' }}>
-                  取消
+                  {_('取消', 'Cancel')}
                 </button>
                 <button type="submit" disabled={formSubmitting || commMembers.length === 0}
                   className="px-4 py-2 rounded-2xl text-xs font-black text-white transition cursor-pointer"
                   style={{ background: '#95CBFF', opacity: formSubmitting ? 0.7 : 1 }}
                 >
-                  {formSubmitting ? '发布中...' : '发布任务'}
+                  {formSubmitting ? _('发布中...', 'Publishing...') : _('发布任务', 'Assign Task')}
                 </button>
               </div>
             </form>

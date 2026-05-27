@@ -7,8 +7,8 @@ import PositionSelect from '../components/PositionSelect'
 const ROLE_OPTIONS = [
   { value: 'convener_teacher', zh: '召集老师', en: 'Convener Teacher', bg: '#ffe4ec', color: '#be185d', border: '#FFB3C6' },
   { value: 'advisor_teacher', zh: '指导老师', en: 'Advisor Teacher', bg: '#fff1f2', color: '#e11d48', border: '#fecdd3' },
-  { value: 'chairperson', zh: '主席', en: 'Chairperson', bg: '#e0f1ff', color: '#2E86C1', border: '#95CBFF' },
-  { value: 'vice_chairperson', zh: '副主席', en: 'Vice Chairperson', bg: '#ede9fe', color: '#7c3aed', border: '#c4b5fd' },
+  { value: 'chairperson', zh: '主席', en: 'President', bg: '#e0f1ff', color: '#2E86C1', border: '#95CBFF' },
+  { value: 'vice_chairperson', zh: '副主席', en: 'Vice President', bg: '#ede9fe', color: '#7c3aed', border: '#c4b5fd' },
   { value: 'secretary', zh: '正文书', en: 'Secretary', bg: '#dcfce7', color: '#16a34a', border: '#86efac' },
   { value: 'vice_secretary', zh: '副文书', en: 'Vice Secretary', bg: '#f0fdf4', color: '#15803d', border: '#bbf7d0' },
   { value: 'treasurer', zh: '正财政', en: 'Treasurer', bg: '#fef9c3', color: '#ca8a04', border: '#fde047' },
@@ -52,7 +52,8 @@ const selectStyle = {
   fontWeight: 700
 }
 
-export default function Members({ currentUserProfile }) {
+export default function Members({ currentUserProfile, lang }) {
+  const _ = (zh, en) => lang === 'zh' ? zh : en
   const [members, setMembers] = useState([])
   const [loading, setLoading] = useState(true)
   const [errorMsg, setErrorMsg] = useState('')
@@ -73,7 +74,7 @@ export default function Members({ currentUserProfile }) {
   const validateCustomRole = () => {
     if (formData.role !== 'custom') return true
     if (formData.custom_role_label?.trim()) return true
-    setErrorMsg('请输入自定义职称名称 Please enter a custom title.')
+    setErrorMsg(_('请输入自定义职称名称', 'Please enter a custom role name.'))
     return false
   }
 
@@ -85,10 +86,37 @@ export default function Members({ currentUserProfile }) {
       if (error) throw error
       setMembers(data || [])
     } catch (err) {
-      setErrorMsg(err.message || '获取成员列表失败 Failed to fetch members.')
+      setErrorMsg(err.message || _('获取成员列表失败', 'Failed to load members.'))
     } finally {
       setLoading(false)
     }
+  }
+
+  const addToCurrentBoardRoster = async (userId, role, customRoleLabel) => {
+    if (!userId) return false
+
+    const { data: currentBoard, error: boardError } = await supabase
+      .from('teams')
+      .select('id')
+      .eq('type', 'board')
+      .eq('is_archived', false)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+
+    if (boardError) throw boardError
+    if (!currentBoard?.id) return false
+
+    const { error: memberError } = await supabase
+      .from('team_members')
+      .upsert({
+        team_id: currentBoard.id,
+        user_id: userId,
+        position: role === 'custom' && customRoleLabel ? customRoleLabel : (ROLE_LABELS[role]?.zh || role),
+      }, { onConflict: 'team_id,user_id' })
+
+    if (memberError) throw memberError
+    return true
   }
 
   const handleToggleStatus = async (member) => {
@@ -97,14 +125,14 @@ export default function Members({ currentUserProfile }) {
     setSuccessMsg('')
     const nextStatus = !member.is_active
     const confirmMsg = nextStatus
-      ? `确定要重新启用 ${member.name} 的账号吗？\nRe-enable account for ${member.name}?`
-      : `确定要停用 ${member.name} 的账号吗？停用后该成员将无法登录系统。\nDeactivate account for ${member.name}?`
+      ? _(`确定要重新启用 ${member.name} 的账号吗？`, `Reactivate ${member.name}'s account?`)
+      : _(`确定要停用 ${member.name} 的账号吗？停用后该成员将无法登录系统。`, `Deactivate ${member.name}'s account? They will not be able to log in.`)
     if (!window.confirm(confirmMsg)) return
     try {
       if (!validateCustomRole()) return
       const { error } = await supabase.from('users').update({ is_active: nextStatus }).eq('id', member.id)
       if (error) throw error
-      setSuccessMsg(nextStatus ? '账号已启用 Account enabled.' : '账号已停用 Account deactivated.')
+      setSuccessMsg(nextStatus ? _('账号已启用', 'Account activated.') : _('账号已停用', 'Account deactivated.'))
       fetchMembers()
     } catch (err) {
       setErrorMsg(err.message)
@@ -134,7 +162,7 @@ export default function Members({ currentUserProfile }) {
           .eq('id', data.user.id)
         if (birthdayError) throw birthdayError
       }
-      setSuccessMsg(`成功添加账号 ${formData.name}。\nAccount ${formData.name} added successfully.`)
+      setSuccessMsg(_(`成功添加账号 ${formData.name}。`, `Account ${formData.name} created.`))
       setShowAddModal(false)
       setFormData({ name: '', email: '', role: 'ordinary_member', custom_role_label: '', birthday: '', password: '', is_active: true })
       fetchMembers()
@@ -153,7 +181,8 @@ export default function Members({ currentUserProfile }) {
     try {
       const { error } = await supabase.from('users').update({ name: formData.name, role: formData.role, custom_role_label: formData.role === 'custom' ? formData.custom_role_label.trim() : null, birthday: formData.birthday || null }).eq('id', selectedMember.id)
       if (error) throw error
-      setSuccessMsg(`成功修改账号 ${formData.name} 的信息。\nAccount ${formData.name} updated.`)
+      setSuccessMsg(_(`成功修改账号 ${formData.name} 的信息。`, `Account ${formData.name} updated.`))
+      await addToCurrentBoardRoster(selectedMember.id, formData.role, formData.custom_role_label?.trim())
       setShowEditModal(false)
       fetchMembers()
     } catch (err) {
@@ -188,10 +217,10 @@ export default function Members({ currentUserProfile }) {
         <div>
           <h1 className="text-2xl font-black flex items-center gap-2" style={{ color: '#1a1a1a' }}>
             <Shield style={{ color: '#95CBFF' }} />
-            系统账号管理
+            {_('系统账号管理', 'Members')}
           </h1>
           <p className="text-sm mt-1 font-semibold" style={{ color: '#6b7280' }}>
-            User Accounts (teachers, committee members and ordinary members)
+            {_('系统账号 — 管理所有成员、召集老师、指导老师与普通会员账号', 'Manage all member accounts, convener, advisor, and ordinary members.')}
           </p>
         </div>
         {isPowerUser && (
@@ -200,7 +229,7 @@ export default function Members({ currentUserProfile }) {
             className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-2xl text-sm font-black transition cursor-pointer"
             style={{ background: '#95CBFF', color: 'white', boxShadow: '0 4px 16px rgba(149,203,255,0.4)' }}>
             <UserPlus size={16} />
-            添加账号
+            {_('添加账号', 'Add Account')}
           </button>
         )}
       </div>
@@ -231,7 +260,7 @@ export default function Members({ currentUserProfile }) {
             type="text"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            placeholder="搜索姓名或邮箱 Search name or email..."
+            placeholder={_('搜索姓名或邮箱', 'Search by name or email')}
             className="w-full pl-10 pr-4 py-2.5 text-sm outline-none transition"
             style={inputStyle}
           />
@@ -239,18 +268,18 @@ export default function Members({ currentUserProfile }) {
         <div>
           <select value={roleFilter} onChange={(e) => setRoleFilter(e.target.value)}
             className="w-full px-3 py-2.5 text-sm outline-none transition" style={selectStyle}>
-            <option value="all">所有职务 / All Roles</option>
+            <option value="all">{_('所有职务', 'All Roles')}</option>
             {ROLE_OPTIONS.map(role => (
-              <option key={role.value} value={role.value}>{role.zh} / {role.en}</option>
+              <option key={role.value} value={role.value}>{role[lang]}</option>
             ))}
           </select>
         </div>
         <div>
           <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}
             className="w-full px-3 py-2.5 text-sm outline-none transition" style={selectStyle}>
-            <option value="all">所有状态 / All Status</option>
-            <option value="active">使用中 / Active</option>
-            <option value="inactive">已停用 / Deactivated</option>
+            <option value="all">{_('所有状态', 'All Status')}</option>
+            <option value="active">{_('使用中', 'Active')}</option>
+            <option value="inactive">{_('已停用', 'Inactive')}</option>
           </select>
         </div>
       </div>
@@ -259,12 +288,12 @@ export default function Members({ currentUserProfile }) {
       {loading ? (
         <div className="flex flex-col items-center justify-center py-16 gap-3" style={{ color: '#6b7280' }}>
           <Loader size={30} style={{ color: '#95CBFF', animation: 'spin 1s linear infinite' }} />
-          <p className="font-bold">加载成员列表中 Loading members...</p>
+          <p className="font-bold">{_('加载成员列表中...', 'Loading members...')}</p>
         </div>
       ) : filteredMembers.length === 0 ? (
         <div className="text-center py-16 rounded-2xl font-semibold"
           style={{ background: '#f0f7ff', border: '1.5px solid #e0f1ff', color: '#6b7280' }}>
-          没有找到符合条件的成员 No members found.
+          {_('没有找到符合条件的成员', 'No members found.')}
         </div>
       ) : (
         <>
@@ -273,7 +302,7 @@ export default function Members({ currentUserProfile }) {
             <table className="w-full text-left text-sm border-collapse">
               <thead>
                 <tr style={{ background: '#95CBFF' }}>
-                  {['姓名 Name', '邮箱 Email', '职务 Role', '状态 Status', ...(isPowerUser ? ['操作 Action'] : [])].map(h => (
+                  {[_('姓名', 'Name'), _('邮箱', 'Email'), _('职务', 'Role'), _('状态', 'Status'), ...(isPowerUser ? [_('操作', 'Actions')] : [])].map(h => (
                     <th key={h} className="py-4 px-5 font-black" style={{ color: 'white' }}>{h}</th>
                   ))}
                 </tr>
@@ -288,19 +317,19 @@ export default function Members({ currentUserProfile }) {
                       <td className="py-4 px-5">
                         <span className="px-2.5 py-1 text-xs font-black rounded-full"
                           style={{ background: roleLabel.bg, color: roleLabel.color, border: `1.5px solid ${roleLabel.border}` }}>
-                          {roleLabel.zh} / {roleLabel.en}
+                          {roleLabel[lang]}
                         </span>
                       </td>
                       <td className="py-4 px-5">
                         {m.is_active ? (
                           <span className="flex items-center gap-1.5 text-xs font-black" style={{ color: '#16a34a' }}>
                             <span className="w-2 h-2 rounded-full" style={{ background: '#22c55e' }} />
-                            使用中 Active
+ {_('使用中', 'Active')}
                           </span>
                         ) : (
                           <span className="flex items-center gap-1.5 text-xs font-black" style={{ color: '#9ca3af' }}>
                             <span className="w-2 h-2 rounded-full" style={{ background: '#9ca3af' }} />
-                            已停用 Deactivated
+                            {_('已停用', 'Inactive')}
                           </span>
                         )}
                       </td>
@@ -310,7 +339,7 @@ export default function Members({ currentUserProfile }) {
                             <button onClick={() => openEditModal(m)}
                               className="p-1.5 rounded-xl transition cursor-pointer"
                               style={{ border: '1.5px solid #e0f1ff', background: 'white', color: '#6b7280' }}
-                              title="编辑 Edit">
+                              title={_('编辑', 'Edit')}>
                               <Edit2 size={14} />
                             </button>
                             <button onClick={() => handleToggleStatus(m)}
@@ -320,7 +349,7 @@ export default function Members({ currentUserProfile }) {
                                 background: m.is_active ? '#fee2e2' : '#dcfce7',
                                 color: m.is_active ? '#dc2626' : '#16a34a'
                               }}
-                              title={m.is_active ? '停用 Deactivate' : '启用 Enable'}
+                              title={m.is_active ? _('停用', 'Deactivate') : _('启用', 'Activate')}
                               disabled={m.id === currentUserProfile.id}>
                               {m.is_active ? <UserX size={14} /> : <UserCheck size={14} />}
                             </button>
@@ -349,19 +378,19 @@ export default function Members({ currentUserProfile }) {
                       </div>
                       <span className="px-2 py-0.5 text-[10px] font-black rounded-full shrink-0"
                         style={{ background: roleLabel.bg, color: roleLabel.color, border: `1.5px solid ${roleLabel.border}` }}>
-                        {roleLabel.zh}
+                        {roleLabel[lang]}
                       </span>
                     </div>
                     <div className="text-xs pt-1.5" style={{ borderTop: '1.5px solid #f0f7ff' }}>
                       {m.is_active ? (
                         <span className="inline-flex items-center gap-1.5 font-black" style={{ color: '#16a34a' }}>
                           <span className="w-1.5 h-1.5 rounded-full" style={{ background: '#22c55e' }} />
-                          使用中 Active
+                          {_('使用中', 'Active')}
                         </span>
                       ) : (
                         <span className="inline-flex items-center gap-1.5 font-black" style={{ color: '#9ca3af' }}>
                           <span className="w-1.5 h-1.5 rounded-full" style={{ background: '#9ca3af' }} />
-                          已停用 Deactivated
+                          {_('已停用', 'Inactive')}
                         </span>
                       )}
                     </div>
@@ -371,7 +400,7 @@ export default function Members({ currentUserProfile }) {
                       <button onClick={() => openEditModal(m)}
                         className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer"
                         style={{ border: '1.5px solid #e0f1ff', background: '#f0f7ff', color: '#6b7280' }}>
-                        <Edit2 size={12} />编辑
+                        <Edit2 size={12} />{_('编辑', 'Edit')}
                       </button>
                       <button onClick={() => handleToggleStatus(m)}
                         className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer"
@@ -381,7 +410,7 @@ export default function Members({ currentUserProfile }) {
                           color: m.is_active ? '#dc2626' : '#16a34a'
                         }}
                         disabled={m.id === currentUserProfile.id}>
-                        {m.is_active ? <><UserX size={12} />停用</> : <><UserCheck size={12} />启用</>}
+                        {m.is_active ? <><UserX size={12} />{_('停用', 'Deactivate')}</> : <><UserCheck size={12} />{_('启用', 'Activate')}</>}
                       </button>
                     </div>
                   )}
@@ -399,15 +428,15 @@ export default function Members({ currentUserProfile }) {
             <div className="px-6 py-4 flex items-center justify-between"
               style={{ borderBottom: '1.5px solid #e0f1ff' }}>
               <h3 className="font-black text-lg flex items-center gap-2" style={{ color: '#1a1a1a' }}>
-                <UserPlus size={18} style={{ color: '#95CBFF' }} />添加账号
+                <UserPlus size={18} style={{ color: '#95CBFF' }} />{_('添加账号', 'Add Account')}
               </h3>
               <button onClick={() => setShowAddModal(false)}
                 className="text-lg transition cursor-pointer font-black" style={{ color: '#6b7280' }}>✕</button>
             </div>
             <form onSubmit={handleAddMember} className="p-6 space-y-4">
               {[
-                { label: '成员姓名 Name', key: 'name', type: 'text', placeholder: '如: 陈大文' },
-                { label: '登录邮箱 Email', key: 'email', type: 'email', placeholder: 'member@huawenxuehui.com' },
+                { label: _('成员姓名', 'Name'), key: 'name', type: 'text', placeholder: _('如: 陈大文', 'e.g. Chen Da-wen') },
+                { label: _('登录邮箱', 'Email'), key: 'email', type: 'email', placeholder: 'member@huawenxuehui.com' },
               ].map(f => (
                 <div key={f.key}>
                   <label className="block text-xs font-black uppercase tracking-wider mb-1.5" style={{ color: '#6b7280' }}>{f.label}</label>
@@ -421,25 +450,25 @@ export default function Members({ currentUserProfile }) {
                 onChange={(val) => setFormData({ ...formData, role: val })}
                 customLabel={formData.custom_role_label}
                 onCustomLabelChange={(label) => setFormData({ ...formData, custom_role_label: label })}
-                lang="zh"
+                lang={lang}
               />
               <div>
-                <label className="block text-xs font-black uppercase tracking-wider mb-1.5" style={{ color: '#6b7280' }}>生日 Birthday</label>
+                <label className="block text-xs font-black uppercase tracking-wider mb-1.5" style={{ color: '#6b7280' }}>{_('生日', 'Birthday')}</label>
                 <input type="date" value={formData.birthday}
                   onChange={(e) => setFormData({ ...formData, birthday: e.target.value })}
                   className="w-full px-3 py-2 text-sm outline-none transition" style={inputStyle} />
               </div>
               <div>
-                <label className="block text-xs font-black uppercase tracking-wider mb-1.5" style={{ color: '#6b7280' }}>初始登录密码 Password</label>
+                <label className="block text-xs font-black uppercase tracking-wider mb-1.5" style={{ color: '#6b7280' }}>{_('初始登录密码', 'Initial Password')}</label>
                 <input type="password" required value={formData.password}
                   onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                  placeholder="至少 6 位密码" minLength={6}
+                  placeholder={_('至少 6 位密码', 'Min 6 characters')} minLength={6}
                   className="w-full px-3 py-2 text-sm outline-none transition" style={inputStyle} />
               </div>
               <div className="flex items-center gap-2.5 text-xs p-3 rounded-2xl font-semibold"
                 style={{ background: '#fef9c3', border: '1.5px solid #fde047', color: '#ca8a04' }}>
                 <AlertCircle size={14} style={{ flexShrink: 0 }} />
-                <p>提交后，系统将自动利用 Supabase Auth 模块为该用户分配账号。成员可通过此邮箱与设定的初始密码登录。</p>
+                <p>{_('提交后，系统将自动为该用户分配账号。成员可通过此邮箱与设定的初始密码登录。', 'The system will create an account via Supabase Auth. The member can log in with this email and the initial password.')}</p>
               </div>
               <div className="flex justify-end gap-3 pt-3">
                 <button type="button" onClick={() => setShowAddModal(false)}
@@ -448,7 +477,7 @@ export default function Members({ currentUserProfile }) {
                 <button type="submit" disabled={formSubmitting}
                   className="px-4 py-2 rounded-2xl text-sm font-black transition cursor-pointer"
                   style={{ background: '#95CBFF', color: 'white', opacity: formSubmitting ? 0.7 : 1 }}>
-                  {formSubmitting ? '保存中...' : '确认创建'}
+                  {formSubmitting ? _('保存中...', 'Saving...') : _('确认创建', 'Create')}
                 </button>
               </div>
             </form>
@@ -463,23 +492,23 @@ export default function Members({ currentUserProfile }) {
             <div className="px-6 py-4 flex items-center justify-between"
               style={{ borderBottom: '1.5px solid #e0f1ff' }}>
               <h3 className="font-black text-lg flex items-center gap-2" style={{ color: '#1a1a1a' }}>
-                <Edit2 size={18} style={{ color: '#95CBFF' }} />修改账号信息
+                <Edit2 size={18} style={{ color: '#95CBFF' }} />{_('修改账号信息', 'Edit Account')}
               </h3>
               <button onClick={() => setShowEditModal(false)}
                 className="text-lg transition cursor-pointer font-black" style={{ color: '#6b7280' }}>✕</button>
             </div>
             <form onSubmit={handleEditMemberSubmit} className="p-6 space-y-4">
               <div>
-                <label className="block text-xs font-black uppercase tracking-wider mb-1.5" style={{ color: '#6b7280' }}>登录邮箱 Email</label>
+                <label className="block text-xs font-black uppercase tracking-wider mb-1.5" style={{ color: '#6b7280' }}>{_('登录邮箱', 'Email')}</label>
                 <input type="email" disabled value={formData.email}
                   className="w-full px-3 py-2 text-sm outline-none font-mono"
                   style={{ ...inputStyle, background: '#f5f5f5', color: '#9ca3af', cursor: 'not-allowed' }} />
               </div>
               <div>
-                <label className="block text-xs font-black uppercase tracking-wider mb-1.5" style={{ color: '#6b7280' }}>成员姓名 Name</label>
+                <label className="block text-xs font-black uppercase tracking-wider mb-1.5" style={{ color: '#6b7280' }}>{_('成员姓名', 'Name')}</label>
                 <input type="text" required value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  placeholder="如: 陈大文" className="w-full px-3 py-2 text-sm outline-none transition" style={inputStyle} />
+                  placeholder={_('如: 陈大文', 'e.g. Chen Da-wen')} className="w-full px-3 py-2 text-sm outline-none transition" style={inputStyle} />
               </div>
               <PositionSelect
                 value={formData.role}
@@ -487,27 +516,27 @@ export default function Members({ currentUserProfile }) {
                 customLabel={formData.custom_role_label}
                 onCustomLabelChange={(label) => setFormData({ ...formData, custom_role_label: label })}
                 disabled={selectedMember.id === currentUserProfile.id}
-                lang="zh"
+                lang={lang}
               />
               <div>
-                <label className="block text-xs font-black uppercase tracking-wider mb-1.5" style={{ color: '#6b7280' }}>生日 Birthday</label>
+                <label className="block text-xs font-black uppercase tracking-wider mb-1.5" style={{ color: '#6b7280' }}>{_('生日', 'Birthday')}</label>
                 <input type="date" value={formData.birthday}
                   onChange={(e) => setFormData({ ...formData, birthday: e.target.value })}
                   className="w-full px-3 py-2 text-sm outline-none transition" style={inputStyle} />
               </div>
               {selectedMember.id === currentUserProfile.id && (
                 <p className="text-[10px] mt-1 font-semibold" style={{ color: '#9ca3af' }}>
-                  不可更改你自己的系统角色，以防止系统锁定。
+                  {_('不可更改你自己的系统角色，以防止系统锁定。', 'You cannot change your own role to prevent system lockout.')}
                 </p>
               )}
               <div className="flex justify-end gap-3 pt-3">
                 <button type="button" onClick={() => setShowEditModal(false)}
                   className="px-4 py-2 rounded-2xl text-sm font-bold transition cursor-pointer"
-                  style={{ background: '#f0f7ff', border: '1.5px solid #e0f1ff', color: '#6b7280' }}>取消</button>
+                  style={{ background: '#f0f7ff', border: '1.5px solid #e0f1ff', color: '#6b7280' }}>{_('取消', 'Cancel')}</button>
                 <button type="submit" disabled={formSubmitting}
                   className="px-4 py-2 rounded-2xl text-sm font-black transition cursor-pointer"
                   style={{ background: '#95CBFF', color: 'white', opacity: formSubmitting ? 0.7 : 1 }}>
-                  {formSubmitting ? '保存中...' : '确认更新'}
+                  {formSubmitting ? _('保存中...', 'Saving...') : _('确认更新', 'Update')}
                 </button>
               </div>
             </form>

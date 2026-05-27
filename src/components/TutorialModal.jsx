@@ -24,10 +24,10 @@ const STEPS_ZH = [
   {
     icon: <CheckSquare size={32} style={{ color: '#6366f1' }} />,
     title: '任务看板：你的工作中心',
-    subtitle: 'Tasks Board — Your Workflow Hub',
+    subtitle: '任务看板 — 你的工作中心',
     body: (
       <div className="space-y-3 text-sm leading-relaxed text-gray-600 font-semibold">
-        <p>点击左边菜单栏的 <strong className="text-gray-800">「任务看板 Tasks」</strong>，你会看到四个状态栏：</p>
+        <p>点击左边菜单栏的 <strong className="text-gray-800">「任务看板」</strong>，你会看到四个状态栏：</p>
         <div className="grid grid-cols-2 gap-2 text-xs">
           {[
             { label: '待开始', color: '#eff6ff', text: '#3b82f6', desc: '刚分配，尚未开始' },
@@ -48,7 +48,7 @@ const STEPS_ZH = [
   {
     icon: <FolderGit size={32} style={{ color: '#10b981' }} />,
     title: '筹委团：多团队协作',
-    subtitle: 'Committees — One account, multiple teams',
+    subtitle: '筹委团 — 多团队协作',
     body: (
       <div className="space-y-3 text-sm leading-relaxed text-gray-600 font-semibold">
         <p>你可以同时是<strong className="text-gray-800">执委干部</strong>，又是<strong className="text-gray-800">某活动的筹委成员</strong>，只需一个账号。</p>
@@ -67,7 +67,7 @@ const STEPS_ZH = [
   {
     icon: <Smartphone size={32} style={{ color: '#f59e0b' }} />,
     title: '手机推送通知 — iPhone (Safari)',
-    subtitle: 'Enable Push Notifications on iPhone',
+    subtitle: '在 iPhone 上开启推送通知',
     body: (
       <div className="space-y-4 text-sm leading-relaxed text-gray-600 font-semibold">
         <div className="p-4 rounded-2xl text-xs space-y-2" style={{ background: '#fffbeb', border: '1.5px solid #fde68a' }}>
@@ -78,7 +78,7 @@ const STEPS_ZH = [
           {[
             { step: '①', text: '在 Safari 中打开系统网址并登录' },
             { step: '②', text: '点击底部工具栏的「分享」按钮（方块+箭头图标）' },
-            { step: '③', text: '在弹出菜单中选择「添加到主屏幕 Add to Home Screen」' },
+            { step: '③', text: '在弹出菜单中选择「添加到主屏幕」' },
             { step: '④', text: '系统会以 App 图标形式保存到桌面，下次从桌面图标打开' },
             { step: '⑤', text: '首次从桌面打开后，系统会弹出通知权限请求，点击「允许」即可' },
           ].map(s => (
@@ -97,7 +97,7 @@ const STEPS_ZH = [
   {
     icon: <Monitor size={32} style={{ color: '#3b82f6' }} />,
     title: '手机推送通知 — Android & 电脑',
-    subtitle: 'Push Notifications on Android & Desktop',
+    subtitle: '在 Android 与电脑上开启推送通知',
     body: (
       <div className="space-y-4 text-sm leading-relaxed text-gray-600 font-semibold">
         <div className="p-4 rounded-2xl text-xs space-y-2" style={{ background: '#eff6ff', border: '1.5px solid #bfdbfe' }}>
@@ -129,11 +129,11 @@ const STEPS_ZH = [
   {
     icon: <Bell size={32} style={{ color: '#10b981' }} />,
     title: '一切准备就绪！',
-    subtitle: "You're all set — Let's go!",
+    subtitle: '一切准备就绪，开始使用吧！',
     body: (
       <div className="space-y-4 text-sm leading-relaxed text-gray-600 font-semibold">
         <div className="p-4 rounded-2xl space-y-3" style={{ background: 'linear-gradient(135deg, #f0f7ff 0%, #f0fdf4 100%)', border: '1.5px solid #e0f1ff' }}>
-          <p className="text-xs font-black text-gray-700">快速上手检查清单 Quick Start Checklist：</p>
+          <p className="text-xs font-black text-gray-700">快速上手检查清单：</p>
           {[
             '✅ 确认自己的账号可以正常登录',
             '✅ 在任务看板查看有没有分配给你的任务',
@@ -157,7 +157,7 @@ const STEPS_ZH = [
 const STEPS_EN = [
   {
     icon: <Shield size={32} style={{ color: '#95CBFF' }} />,
-    title: 'Welcome to the CLS System',
+    title: 'Welcome to CHMS1 Chinese Language Club System',
     subtitle: 'Internal Task Management & Activity Collaboration Platform',
     body: (
       <div className="space-y-3 text-sm leading-relaxed text-gray-600 font-semibold">
@@ -295,7 +295,7 @@ const STEPS_EN = [
           ))}
         </div>
         <p className="text-xs text-gray-400 text-center">
-          If you have any issues, please contact your convener/advisor teacher or chairperson. Happy using!
+          If you have any issues, please contact your convener teacher, advisor teacher, or president. Happy using!
         </p>
       </div>
     )

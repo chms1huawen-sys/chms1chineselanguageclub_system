@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react'
 import { supabase } from '../supabaseClient'
 import {
   Users,
-  Calendar,
   Loader,
   AlertCircle,
   ShieldCheck,
@@ -20,7 +19,8 @@ const selectStyle = {
   cursor: 'pointer'
 }
 
-export default function HistoricalMembers() {
+export default function HistoricalMembers({ lang }) {
+  const _ = (zh, en) => lang === 'zh' ? zh : en
   const [sessions, setSessions] = useState([])
   const [selectedSessionId, setSelectedSessionId] = useState('')
   const [members, setMembers] = useState([])
@@ -44,7 +44,6 @@ export default function HistoricalMembers() {
     setLoading(true)
     setErrorMsg('')
     try {
-      // Fetch all archived teams of type 'board'
       const { data, error } = await supabase
         .from('teams')
         .select('*')
@@ -59,7 +58,7 @@ export default function HistoricalMembers() {
         setSelectedSessionId(data[0].id)
       }
     } catch (err) {
-      setErrorMsg(err.message || '获取历年执委团队失败 Failed to load archived boards.')
+      setErrorMsg(err.message || _('获取历年名单失败', 'Failed to load historical rosters.'))
     } finally {
       setLoading(false)
     }
@@ -86,28 +85,26 @@ export default function HistoricalMembers() {
       if (error) throw error
       setMembers(data || [])
     } catch (err) {
-      setErrorMsg(err.message || '获取该届执委成员失败 Failed to fetch members.')
+      setErrorMsg(err.message || _('获取该学期成员失败', 'Failed to load session members.'))
     } finally {
       setMembersLoading(false)
     }
   }
 
   const getSelectedSessionName = () => {
-    const s = sessions.find(x => x.id === selectedSessionId)
-    return s ? `${s.name} (${s.session})` : ''
+    const session = sessions.find(item => item.id === selectedSessionId)
+    return session ? `${session.name} (${session.session})` : ''
   }
 
   return (
     <div className="space-y-6 text-left animate-[fadeIn_0.3s_ease]" style={{ fontFamily: "'Nunito', sans-serif" }}>
-
-      {/* Header */}
       <div className="pb-5 border-b-1.5 border-[#e0f1ff]">
         <h1 className="text-2xl font-black flex items-center gap-2" style={{ color: '#1a1a1a' }}>
           <Users style={{ color: '#95CBFF' }} />
-          历年执委名册
+          {_('历年名单', 'Historical Rosters')}
         </h1>
         <p className="text-sm mt-1 font-semibold" style={{ color: '#6b7280' }}>
-          Historical Committees List (Browse history cabinets and board members by academic sessions)
+          {_('查阅历年归档执委名单，按学期切换后自动归入档案。', 'Browse archived board rosters from past terms.')}
         </p>
       </div>
 
@@ -122,19 +119,18 @@ export default function HistoricalMembers() {
       {loading ? (
         <div className="flex flex-col items-center justify-center py-20 gap-3 text-gray-500">
           <Loader size={32} style={{ color: '#95CBFF', animation: 'spin 1s linear infinite' }} />
-          <p className="font-bold">加载历年届次中 Loading sessions...</p>
+          <p className="font-bold">{_('加载历年名单中...', 'Loading rosters...')}</p>
         </div>
       ) : sessions.length === 0 ? (
         <div className="text-center py-20 rounded-3xl font-semibold"
           style={{ background: '#f0f7ff', border: '1.5px solid #e0f1ff', color: '#6b7280' }}>
-          📂 目前没有已归档的历史执委届次。换届归档后旧团队数据将在此显示。
+          {_('目前没有已归档的历史名单。学期切换归档后，旧学期成员记录会在这里显示。', 'No archived rosters yet. Term handover will archive past rosters here.')}
         </div>
       ) : (
         <div className="space-y-6">
-          {/* Selector Bar */}
           <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 p-4 rounded-2xl"
             style={{ background: '#f0f7ff', border: '1.5px solid #e0f1ff' }}>
-            <span className="text-xs font-black text-gray-500 uppercase tracking-wider shrink-0">选择执委届次 Select Session:</span>
+            <span className="text-xs font-black text-gray-500 uppercase tracking-wider shrink-0">{_('选择学期名单:', 'Select Session:')}</span>
             
             <div className="relative w-full sm:w-72">
               <select
@@ -143,9 +139,9 @@ export default function HistoricalMembers() {
                 className="w-full pr-10 pl-4 py-2.5 text-sm font-black rounded-2xl cursor-pointer transition outline-none appearance-none"
                 style={{ ...selectStyle, background: 'white' }}
               >
-                {sessions.map(s => (
-                  <option key={s.id} value={s.id}>
-                    📜 {s.name} ({s.session})
+                {sessions.map(session => (
+                  <option key={session.id} value={session.id}>
+                    {session.name} ({session.session})
                   </option>
                 ))}
               </select>
@@ -155,49 +151,46 @@ export default function HistoricalMembers() {
             </div>
           </div>
 
-          {/* Members Showcase */}
           {membersLoading ? (
             <div className="flex flex-col items-center justify-center py-16 gap-3 text-gray-500">
               <Loader size={24} style={{ color: '#95CBFF', animation: 'spin 1s linear infinite' }} />
-              <p className="font-bold">拉取该届执委干部中...</p>
+              <p className="font-bold">{_('拉取该学期成员中...', 'Loading members...')}</p>
             </div>
           ) : (
             <div className="space-y-4">
               <div className="flex items-center gap-2 pb-2" style={{ borderBottom: '1.5px solid #f0f7ff' }}>
                 <ShieldCheck size={16} style={{ color: '#4ade80' }} />
                 <h3 className="font-black text-sm text-gray-800">
-                  {getSelectedSessionName()} · 执委名册
+                  {getSelectedSessionName()} · {_('成员名单', 'Roster')}
                 </h3>
               </div>
 
               {members.length === 0 ? (
                 <div className="text-center py-12 text-xs font-bold text-gray-400 border border-[#e0f1ff] bg-[#fdfdfd] rounded-2xl">
-                  该届次未绑定成员记录 No historical members.
+                  {_('该学期尚未绑定成员记录', 'No member records for this session.')}
                 </div>
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {members.map((m, idx) => {
-                    const rawUser = Array.isArray(m.users) ? m.users[0] : m.users
-                    const u = rawUser || { name: '已注销干事', email: 'N/A', role: '' }
+                  {members.map((member, idx) => {
+                    const rawUser = Array.isArray(member.users) ? member.users[0] : member.users
+                    const user = rawUser || { name: '已注销成员', email: 'N/A', role: '' }
                     return (
                       <div
-                        key={m.user_id || idx}
+                        key={member.user_id || idx}
                         className="p-5 rounded-3xl bg-white border border-[#e0f1ff] flex items-center gap-4 relative overflow-hidden transition-transform hover:scale-[1.01]"
                         style={{ boxShadow: '0 4px 16px rgba(149,203,255,0.04)' }}
                       >
-                        {/* Initial Circle avatar */}
                         <div className="w-11 h-11 rounded-2xl flex items-center justify-center font-black text-xs shrink-0 bg-[#f0f7ff] text-[#6db8ff] border border-[#e0f1ff]">
-                          {u.name.slice(0, 2)}
+                          {user.name.slice(0, 2)}
                         </div>
 
-                        {/* Details */}
                         <div className="space-y-1 min-w-0 flex-1">
                           <div className="flex items-baseline justify-between gap-2">
-                            <h4 className="font-black text-sm text-gray-800 truncate">{u.name}</h4>
+                            <h4 className="font-black text-sm text-gray-800 truncate">{user.name}</h4>
                           </div>
-                          <p className="text-[10px] font-mono font-semibold text-gray-400 truncate">{u.email}</p>
+                          <p className="text-[10px] font-mono font-semibold text-gray-400 truncate">{user.email}</p>
                           <span className="inline-block text-[9px] font-black px-2 py-0.5 rounded-full bg-blue-50 text-blue-600 border border-blue-200">
-                            {m.position}
+                            {member.position}
                           </span>
                         </div>
                       </div>
