@@ -60,7 +60,7 @@ const STEPS_ZH = [
             <li>→ 查看同一活动其他筹委成员的职位</li>
           </ul>
         </div>
-        <p className="text-xs text-gray-500">主席可随时将你加入或移出特定筹委团，而不影响你在执委团的账号状态。</p>
+        <p className="text-xs text-gray-500">主席可随时将你加入或移出特定筹委团，而不影响你在执委层的账号状态。</p>
       </div>
     )
   },

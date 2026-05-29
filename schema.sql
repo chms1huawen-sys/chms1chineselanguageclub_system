@@ -36,7 +36,7 @@ create table public.users (
 create table public.teams (
   id uuid default gen_random_uuid() primary key,
   name text not null,
-  type text not null check (type in ('board', 'event')), -- 'board' = 执委团, 'event' = 筹委团
+  type text not null check (type in ('board', 'event')), -- 'board' = 执委层, 'event' = 筹委团
   session text not null,                                 -- e.g. '2026/2027'
   is_archived boolean not null default false,
   start_date date,

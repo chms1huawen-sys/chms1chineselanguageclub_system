@@ -223,7 +223,7 @@ export default function Tasks({ currentUserProfile, lang }) {
         if (memberError) throw memberError
       }
 
-      setSuccessMsg(_(`已根据账号管理建立 ${sessionLabel} 执委名单，共 ${rosterRows.length} 人。`, `${sessionLabel} board roster created (${rosterRows.length} members).`))
+      setSuccessMsg(_(`已根据账号管理建立 ${sessionLabel} 执委层名单，共 ${rosterRows.length} 人。`, `${sessionLabel} executive level roster created (${rosterRows.length} members).`))
       fetchInitialData()
     } catch (err) {
       setErrorMsg(err.message)
@@ -619,7 +619,7 @@ export default function Tasks({ currentUserProfile, lang }) {
               >
                 {teams.map(t => (
                   <option key={t.id} value={t.id}>
-                    {t.type === 'board' ? _('📅 执委团: ', '📅 Board: ') : _('🏆 筹委: ', '🏆 Committee: ')} {t.name} ({t.session})
+                    {t.type === 'board' ? _('📅 执委层: ', '📅 Executive Level: ') : _('🏆 筹委: ', '🏆 Committee: ')} {t.name} ({t.session})
                   </option>
                 ))}
               </select>
@@ -633,7 +633,7 @@ export default function Tasks({ currentUserProfile, lang }) {
                 onClick={handleCreateDefaultSession}
                 className="px-4 py-2 text-xs font-black rounded-2xl bg-amber-100 text-amber-700 border border-amber-300 hover:bg-amber-200 transition cursor-pointer"
               >
-                {_('⚠️ 根据账号身份建立执委名单', '⚠️ Create board roster from accounts')}
+                {_('⚠️ 根据账号身份建立执委层名单', '⚠️ Create executive level roster from accounts')}
               </button>
             )
           )}
@@ -704,7 +704,7 @@ export default function Tasks({ currentUserProfile, lang }) {
       ) : !activeTeam ? (
         <div className="text-center py-20 rounded-3xl font-semibold"
           style={{ background: '#f0f7ff', border: '1.5px solid #e0f1ff', color: '#6b7280' }}>
-          {_('⚠️ 系统暂无执委名单。请联系顾问老师或主席点击上方按钮，系统会根据账号管理里的身份自动建立当前执委名单。', '⚠️ No board roster found. Ask the convener teacher or president to create one using the button above.')}
+          {_('⚠️ 系统暂无执委层名单。请联系顾问老师或主席点击上方按钮，系统会根据账号管理里的身份自动建立当前执委层名单。', '⚠️ No executive level roster found. Ask the convener teacher or president to create one using the button above.')}
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 items-start">

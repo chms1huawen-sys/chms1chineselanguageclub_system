@@ -133,7 +133,7 @@ const getLeaveTypeText = (leave, lang) => {
 }
 
 const getAnnouncementTargetLabel = (announcement) => {
-  if (announcement?.target_type === 'board') return '仅执委'
+  if (announcement?.target_type === 'board') return '仅执委层'
   if (announcement?.target_type === 'committee') return announcement.target_team?.name || '指定筹委'
   return '全部'
 }
@@ -766,7 +766,7 @@ export default function Dashboard({ currentUserProfile, lang = 'zh', onShowTutor
                   className="w-full text-sm"
                   style={inputStyle}>
                   <option value="all">{lang === 'zh' ? '全部成员' : 'All Members'}</option>
-                  <option value="board">{lang === 'zh' ? '仅执委' : 'Board Only'}</option>
+                  <option value="board">{lang === 'zh' ? '仅执委层' : 'Executive Level Only'}</option>
                   <option value="committee">{lang === 'zh' ? '指定筹委团' : 'Specific Committee'}</option>
                 </select>
               </div>

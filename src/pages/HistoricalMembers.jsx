@@ -104,7 +104,7 @@ export default function HistoricalMembers({ lang }) {
           {_('历年名单', 'Historical Rosters')}
         </h1>
         <p className="text-sm mt-1 font-semibold" style={{ color: '#6b7280' }}>
-          {_('查阅历年归档执委名单，按学期切换后自动归入档案。', 'Browse archived board rosters from past terms.')}
+          {_('查阅历年归档执委层名单，按学期切换后自动归入档案。', 'Browse archived executive level rosters from past terms.')}
         </p>
       </div>
 

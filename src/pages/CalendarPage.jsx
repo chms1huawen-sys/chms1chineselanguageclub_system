@@ -21,6 +21,7 @@ const EVENT_TYPE_LABELS = {
 
 const BOARD_MANAGER_ROLES = ['convener_teacher', 'advisor_teacher', 'chairperson', 'vice_chairperson', 'advisor']
 const TASK_MANAGER_ROLES = [...BOARD_MANAGER_ROLES, 'secretary', 'vice_secretary', 'treasurer', 'vice_treasurer', 'general_affairs', 'vice_general_affairs', 'activity_lead', 'vice_activity_lead', 'media_lead', 'vice_media_lead']
+const ALL_MEMBERS_SCOPE = '__all_members__'
 
 const inputStyle = {
   background: '#f0f7ff',
@@ -55,6 +56,7 @@ export default function CalendarPage({ currentUserProfile, lang }) {
   })
 
   const isPowerUser = TASK_MANAGER_ROLES.includes(currentUserProfile?.role)
+  const activeBoardTeam = teams.find(t => t.type === 'board') || teams[0] || null
 
   useEffect(() => {
     fetchCalendarData()
@@ -199,11 +201,13 @@ export default function CalendarPage({ currentUserProfile, lang }) {
 
       const color = formData.type === 'event' ? 'blue' : formData.type === 'meeting' ? 'green' : 'red'
 
-      // Must belong to a team, default to first available active team
-      const teamId = formData.team_id || (teams.length > 0 ? teams[0].id : null)
+      // Events are visible to all authenticated members. team_id is kept for system archiving.
+      const teamId = formData.team_id && formData.team_id !== ALL_MEMBERS_SCOPE
+        ? formData.team_id
+        : activeBoardTeam?.id || null
 
       if (!teamId) {
-        throw new Error('系统无法自动绑定活动组，请先前往“任务”初始化执委团。')
+        throw new Error('系统无法自动绑定记录范围，请先前往“任务”初始化执委层。')
       }
 
       const { error } = await supabase
@@ -220,7 +224,7 @@ export default function CalendarPage({ currentUserProfile, lang }) {
       if (error) throw error
       setSuccessMsg(lang === 'zh' ? '日程成功添加到日历中！' : 'Event successfully added to calendar!')
       setShowAddModal(false)
-      setFormData({ title: '', type: 'event', team_id: '', drive_link: '' })
+      setFormData({ title: '', type: 'event', team_id: ALL_MEMBERS_SCOPE, drive_link: '' })
       fetchCalendarData(true)  // silent: don't trigger full loading state
     } catch (err) {
       setErrorMsg(err.message)
@@ -419,7 +423,7 @@ export default function CalendarPage({ currentUserProfile, lang }) {
                 {isPowerUser && (
                   <button
                     onClick={() => {
-                      setFormData({ title: '', type: 'event', team_id: teams.length > 0 ? teams[0].id : '', drive_link: '' })
+                      setFormData({ title: '', type: 'event', team_id: ALL_MEMBERS_SCOPE, drive_link: '' })
                       setShowAddModal(true)
                     }}
                     className="flex items-center gap-1 px-3 py-1.5 text-xs font-black rounded-xl text-white transition cursor-pointer"
@@ -549,20 +553,26 @@ export default function CalendarPage({ currentUserProfile, lang }) {
               {teams.length > 0 && (
                 <div>
                   <label className="block text-xs font-black uppercase tracking-wider mb-1.5 text-gray-500">
-                    {lang === 'zh' ? '关联团队' : 'Link to Team'}
+                    {lang === 'zh' ? '可见对象' : 'Visible To'}
                   </label>
                   <select
-                    value={formData.team_id}
+                    value={formData.team_id || ALL_MEMBERS_SCOPE}
                     onChange={(e) => setFormData({ ...formData, team_id: e.target.value })}
                     className="w-full text-sm outline-none py-2.5 transition cursor-pointer"
                     style={{ ...inputStyle, background: 'white' }}
                   >
+                    <option value={ALL_MEMBERS_SCOPE}>
+                      {lang === 'zh' ? '👥 所有会员可见' : '👥 All Members'}
+                    </option>
                     {teams.map(t => (
                       <option key={t.id} value={t.id}>
-                        {t.type === 'board' ? '📅 执委团: ' : '🏆 筹委: '} {t.name}
+                        {t.type === 'board' ? (lang === 'zh' ? '📅 执委层: ' : '📅 Executive Level: ') : (lang === 'zh' ? '🏆 筹委: ' : '🏆 Committee: ')} {t.name}
                       </option>
                     ))}
                   </select>
+                  <p className="mt-1.5 text-[10px] font-bold text-gray-400">
+                    {lang === 'zh' ? '行事历默认所有登入会员都能查看；团队仅用于内部归档。' : 'Calendar items are visible to all signed-in members by default; teams are used for internal records.'}
+                  </p>
                 </div>
               )}
 

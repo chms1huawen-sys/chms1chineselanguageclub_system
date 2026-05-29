@@ -1,6 +1,6 @@
 -- 发布前清理脚本
 -- 用途：
--- 1. 删除测试用「第 57 届执委团 (2027/2028)」及其关联任务、日程、成员关系。
+-- 1. 删除测试用「第 57 届执委层 (2027/2028)」及其关联任务、日程、成员关系。
 -- 2. 清空测试期间产生的通知、动态、任务提醒日志。
 -- 3. 删除明显测试账号的 public.users 资料；不会删除正式账号。
 --
@@ -12,8 +12,8 @@ begin;
 create temp table cleanup_target_teams as
 select id, name, session
 from public.teams
-where name ilike '%第 57 届执委团%'
-   or name ilike '%57届执委团%'
+where name ilike '%第 57 届执委层%'
+   or name ilike '%57届执委层%'
    or name ilike '%2027/2028%'
    or session = '2027/2028';
 
@@ -100,8 +100,8 @@ commit;
 -- 执行后可用以下查询确认清理结果：
 select 'teams_57' as check_name, count(*) as remaining
 from public.teams
-where name ilike '%第 57 届执委团%'
-   or name ilike '%57届执委团%'
+where name ilike '%第 57 届执委层%'
+   or name ilike '%57届执委层%'
    or name ilike '%2027/2028%'
    or session = '2027/2028'
 union all
