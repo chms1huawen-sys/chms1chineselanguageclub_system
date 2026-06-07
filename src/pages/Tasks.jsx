@@ -14,7 +14,8 @@ import {
   Users,
   ChevronDown,
   Loader,
-  ArrowRight
+  ArrowRight,
+  TrendingUp
 } from 'lucide-react'
 
 const PRIORITY_LABELS = {
@@ -60,6 +61,7 @@ const getTaskUserRoleLabel = (user, lang) => {
 const BOARD_MANAGER_ROLES = ['convener_teacher', 'advisor_teacher', 'chairperson', 'vice_chairperson', 'advisor']
 const TASK_MANAGER_ROLES = [...BOARD_MANAGER_ROLES, 'secretary', 'vice_secretary', 'treasurer', 'vice_treasurer', 'general_affairs', 'vice_general_affairs', 'activity_lead', 'vice_activity_lead', 'media_lead', 'vice_media_lead']
 const TASK_COMPLETION_NOTIFY_ROLES = ['convener_teacher', 'advisor_teacher', 'chairperson', 'vice_chairperson']
+const PERFORMANCE_VIEW_ROLES = ['convener_teacher', 'advisor_teacher', 'chairperson', 'vice_chairperson']
 
 const inputStyle = {
   background: '#f0f7ff',
@@ -108,6 +110,7 @@ export default function Tasks({ currentUserProfile, lang }) {
   const [formSubmitting, setFormSubmitting] = useState(false)
 
   const isPowerUser = TASK_MANAGER_ROLES.includes(currentUserProfile?.role)
+  const canViewPerformance = PERFORMANCE_VIEW_ROLES.includes(currentUserProfile?.role)
 
   useEffect(() => {
     fetchInitialData()
@@ -621,6 +624,52 @@ export default function Tasks({ currentUserProfile, lang }) {
     return new Date(task.due_date) < new Date()
   }
 
+  const memberPerformance = users.map(user => {
+    const assignedTasks = tasks.filter(task => task.assigned_to?.includes(user.id))
+    const completed = assignedTasks.filter(task => task.status === 'completed').length
+    const pending = assignedTasks.filter(task => task.status === 'pending').length
+    const inProgress = assignedTasks.filter(task => task.status === 'in_progress').length
+    const needHelp = assignedTasks.filter(task => task.status === 'need_help').length
+    const overdue = assignedTasks.filter(isOverdue).length
+    const total = assignedTasks.length
+    const completionRate = total ? Math.round((completed / total) * 100) : 0
+
+    let label = _('暂无任务', 'No tasks')
+    let labelColor = '#6b7280'
+    let labelBg = '#f3f4f6'
+    if (total > 0) {
+      if (overdue > 0 || pending >= 3 || completionRate < 40) {
+        label = _('需跟进', 'Needs Follow-up')
+        labelColor = '#dc2626'
+        labelBg = '#fef2f2'
+      } else if (completionRate >= 75 && overdue === 0) {
+        label = _('积极', 'Active')
+        labelColor = '#059669'
+        labelBg = '#ecfdf5'
+      } else {
+        label = _('稳定', 'Steady')
+        labelColor = '#2563eb'
+        labelBg = '#eff6ff'
+      }
+    }
+
+    return {
+      user,
+      total,
+      completed,
+      pending,
+      inProgress,
+      needHelp,
+      overdue,
+      completionRate,
+      label,
+      labelColor,
+      labelBg,
+    }
+  })
+    .filter(item => item.total > 0)
+    .sort((a, b) => b.overdue - a.overdue || b.total - a.total || a.user.name.localeCompare(b.user.name))
+
   return (
     <div className="space-y-6" style={{ fontFamily: "'Nunito', sans-serif" }}>
       
@@ -729,6 +778,90 @@ export default function Tasks({ currentUserProfile, lang }) {
           </select>
         </div>
       </div>
+
+      {canViewPerformance && activeTeam && (
+        <section className="p-5 rounded-3xl bg-white border border-[#e0f1ff] space-y-4"
+          style={{ boxShadow: '0 4px 20px rgba(149,203,255,0.10)' }}>
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+            <div>
+              <h2 className="text-base font-black flex items-center gap-2 text-gray-900">
+                <TrendingUp size={18} style={{ color: '#95CBFF' }} />
+                {_('成员任务表现', 'Member Task Performance')}
+              </h2>
+              <p className="text-xs font-semibold text-gray-500 mt-1">
+                {_('只供召集老师、指导老师、主席和副主席查看，用于掌握任务完成积极度。', 'Visible only to convener, advisor, president and vice president.')}
+              </p>
+            </div>
+            <span className="text-[10px] font-black px-3 py-1 rounded-full bg-[#f0f7ff] text-[#4b8ed8] border border-[#e0f1ff] self-start sm:self-auto">
+              {_('当前团队', 'Current Team')}: {activeTeam.name}
+            </span>
+          </div>
+
+          {memberPerformance.length === 0 ? (
+            <div className="text-center py-8 rounded-2xl text-xs font-bold text-gray-400 border-2 border-dashed border-gray-100">
+              {_('目前还没有成员被分配任务。', 'No members have assigned tasks yet.')}
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
+              {memberPerformance.map(item => (
+                <div key={item.user.id} className="p-4 rounded-2xl border border-[#e0f1ff] bg-[#fcfcfc] space-y-3">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <div className="w-9 h-9 rounded-full flex items-center justify-center font-black text-xs text-white shrink-0"
+                        style={{ background: '#95CBFF' }}>
+                        {item.user.name.slice(0, 2)}
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-sm font-black text-gray-900 truncate">{item.user.name}</p>
+                        <p className="text-[10px] font-bold text-gray-400 truncate">{getTaskUserRoleLabel(item.user, lang)}</p>
+                      </div>
+                    </div>
+                    <span className="text-[10px] font-black px-2.5 py-1 rounded-full shrink-0"
+                      style={{ background: item.labelBg, color: item.labelColor, border: `1px solid ${item.labelColor}22` }}>
+                      {item.label}
+                    </span>
+                  </div>
+
+                  <div>
+                    <div className="flex items-center justify-between text-[10px] font-black text-gray-400 mb-1.5">
+                      <span>{_('完成率', 'Completion')}</span>
+                      <span>{item.completionRate}%</span>
+                    </div>
+                    <div className="h-2 rounded-full bg-[#f0f7ff] overflow-hidden">
+                      <div className="h-full rounded-full transition-all"
+                        style={{ width: `${item.completionRate}%`, background: item.overdue > 0 ? '#f87171' : '#95CBFF' }}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-5 gap-1.5 text-center">
+                    <div className="p-2 rounded-xl bg-white border border-gray-100">
+                      <p className="text-sm font-black text-gray-900">{item.total}</p>
+                      <p className="text-[9px] font-bold text-gray-400">{_('总数', 'Total')}</p>
+                    </div>
+                    <div className="p-2 rounded-xl bg-emerald-50 border border-emerald-100">
+                      <p className="text-sm font-black text-emerald-600">{item.completed}</p>
+                      <p className="text-[9px] font-bold text-emerald-500">{_('完成', 'Done')}</p>
+                    </div>
+                    <div className="p-2 rounded-xl bg-blue-50 border border-blue-100">
+                      <p className="text-sm font-black text-blue-600">{item.inProgress}</p>
+                      <p className="text-[9px] font-bold text-blue-500">{_('进行', 'Doing')}</p>
+                    </div>
+                    <div className="p-2 rounded-xl bg-amber-50 border border-amber-100">
+                      <p className="text-sm font-black text-amber-600">{item.pending}</p>
+                      <p className="text-[9px] font-bold text-amber-500">{_('待做', 'Pending')}</p>
+                    </div>
+                    <div className="p-2 rounded-xl bg-red-50 border border-red-100">
+                      <p className="text-sm font-black text-red-600">{item.overdue}</p>
+                      <p className="text-[9px] font-bold text-red-500">{_('逾期', 'Late')}</p>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
+      )}
 
       {/* Kanban Layout */}
       {loading ? (
