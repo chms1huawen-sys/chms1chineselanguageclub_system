@@ -1,0 +1,5 @@
+[functions.task-deadline-reminder]
+verify_jwt = false
+
+[functions.event-meeting-reminder]
+verify_jwt = false
