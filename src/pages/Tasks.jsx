@@ -142,8 +142,8 @@ export default function Tasks({ currentUserProfile, lang }) {
     setLoading(true)
     setErrorMsg('')
     try {
-      // 1. Fetch active teams (both board and event)
-      const { data: teamsData, error: teamsError } = await supabase
+      // 1. Fetch active teams (both board and event). Managers see all; members see only relevant teams.
+      const { data: allTeamsData, error: teamsError } = await supabase
         .from('teams')
         .select('*')
         .eq('is_archived', false)
@@ -151,11 +151,35 @@ export default function Tasks({ currentUserProfile, lang }) {
 
       if (teamsError) throw teamsError
 
-      setTeams(teamsData || [])
+      let visibleTeams = allTeamsData || []
 
-      if (teamsData && teamsData.length > 0) {
+      if (!isPowerUser && currentUserProfile?.id) {
+        const [membershipResult, assignedTasksResult] = await Promise.all([
+          supabase
+            .from('team_members')
+            .select('team_id')
+            .eq('user_id', currentUserProfile.id),
+          supabase
+            .from('tasks')
+            .select('team_id')
+            .contains('assigned_to', [currentUserProfile.id]),
+        ])
+
+        if (membershipResult.error) throw membershipResult.error
+        if (assignedTasksResult.error) throw assignedTasksResult.error
+
+        const visibleTeamIds = new Set([
+          ...(membershipResult.data || []).map(item => item.team_id),
+          ...(assignedTasksResult.data || []).map(item => item.team_id),
+        ])
+        visibleTeams = visibleTeams.filter(team => visibleTeamIds.has(team.id))
+      }
+
+      setTeams(visibleTeams)
+
+      if (visibleTeams.length > 0) {
         // Set the active team to the first board type, or just the first available team
-        const defaultTeam = teamsData.find(t => t.type === 'board') || teamsData[0]
+        const defaultTeam = visibleTeams.find(t => t.type === 'board') || visibleTeams[0]
         setActiveTeam(defaultTeam)
       } else {
         // If there are absolutely no teams, we can offer to create a default board session
@@ -239,11 +263,17 @@ export default function Tasks({ currentUserProfile, lang }) {
   const fetchTasks = async (teamId) => {
     setErrorMsg('')
     try {
-      const { data, error } = await supabase
+      let query = supabase
         .from('tasks')
         .select('*')
         .eq('team_id', teamId)
         .order('created_at', { ascending: false })
+
+      if (!isPowerUser && currentUserProfile?.id) {
+        query = query.contains('assigned_to', [currentUserProfile.id])
+      }
+
+      const { data, error } = await query
 
       if (error) throw error
       setTasks(data || [])
@@ -872,7 +902,9 @@ export default function Tasks({ currentUserProfile, lang }) {
       ) : !activeTeam ? (
         <div className="text-center py-20 rounded-3xl font-semibold"
           style={{ background: '#f0f7ff', border: '1.5px solid #e0f1ff', color: '#6b7280' }}>
-          {_('⚠️ 系统暂无执委层名单。请联系顾问老师或主席点击上方按钮，系统会根据账号管理里的身份自动建立当前执委层名单。', '⚠️ No executive level roster found. Ask the convener teacher or president to create one using the button above.')}
+          {isPowerUser
+            ? _('⚠️ 系统暂无执委层名单。请联系顾问老师或主席点击上方按钮，系统会根据账号管理里的身份自动建立当前执委层名单。', '⚠️ No executive level roster found. Ask the convener teacher or president to create one using the button above.')
+            : _('目前没有与你相关的任务团队。被加入筹委或被分配任务后，这里会自动显示。', 'No task teams related to you yet. Teams will appear here after you are added or assigned tasks.')}
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 items-start">
