@@ -25,6 +25,8 @@ import {
 
 const MANAGER_ROLES = ['convener_teacher', 'advisor_teacher', 'chairperson', 'secretary', 'vice_secretary']
 const ANNOUNCEMENT_ROLES = ['convener_teacher', 'advisor_teacher', 'chairperson']
+const MEMBER_MANAGER_ROLES = ['convener_teacher', 'advisor_teacher', 'chairperson', 'vice_chairperson']
+const TASK_QUICK_ACCESS_ROLES = ['convener_teacher', 'advisor_teacher', 'chairperson', 'vice_chairperson', 'secretary', 'vice_secretary', 'treasurer', 'vice_treasurer', 'general_affairs', 'vice_general_affairs', 'activity_lead', 'vice_activity_lead', 'media_lead', 'vice_media_lead']
 const BOARD_ROLES = [
   'convener_teacher',
   'advisor_teacher',
@@ -162,6 +164,8 @@ export default function Dashboard({ currentUserProfile, lang = 'zh', onShowTutor
 
   const isLeaveManager = MANAGER_ROLES.includes(currentUserProfile?.role)
   const canPublishAnnouncements = ANNOUNCEMENT_ROLES.includes(currentUserProfile?.role)
+  const canManageMembers = MEMBER_MANAGER_ROLES.includes(currentUserProfile?.role)
+  const canCreateTasks = TASK_QUICK_ACCESS_ROLES.includes(currentUserProfile?.role)
 
   useEffect(() => {
     if (!currentUserProfile?.id) return
@@ -740,11 +744,11 @@ export default function Dashboard({ currentUserProfile, lang = 'zh', onShowTutor
           <TrendingUp size={18} color="#95CBFF" /> {lang === 'zh' ? '快捷入口' : 'Quick Access'}
         </h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-3">
-          <QuickButton icon={<Plus size={16} />} label={lang === 'zh' ? '新建任务' : 'New Task'} onClick={() => navigate('/tasks')} />
+          {canCreateTasks && <QuickButton icon={<Plus size={16} />} label={lang === 'zh' ? '新建任务' : 'New Task'} onClick={() => navigate('/tasks')} />}
           <QuickButton icon={<ClipboardList size={16} />} label={lang === 'zh' ? '提交请假' : 'Submit Leave'} onClick={() => navigate('/leave')} />
           <QuickButton icon={<Calendar size={16} />} label={lang === 'zh' ? '查看行事历' : 'View Calendar'} onClick={() => navigate('/calendar')} />
           {isLeaveManager && <QuickButton icon={<CheckSquare size={16} />} label={lang === 'zh' ? '检查请假' : 'Review Leave'} onClick={() => navigate('/leave')} />}
-          {isLeaveManager && <QuickButton icon={<Users size={16} />} label={lang === 'zh' ? '管理成员' : 'Manage Members'} onClick={() => navigate('/members')} />}
+          {canManageMembers && <QuickButton icon={<Users size={16} />} label={lang === 'zh' ? '管理成员' : 'Manage Members'} onClick={() => navigate('/members')} />}
           {canPublishAnnouncements && <QuickButton icon={<Megaphone size={16} />} label={lang === 'zh' ? '发布公告' : 'Post Announcement'} onClick={openNewAnnouncementModal} />}
         </div>
       </section>
