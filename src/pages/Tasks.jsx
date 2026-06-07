@@ -59,6 +59,7 @@ const getTaskUserRoleLabel = (user, lang) => {
 }
 const BOARD_MANAGER_ROLES = ['convener_teacher', 'advisor_teacher', 'chairperson', 'vice_chairperson', 'advisor']
 const TASK_MANAGER_ROLES = [...BOARD_MANAGER_ROLES, 'secretary', 'vice_secretary', 'treasurer', 'vice_treasurer', 'general_affairs', 'vice_general_affairs', 'activity_lead', 'vice_activity_lead', 'media_lead', 'vice_media_lead']
+const TASK_COMPLETION_NOTIFY_ROLES = ['convener_teacher', 'advisor_teacher', 'chairperson', 'vice_chairperson']
 
 const inputStyle = {
   background: '#f0f7ff',
@@ -289,6 +290,33 @@ export default function Tasks({ currentUserProfile, lang }) {
     await insertNotifications([{ user_id: task.created_by, type, title, body }])
   }
 
+  const notifyTaskCompleted = async (task) => {
+    if (!task?.id) return
+
+    const roleRecipients = users
+      .filter(user => TASK_COMPLETION_NOTIFY_ROLES.includes(user.role))
+      .map(user => user.id)
+
+    const recipients = [...new Set([
+      ...roleRecipients,
+      task.created_by,
+    ].filter(Boolean))]
+
+    if (recipients.length === 0) return
+
+    const completedBy = currentUserProfile?.name || _('成员', 'Member')
+    const dueText = formatTaskDueText(task.due_date)
+    const timestamp = Date.now()
+
+    await insertNotifications(recipients.map(userId => ({
+      user_id: userId,
+      type: 'task_completed',
+      title: _('任务已完成：', 'Task completed: ') + task.title,
+      body: completedBy + _(' 已完成任务。截止：', ' completed the task. Due: ') + dueText,
+      dedupe_key: `task-completed-${task.id}-${userId}-${timestamp}`
+    })))
+  }
+
   const createDueReminderNotifications = async (taskList) => {
     if (!isPowerUser || !Array.isArray(taskList) || taskList.length === 0) return
 
@@ -379,6 +407,9 @@ export default function Tasks({ currentUserProfile, lang }) {
           .eq('id', selectedTask.id)
         
         if (error) throw error
+        if (payload.status === 'completed' && selectedTask.status !== 'completed') {
+          await notifyTaskCompleted({ ...selectedTask, ...payload })
+        }
         setSuccessMsg(_('任务已成功更新', 'Task updated.'))
       } else if (formData.repeat_enabled) {
         const occurrences = getNextWeeklyOccurrences()
@@ -475,13 +506,17 @@ export default function Tasks({ currentUserProfile, lang }) {
         .eq('id', task.id)
 
       if (error) throw error
-      
-      await notifyTaskCreator(
-        task,
-        'task_status_updated',
-        _('任务状态更新：', 'Task status updated: ') + task.title,
-        (currentUserProfile?.name || _('成员', 'Member')) + _(' 将任务状态改为「', ' changed status to 「') + getStatusLabel(newStatus) + '」。'
-      )
+
+      if (newStatus === 'completed' && task.status !== 'completed') {
+        await notifyTaskCompleted(task)
+      } else {
+        await notifyTaskCreator(
+          task,
+          'task_status_updated',
+          _('任务状态更新：', 'Task status updated: ') + task.title,
+          (currentUserProfile?.name || _('成员', 'Member')) + _(' 将任务状态改为「', ' changed status to 「') + getStatusLabel(newStatus) + '」。'
+        )
+      }
       
       // Update local state for immediate feedback
       setTasks(prev => prev.map(t => t.id === task.id ? { ...t, status: newStatus } : t))

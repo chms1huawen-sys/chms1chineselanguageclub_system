@@ -241,9 +241,15 @@ const getReminderDecision = (task: Task, todayKey: string): ReminderDecision | n
   return null
 }
 
-Deno.serve(async () => {
+Deno.serve(async (request) => {
+  console.log('[task-deadline-reminder] request received', {
+    method: request.method,
+    now: new Date().toISOString(),
+  })
+
   const serviceRoleKey = Deno.env.get('SERVICE_ROLE_KEY') || Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
   if (!serviceRoleKey) {
+    console.error('[task-deadline-reminder] missing SERVICE_ROLE_KEY')
     return new Response(JSON.stringify({ error: 'Missing SERVICE_ROLE_KEY secret.' }), { status: 500 })
   }
 
@@ -254,16 +260,19 @@ Deno.serve(async () => {
 
   const serviceAccountText = Deno.env.get('FIREBASE_SERVICE_ACCOUNT')
   if (!serviceAccountText) {
+    console.error('[task-deadline-reminder] missing FIREBASE_SERVICE_ACCOUNT')
     return new Response(JSON.stringify({ error: 'Missing FIREBASE_SERVICE_ACCOUNT secret.' }), { status: 500 })
   }
 
   const serviceAccount = JSON.parse(serviceAccountText) as ServiceAccount
   const firebaseProjectId = Deno.env.get('FIREBASE_PROJECT_ID') || serviceAccount.project_id
   if (!firebaseProjectId) {
+    console.error('[task-deadline-reminder] missing FIREBASE_PROJECT_ID')
     return new Response(JSON.stringify({ error: 'Missing FIREBASE_PROJECT_ID secret.' }), { status: 500 })
   }
 
   const todayKey = localDateKey(new Date())
+  console.log('[task-deadline-reminder] running rules', { todayKey })
 
   const { data: tasks, error } = await supabase
     .from('tasks')
