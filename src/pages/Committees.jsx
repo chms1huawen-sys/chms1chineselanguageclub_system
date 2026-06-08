@@ -29,6 +29,7 @@ const COMMITTEE_POSITION_OPTIONS = [
   { value: '宣传组长', zh: '宣传组长', en: 'Publicity Lead' },
   { value: '普通筹委', zh: '普通筹委', en: 'Committee Member' },
 ]
+const COMMITTEE_MANAGER_POSITIONS = ['筹委主席', '筹委副主席']
 
 const inputStyle = {
   background: '#f0f7ff',
@@ -84,6 +85,11 @@ export default function Committees({ currentUserProfile, lang }) {
   const [users, setUsers] = useState([])
 
   const isPowerUser = BOARD_MANAGER_ROLES.includes(currentUserProfile?.role)
+  const isSelectedCommitteeManager = selectedComm && commMembers.some(member =>
+    member.user_id === currentUserProfile?.id &&
+    COMMITTEE_MANAGER_POSITIONS.includes(member.position)
+  )
+  const canManageSelectedCommittee = isPowerUser || isSelectedCommitteeManager
 
   useEffect(() => {
     fetchCommittees()
@@ -586,7 +592,7 @@ export default function Committees({ currentUserProfile, lang }) {
                     <Users size={16} style={{ color: '#95CBFF' }} />
                     {_('筹委名单', 'Committee Members')} ({commMembers.length}{_('人', '')})
                   </h3>
-                  {isPowerUser && !selectedComm.is_archived && (
+                  {canManageSelectedCommittee && !selectedComm.is_archived && (
                     <button
                       onClick={() => setShowAddMemberModal(true)}
                       className="flex items-center gap-1 px-3 py-1.5 text-xs font-black rounded-xl text-white transition cursor-pointer"
@@ -613,7 +619,7 @@ export default function Committees({ currentUserProfile, lang }) {
                               {m.position}
                             </span>
                           </div>
-                          {isPowerUser && !selectedComm.is_archived && (
+                          {canManageSelectedCommittee && !selectedComm.is_archived && (
                             <button
                               onClick={() => handleRemoveMember(m.user_id)}
                               className="p-1.5 text-red-500 hover:bg-red-50 rounded-lg transition cursor-pointer"
@@ -636,7 +642,7 @@ export default function Committees({ currentUserProfile, lang }) {
                     <ListTodo size={16} style={{ color: '#95CBFF' }} />
                     {_('特定任务追踪', 'Task Tracking')} ({commTasks.length})
                   </h3>
-                  {isPowerUser && !selectedComm.is_archived && (
+                  {canManageSelectedCommittee && !selectedComm.is_archived && (
                     <button
                       onClick={() => {
                         setNewCommTask({ title: '', description: '', assigned_to: [], due_date: '', priority: 'medium' })
@@ -721,7 +727,7 @@ export default function Committees({ currentUserProfile, lang }) {
                     </a>
                   )}
 
-                  {isPowerUser && !selectedComm.is_archived && (
+                  {canManageSelectedCommittee && !selectedComm.is_archived && (
                     <button
                       onClick={handleSaveDriveLink}
                       className="w-full py-2.5 rounded-2xl text-xs font-black text-white cursor-pointer transition shrink-0"
@@ -860,7 +866,7 @@ export default function Committees({ currentUserProfile, lang }) {
 
             <form onSubmit={handleAddMember} className="p-6 space-y-4">
               <div>
-                <label className="block text-xs font-black uppercase tracking-wider mb-1.5 text-gray-500">{_('选择已有执委', 'Select a Member')}</label>
+                <label className="block text-xs font-black uppercase tracking-wider mb-1.5 text-gray-500">{_('选择已有成员账号', 'Select an Existing Account')}</label>
                 <select
                   required
                   value={newMemberData.user_id}
@@ -868,7 +874,7 @@ export default function Committees({ currentUserProfile, lang }) {
                   className="w-full text-sm outline-none py-2.5 transition cursor-pointer"
                   style={{ ...inputStyle, background: 'white' }}
                 >
-                  <option value="">{_('-- 请选择一名干事 --', '-- Select a member --')}</option>
+                  <option value="">{_('-- 请选择一名成员 --', '-- Select a member --')}</option>
                   {users.map(u => (
                     <option key={u.id} value={u.id}>{u.name} ({u.email})</option>
                   ))}

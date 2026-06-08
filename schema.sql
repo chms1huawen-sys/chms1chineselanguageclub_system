@@ -142,6 +142,31 @@ alter table public.notifications enable row level security;
 alter table public.announcements enable row level security;
 alter table public.activity_log enable row level security;
 
+-- Committee-local permission helper:
+create or replace function public.can_manage_committee(target_team_id uuid)
+returns boolean
+language sql
+security definer
+set search_path = public
+as $$
+  select exists (
+    select 1
+    from public.users
+    where id = auth.uid()
+      and role in ('convener_teacher', 'advisor_teacher', 'chairperson', 'vice_chairperson', 'advisor')
+      and is_active = true
+  )
+  or exists (
+    select 1
+    from public.team_members
+    where team_id = target_team_id
+      and user_id = auth.uid()
+      and position in ('筹委主席', '筹委副主席')
+  );
+$$;
+
+grant execute on function public.can_manage_committee(uuid) to authenticated;
+
 -- 12. Create basic RLS Policies (allows authenticated users full read, restricted writes)
 -- For simplicity & full usability:
 -- Users policies:
@@ -196,6 +221,14 @@ create policy "Advisors and Chairpersons can manage team members." on public.tea
     )
   );
 
+create policy "Committee managers can insert team members." on public.team_members
+  for insert to authenticated
+  with check (public.can_manage_committee(team_id));
+
+create policy "Committee managers can delete team members." on public.team_members
+  for delete to authenticated
+  using (public.can_manage_committee(team_id));
+
 -- Tasks policies:
 create policy "Task managers and related users can view tasks." on public.tasks
   for select to authenticated using (
@@ -207,6 +240,10 @@ create policy "Task managers and related users can view tasks." on public.tasks
     )
   );
 
+create policy "Committee managers can view committee tasks." on public.tasks
+  for select to authenticated
+  using (public.can_manage_committee(team_id));
+
 create policy "Task managers can create tasks." on public.tasks
   for insert to authenticated with check (
     auth.uid() = created_by and
@@ -214,6 +251,13 @@ create policy "Task managers can create tasks." on public.tasks
       select 1 from public.users
       where id = auth.uid() and role in ('convener_teacher', 'advisor_teacher', 'chairperson', 'vice_chairperson', 'secretary', 'vice_secretary', 'treasurer', 'vice_treasurer', 'general_affairs', 'vice_general_affairs', 'activity_lead', 'vice_activity_lead', 'media_lead', 'vice_media_lead')
     )
+  );
+
+create policy "Committee managers can create committee tasks." on public.tasks
+  for insert to authenticated
+  with check (
+    auth.uid() = created_by
+    and public.can_manage_committee(team_id)
   );
 
 create policy "Task managers and assignees can update tasks." on public.tasks
@@ -226,6 +270,11 @@ create policy "Task managers and assignees can update tasks." on public.tasks
     )
   );
 
+create policy "Committee managers can update committee tasks." on public.tasks
+  for update to authenticated
+  using (public.can_manage_committee(team_id))
+  with check (public.can_manage_committee(team_id));
+
 create policy "Task managers can delete tasks." on public.tasks
   for delete to authenticated using (
     exists (
@@ -233,6 +282,10 @@ create policy "Task managers can delete tasks." on public.tasks
       where id = auth.uid() and role in ('convener_teacher', 'advisor_teacher', 'chairperson', 'vice_chairperson', 'secretary', 'vice_secretary', 'treasurer', 'vice_treasurer', 'general_affairs', 'vice_general_affairs', 'activity_lead', 'vice_activity_lead', 'media_lead', 'vice_media_lead')
     )
   );
+
+create policy "Committee managers can delete committee tasks." on public.tasks
+  for delete to authenticated
+  using (public.can_manage_committee(team_id));
 
 -- Comments policies:
 create policy "Comments are viewable by all authenticated users." on public.task_comments
@@ -258,6 +311,24 @@ create policy "Advisors, chairpersons, secretaries, and treasurers can manage ev
       select 1 from public.users
       where id = auth.uid() and role in ('convener_teacher', 'advisor_teacher', 'chairperson', 'vice_chairperson', 'secretary', 'vice_secretary', 'treasurer', 'vice_treasurer', 'general_affairs', 'vice_general_affairs', 'activity_lead', 'vice_activity_lead', 'media_lead', 'vice_media_lead')
     )
+  );
+
+create policy "Committee managers can insert committee drive events." on public.events
+  for insert to authenticated
+  with check (
+    team_id is not null
+    and public.can_manage_committee(team_id)
+  );
+
+create policy "Committee managers can update committee drive events." on public.events
+  for update to authenticated
+  using (
+    team_id is not null
+    and public.can_manage_committee(team_id)
+  )
+  with check (
+    team_id is not null
+    and public.can_manage_committee(team_id)
   );
 
 -- Notifications policies:
