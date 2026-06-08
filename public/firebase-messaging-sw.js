@@ -12,6 +12,22 @@ firebase.initializeApp({
 
 const messaging = firebase.messaging()
 
+const normalizeTargetUrl = (url = '/') => {
+  if (!url || url === '/') return '/'
+  if (url.startsWith('http')) return url
+  if (url.startsWith('/#/')) return url
+
+  const hashRoutes = {
+    '/tasks': '/#/tasks',
+    '/calendar': '/#/calendar',
+    '/leave': '/#/leave',
+    '/members': '/#/members',
+    '/settings': '/#/settings',
+  }
+
+  return hashRoutes[url] || url
+}
+
 const showPushNotification = (payload = {}) => {
   const notification = payload.notification || {}
   const data = payload.data || {}
@@ -57,7 +73,7 @@ self.addEventListener('push', (event) => {
 
 self.addEventListener('notificationclick', (event) => {
   event.notification.close()
-  const targetUrl = event.notification.data?.url || '/'
+  const targetUrl = normalizeTargetUrl(event.notification.data?.url || '/')
 
   event.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {

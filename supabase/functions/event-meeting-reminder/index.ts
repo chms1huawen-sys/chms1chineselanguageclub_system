@@ -40,6 +40,13 @@ const textEncoder = new TextEncoder()
 const DAY_MS = 24 * 60 * 60 * 1000
 const MALAYSIA_OFFSET_MS = 8 * 60 * 60 * 1000
 const REMINDER_DAYS = [7, 3, 1]
+const CALENDAR_ROUTE = '/#/calendar'
+
+const buildAppUrl = (route: string) => {
+  const siteUrl = Deno.env.get('SITE_URL') || Deno.env.get('APP_URL') || ''
+  if (!siteUrl) return route
+  return `${siteUrl.replace(/\/+$/, '')}${route}`
+}
 
 const base64UrlEncode = (input: string | Uint8Array) => {
   const bytes = typeof input === 'string' ? textEncoder.encode(input) : input
@@ -159,10 +166,10 @@ const sendFcmNotification = async (
           type: notification.type,
           notification_id: notification.id,
           dedupe_key: notification.dedupe_key,
-          url: '/calendar',
+          url: CALENDAR_ROUTE,
         },
         webpush: {
-          fcm_options: { link: '/calendar' },
+          fcm_options: { link: buildAppUrl(CALENDAR_ROUTE) },
           notification: {
             icon: '/logo-192.png',
             badge: '/logo-192.png',

@@ -1,5 +1,20 @@
 import { supabase } from '../supabaseClient'
 
+const HASH_ROUTE_MAP = {
+  '/tasks': '/#/tasks',
+  '/calendar': '/#/calendar',
+  '/leave': '/#/leave',
+  '/members': '/#/members',
+  '/settings': '/#/settings',
+}
+
+const normalizeNotificationUrl = (url = '/') => {
+  if (!url || url === '/') return '/'
+  if (url.startsWith('http')) return url
+  if (url.startsWith('/#/')) return url
+  return HASH_ROUTE_MAP[url] || url
+}
+
 export const sendPushForNotifications = async (notificationIds, url = '/') => {
   const ids = [...new Set((notificationIds || []).filter(Boolean))]
   if (ids.length === 0) return
@@ -7,7 +22,7 @@ export const sendPushForNotifications = async (notificationIds, url = '/') => {
   const { data, error } = await supabase.functions.invoke('send-push-notification', {
     body: {
       notification_ids: ids,
-      url,
+      url: normalizeNotificationUrl(url),
     },
   })
 
@@ -26,7 +41,7 @@ export const createNotificationsAndPush = async (notifications, url = '/') => {
   const { data, error } = await supabase.functions.invoke('send-push-notification', {
     body: {
       notifications: rows,
-      url,
+      url: normalizeNotificationUrl(url),
     },
   })
 

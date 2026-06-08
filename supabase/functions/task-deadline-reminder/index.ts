@@ -44,6 +44,13 @@ type ReminderLog = {
 const textEncoder = new TextEncoder()
 const DAY_MS = 24 * 60 * 60 * 1000
 const MALAYSIA_OFFSET_MS = 8 * 60 * 60 * 1000
+const TASKS_ROUTE = '/#/tasks'
+
+const buildAppUrl = (route: string) => {
+  const siteUrl = Deno.env.get('SITE_URL') || Deno.env.get('APP_URL') || ''
+  if (!siteUrl) return route
+  return `${siteUrl.replace(/\/+$/, '')}${route}`
+}
 
 const base64UrlEncode = (input: string | Uint8Array) => {
   const bytes = typeof input === 'string' ? textEncoder.encode(input) : input
@@ -128,10 +135,10 @@ const sendFcmNotification = async (
         data: {
           type: notification.type,
           dedupe_key: notification.dedupe_key,
-          url: '/tasks',
+          url: TASKS_ROUTE,
         },
         webpush: {
-          fcm_options: { link: '/tasks' },
+          fcm_options: { link: buildAppUrl(TASKS_ROUTE) },
           notification: {
             icon: '/logo-192.png',
             badge: '/logo-192.png',

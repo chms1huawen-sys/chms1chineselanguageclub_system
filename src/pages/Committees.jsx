@@ -17,6 +17,18 @@ import {
 
 const BOARD_MANAGER_ROLES = ['convener_teacher', 'advisor_teacher', 'chairperson', 'vice_chairperson', 'advisor']
 const TASK_MANAGER_ROLES = [...BOARD_MANAGER_ROLES, 'secretary', 'vice_secretary', 'treasurer', 'vice_treasurer', 'general_affairs', 'vice_general_affairs', 'activity_lead', 'vice_activity_lead', 'media_lead', 'vice_media_lead']
+const CUSTOM_POSITION_VALUE = '__custom__'
+const COMMITTEE_POSITION_OPTIONS = [
+  { value: '召集老师', zh: '召集老师', en: 'Convener Teacher' },
+  { value: '指导老师', zh: '指导老师', en: 'Advisor Teacher' },
+  { value: '筹委主席', zh: '筹委主席', en: 'Committee President' },
+  { value: '筹委副主席', zh: '筹委副主席', en: 'Committee Vice President' },
+  { value: '文书干事', zh: '文书干事', en: 'Secretary' },
+  { value: '财政干事', zh: '财政干事', en: 'Treasurer' },
+  { value: '总务干事', zh: '总务干事', en: 'General Affairs' },
+  { value: '宣传组长', zh: '宣传组长', en: 'Publicity Lead' },
+  { value: '普通筹委', zh: '普通筹委', en: 'Committee Member' },
+]
 
 const inputStyle = {
   background: '#f0f7ff',
@@ -59,6 +71,7 @@ export default function Committees({ currentUserProfile, lang }) {
     user_id: '',
     position: '普通筹委'  // internal data, stored in DB as Chinese
   })
+  const [customMemberPosition, setCustomMemberPosition] = useState('')
   const [newCommTask, setNewCommTask] = useState({
     title: '',
     description: '',
@@ -232,6 +245,13 @@ export default function Committees({ currentUserProfile, lang }) {
   const handleAddMember = async (e) => {
     e.preventDefault()
     if (!selectedComm || !newMemberData.user_id) return
+    const finalPosition = newMemberData.position === CUSTOM_POSITION_VALUE
+      ? customMemberPosition.trim()
+      : newMemberData.position
+    if (!finalPosition) {
+      setErrorMsg(_('请输入自定义职位名称。', 'Please enter a custom position.'))
+      return
+    }
     setFormSubmitting(true)
     setErrorMsg('')
     setSuccessMsg('')
@@ -241,13 +261,14 @@ export default function Committees({ currentUserProfile, lang }) {
         .insert({
           team_id: selectedComm.id,
           user_id: newMemberData.user_id,
-          position: newMemberData.position
+          position: finalPosition
         })
 
       if (error) throw error
       setSuccessMsg(_('成功将成员招募进筹委团！', 'Member added to committee!'))
       setShowAddMemberModal(false)
       setNewMemberData({ user_id: '', position: '普通筹委' })
+      setCustomMemberPosition('')
       fetchCommitteeDetails(selectedComm.id)
       fetchCommittees()
     } catch (err) {
@@ -858,18 +879,31 @@ export default function Committees({ currentUserProfile, lang }) {
                 <label className="block text-xs font-black uppercase tracking-wider mb-1.5 text-gray-500">{_('在此筹委团内的职位', 'Position')}</label>
                 <select
                   value={newMemberData.position}
-                  onChange={(e) => setNewMemberData({ ...newMemberData, position: e.target.value })}
+                  onChange={(e) => {
+                    setNewMemberData({ ...newMemberData, position: e.target.value })
+                    if (e.target.value !== CUSTOM_POSITION_VALUE) setCustomMemberPosition('')
+                  }}
                   className="w-full text-sm outline-none py-2.5 transition cursor-pointer"
                   style={{ ...inputStyle, background: 'white' }}
                 >
-                  <option value="筹委主席">{_('筹委主席', 'Committee President')}</option>
-                  <option value="筹委副主席">{_('筹委副主席', 'Committee Vice President')}</option>
-                  <option value="文书干事">{_('文书干事', 'Secretary')}</option>
-                  <option value="财政干事">{_('财政干事', 'Treasurer')}</option>
-                  <option value="总务干事">{_('总务干事', 'General Affairs')}</option>
-                  <option value="宣传组长">{_('宣传组长', 'Publicity Lead')}</option>
-                  <option value="普通筹委">{_('普通筹委', 'Committee Member')}</option>
+                  {COMMITTEE_POSITION_OPTIONS.map(position => (
+                    <option key={position.value} value={position.value}>
+                      {_(position.zh, position.en)}
+                    </option>
+                  ))}
+                  <option value={CUSTOM_POSITION_VALUE}>{_('自定义职位...', 'Custom Position...')}</option>
                 </select>
+                {newMemberData.position === CUSTOM_POSITION_VALUE && (
+                  <input
+                    type="text"
+                    required
+                    value={customMemberPosition}
+                    onChange={(e) => setCustomMemberPosition(e.target.value)}
+                    placeholder={_('例如：舞台组组长、报名处负责人', 'e.g. Stage Lead, Registration Lead')}
+                    className="w-full text-sm font-semibold outline-none py-2.5 transition mt-3"
+                    style={inputStyle}
+                  />
+                )}
               </div>
 
               <div className="flex justify-end gap-3 pt-3 border-t-1.5 border-[#f0f7ff]">
