@@ -1,6 +1,8 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import { supabase } from '../supabaseClient'
 import { createNotificationsAndPush } from '../utils/pushNotifications'
+import UserAvatar from '../components/UserAvatar'
+import AvatarPreviewModal from '../components/AvatarPreviewModal'
 import {
   AlertCircle,
   CalendarDays,
@@ -67,6 +69,20 @@ const getLeaveLabel = (application, lang = 'zh') => {
 
 const getLeaveBadge = (type) => LEAVE_TYPE_OPTIONS.find(option => option.value === type) || LEAVE_TYPE_OPTIONS[3]
 
+const attachApplicants = async (rows = []) => {
+  const userIds = [...new Set(rows.map(row => row.user_id).filter(Boolean))]
+  if (userIds.length === 0) return rows
+
+  const { data: users, error } = await supabase
+    .from('users')
+    .select('id, name, email, role, avatar_url')
+    .in('id', userIds)
+
+  if (error) throw error
+  const usersById = new Map((users || []).map(user => [user.id, user]))
+  return rows.map(row => ({ ...row, applicant: usersById.get(row.user_id) || null }))
+}
+
 export default function LeaveApplications({ currentUserProfile, lang = 'zh' }) {
   const [applications, setApplications] = useState([])
   const [loading, setLoading] = useState(true)
@@ -74,6 +90,7 @@ export default function LeaveApplications({ currentUserProfile, lang = 'zh' }) {
   const [errorMsg, setErrorMsg] = useState('')
   const [successMsg, setSuccessMsg] = useState('')
   const [selectedApplication, setSelectedApplication] = useState(null)
+  const [avatarPreviewUser, setAvatarPreviewUser] = useState(null)
   const [searchTerm, setSearchTerm] = useState('')
   const [typeFilter, setTypeFilter] = useState('all')
   const [driveFolderUrl, setDriveFolderUrl] = useState(DEFAULT_LEAVE_DRIVE_FOLDER_URL)
@@ -161,7 +178,7 @@ export default function LeaveApplications({ currentUserProfile, lang = 'zh' }) {
     try {
       let query = supabase
         .from('leave_applications')
-        .select('*, applicant:users(id, name, email, role)')
+        .select('*, applicant:users(id, name, email, role, avatar_url)')
         .order('created_at', { ascending: false })
 
       if (!isManager) {
@@ -169,7 +186,21 @@ export default function LeaveApplications({ currentUserProfile, lang = 'zh' }) {
       }
 
       const { data, error } = await query
-      if (error) throw error
+      if (error) {
+        let fallbackQuery = supabase
+          .from('leave_applications')
+          .select('*')
+          .order('created_at', { ascending: false })
+
+        if (!isManager) {
+          fallbackQuery = fallbackQuery.eq('user_id', currentUserProfile.id)
+        }
+
+        const { data: fallbackData, error: fallbackError } = await fallbackQuery
+        if (fallbackError) throw fallbackError
+        setApplications(await attachApplicants(fallbackData || []))
+        return
+      }
       setApplications(data || [])
     } catch (err) {
       setErrorMsg(err.message || (lang === 'zh' ? '获取请假记录失败' : 'Failed to load leave applications.'))
@@ -235,12 +266,13 @@ export default function LeaveApplications({ currentUserProfile, lang = 'zh' }) {
       const { data, error } = await supabase
         .from('leave_applications')
         .insert(payload)
-        .select('*, applicant:users(id, name, email, role)')
+        .select('*')
         .single()
 
       if (error) throw error
+      const insertedApplication = (await attachApplicants([data]))[0]
 
-      await notifyManagers(data)
+      await notifyManagers(insertedApplication)
       setSuccessMsg(lang === 'zh' ? '请假申请已记录，并已通知负责老师与执委。' : 'Leave application recorded and managers notified.')
       setFormData({
         leave_type: 'sick',
@@ -581,9 +613,22 @@ export default function LeaveApplications({ currentUserProfile, lang = 'zh' }) {
                               {lang === 'zh' ? '1 天' : '1 day'}
                             </span>
                           </div>
-                          <p className="text-sm font-black truncate" style={{ color: '#1a1a1a' }}>
-                            {isManager ? (application.applicant?.name || '-') : (lang === 'zh' ? '我的申请' : 'My application')}
-                          </p>
+                          <div className="flex items-center gap-2">
+                            {isManager && (
+                              <UserAvatar
+                                user={application.applicant}
+                                size={30}
+                                rounded={12}
+                                onClick={(event) => {
+                                  event.stopPropagation()
+                                  setAvatarPreviewUser(application.applicant)
+                                }}
+                              />
+                            )}
+                            <p className="text-sm font-black truncate" style={{ color: '#1a1a1a' }}>
+                              {isManager ? (application.applicant?.name || '-') : (lang === 'zh' ? '我的申请' : 'My application')}
+                            </p>
+                          </div>
                           <p className="text-xs font-semibold line-clamp-1" style={{ color: '#6b7280' }}>
                             {application.reason}
                           </p>
@@ -659,6 +704,8 @@ export default function LeaveApplications({ currentUserProfile, lang = 'zh' }) {
           </div>
         </div>
       )}
+
+      <AvatarPreviewModal user={avatarPreviewUser} lang={lang} onClose={() => setAvatarPreviewUser(null)} />
     </div>
   )
 }

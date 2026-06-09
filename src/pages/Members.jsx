@@ -3,6 +3,8 @@ import { supabase } from '../supabaseClient'
 import { createClient } from '@supabase/supabase-js'
 import { UserPlus, Search, Edit2, Shield, UserX, UserCheck, AlertCircle, Loader } from 'lucide-react'
 import PositionSelect from '../components/PositionSelect'
+import UserAvatar from '../components/UserAvatar'
+import AvatarPreviewModal from '../components/AvatarPreviewModal'
 
 const ROLE_OPTIONS = [
   { value: 'convener_teacher', zh: '召集老师', en: 'Convener Teacher', bg: '#ffe4ec', color: '#be185d', border: '#FFB3C6' },
@@ -64,6 +66,7 @@ export default function Members({ currentUserProfile, lang }) {
   const [showAddModal, setShowAddModal] = useState(false)
   const [showEditModal, setShowEditModal] = useState(false)
   const [selectedMember, setSelectedMember] = useState(null)
+  const [avatarPreviewUser, setAvatarPreviewUser] = useState(null)
   const [formData, setFormData] = useState({ name: '', email: '', role: 'ordinary_member', custom_role_label: '', birthday: '', password: '', is_active: true })
   const [formSubmitting, setFormSubmitting] = useState(false)
 
@@ -312,7 +315,12 @@ export default function Members({ currentUserProfile, lang }) {
                   const roleLabel = getMemberRoleLabel(m)
                   return (
                     <tr key={m.id} style={{ background: idx % 2 === 0 ? 'white' : '#f7fbff', borderBottom: '1px solid #e0f1ff' }}>
-                      <td className="py-4 px-5 font-black" style={{ color: '#1a1a1a' }}>{m.name}</td>
+                      <td className="py-4 px-5">
+                        <div className="flex items-center gap-3">
+                          <UserAvatar user={m} size={34} rounded={13} onClick={() => setAvatarPreviewUser(m)} />
+                          <span className="font-black" style={{ color: '#1a1a1a' }}>{m.name}</span>
+                        </div>
+                      </td>
                       <td className="py-4 px-5 font-mono text-xs font-semibold" style={{ color: '#6b7280' }}>{m.email}</td>
                       <td className="py-4 px-5">
                         <span className="px-2.5 py-1 text-xs font-black rounded-full"
@@ -373,8 +381,13 @@ export default function Members({ currentUserProfile, lang }) {
                   <div className="space-y-2">
                     <div className="flex items-start justify-between">
                       <div>
-                        <h4 className="font-black text-base" style={{ color: '#1a1a1a' }}>{m.name}</h4>
-                        <p className="font-mono text-xs mt-0.5 font-semibold" style={{ color: '#6b7280' }}>{m.email}</p>
+                        <div className="flex items-center gap-2">
+                          <UserAvatar user={m} size={34} rounded={13} onClick={() => setAvatarPreviewUser(m)} />
+                          <div>
+                            <h4 className="font-black text-base" style={{ color: '#1a1a1a' }}>{m.name}</h4>
+                            <p className="font-mono text-xs mt-0.5 font-semibold" style={{ color: '#6b7280' }}>{m.email}</p>
+                          </div>
+                        </div>
                       </div>
                       <span className="px-2 py-0.5 text-[10px] font-black rounded-full shrink-0"
                         style={{ background: roleLabel.bg, color: roleLabel.color, border: `1.5px solid ${roleLabel.border}` }}>
@@ -543,6 +556,8 @@ export default function Members({ currentUserProfile, lang }) {
           </div>
         </div>
       )}
+
+      <AvatarPreviewModal user={avatarPreviewUser} lang={lang} onClose={() => setAvatarPreviewUser(null)} />
     </div>
   )
 }

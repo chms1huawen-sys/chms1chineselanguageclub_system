@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../supabaseClient'
 import { createNotificationsAndPush, syncAnnouncementNotifications } from '../utils/pushNotifications'
+import UserAvatar from '../components/UserAvatar'
 import {
   AlertCircle,
   Bell,
@@ -217,7 +218,7 @@ export default function Dashboard({ currentUserProfile, lang = 'zh', onShowTutor
         isLeaveManager
           ? supabase.from('leave_applications').select('*, applicant:users(id, name, email)').order('created_at', { ascending: false }).limit(5)
           : Promise.resolve({ data: [] }),
-        supabase.from('users').select('id, name, birthday').eq('is_active', true).not('birthday', 'is', null),
+        supabase.from('users').select('id, name, birthday, avatar_url').eq('is_active', true).not('birthday', 'is', null),
         supabase.from('announcements').select('*, author:users(id, name), target_team:teams(id, name)').order('is_pinned', { ascending: false }).order('created_at', { ascending: false }).limit(20),
         supabase.from('teams').select('id, name, session').eq('type', 'event').eq('is_archived', false).order('created_at', { ascending: false }),
         supabase.from('team_members').select('team_id, teams(id, type, is_archived)').eq('user_id', currentUserProfile.id),
@@ -715,9 +716,7 @@ export default function Dashboard({ currentUserProfile, lang = 'zh', onShowTutor
                 const isToday = birthdayKey === todayKey.slice(5)
                 return (
                   <div key={user.id} className="flex flex-wrap sm:flex-nowrap items-center gap-3 p-3 rounded-2xl" style={{ background: isToday ? '#fff7fb' : '#f0f7ff', border: `1.5px solid ${isToday ? '#FFB3C6' : '#e0f1ff'}` }}>
-                    <div className="w-10 h-10 rounded-2xl flex items-center justify-center font-black shrink-0" style={{ background: 'white', color: '#6db8ff' }}>
-                      {user.name?.slice(0, 2)}
-                    </div>
+                    <UserAvatar user={user} size={40} rounded={16} />
                     <div className="min-w-0 flex-1">
                       <p className="text-sm font-black" style={{ color: '#1a1a1a' }}>{isToday ? '🎂 ' : ''}{user.name}</p>
                       <p className="text-xs font-bold" style={{ color: '#6b7280' }}>{formatDate(user.birthday, lang)}</p>

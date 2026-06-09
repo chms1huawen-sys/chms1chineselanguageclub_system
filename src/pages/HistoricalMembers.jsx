@@ -7,6 +7,8 @@ import {
   ShieldCheck,
   ChevronDown
 } from 'lucide-react'
+import UserAvatar from '../components/UserAvatar'
+import AvatarPreviewModal from '../components/AvatarPreviewModal'
 
 const selectStyle = {
   background: '#f0f7ff',
@@ -61,6 +63,7 @@ export default function HistoricalMembers({ lang }) {
   const [loading, setLoading] = useState(true)
   const [membersLoading, setMembersLoading] = useState(false)
   const [errorMsg, setErrorMsg] = useState('')
+  const [avatarPreviewUser, setAvatarPreviewUser] = useState(null)
 
   useEffect(() => {
     fetchArchivedSessions()
@@ -112,6 +115,7 @@ export default function HistoricalMembers({ lang }) {
             name,
             email,
             role,
+            avatar_url,
             is_active
           )
         `)
@@ -222,13 +226,13 @@ export default function HistoricalMembers({ lang }) {
                         className="grid grid-cols-1 md:grid-cols-[64px_1.1fr_1.6fr_1fr] md:items-center gap-2 md:gap-4 px-4 py-3 text-sm"
                       >
                         <div className="flex items-center gap-3 md:block">
-                          <span className="w-8 h-8 rounded-xl inline-flex items-center justify-center font-black text-xs md:hidden"
-                            style={{ background: '#f0f7ff', color: '#6db8ff', border: '1px solid #e0f1ff' }}>
-                            {user.name.slice(0, 2)}
-                          </span>
+                          <UserAvatar user={user} size={32} rounded={12} className="md:hidden" onClick={() => setAvatarPreviewUser(user)} />
                           <span className="text-xs font-black text-gray-400">#{idx + 1}</span>
                         </div>
-                        <p className="font-black text-gray-800 truncate">{user.name}</p>
+                        <div className="flex items-center gap-2 min-w-0">
+                          <UserAvatar user={user} size={30} rounded={12} className="hidden md:inline-flex" onClick={() => setAvatarPreviewUser(user)} />
+                          <p className="font-black text-gray-800 truncate">{user.name}</p>
+                        </div>
                         <p className="text-xs font-mono font-semibold text-gray-400 truncate">{user.email}</p>
                         <div className="flex flex-wrap items-center gap-2">
                           <span className="w-fit text-[10px] font-black px-2.5 py-1 rounded-full bg-blue-50 text-blue-600 border border-blue-200">
@@ -250,6 +254,7 @@ export default function HistoricalMembers({ lang }) {
           )}
         </div>
       )}
+      <AvatarPreviewModal user={avatarPreviewUser} lang={lang} onClose={() => setAvatarPreviewUser(null)} />
     </div>
   )
 }

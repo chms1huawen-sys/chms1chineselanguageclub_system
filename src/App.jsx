@@ -13,6 +13,7 @@ import CalendarPage from './pages/CalendarPage'
 import LeaveApplications from './pages/LeaveApplications'
 import Settings from './pages/Settings'
 import TutorialModal from './components/TutorialModal'
+import UserAvatar from './components/UserAvatar'
 import {
   LayoutDashboard, Users, LogOut, Menu, X, Shield,
   Calendar, CheckSquare, FolderGit, Loader, CircleAlert,
@@ -349,14 +350,7 @@ function AppShell({ user, profile, onLogout, lang, setLang, onProfileUpdate }) {
         <div className="space-y-3 pt-5" style={{ borderTop: '1.5px solid rgba(255,255,255,0.25)', position: 'relative', zIndex: 1 }}>
           {/* User card */}
           <div className="flex items-center gap-3 p-2 rounded-2xl" style={{ background: 'rgba(255,255,255,0.2)' }}>
-            <div className="w-9 h-9 rounded-full flex items-center justify-center font-black text-sm flex-shrink-0 overflow-hidden"
-              style={{ background: 'white', color: '#6db8ff', boxShadow: '0 2px 10px rgba(40,96,150,0.2)' }}>
-              {profile?.avatar_url ? (
-                <img src={profile.avatar_url} alt="Avatar" className="w-full h-full object-cover" />
-              ) : (
-                profile?.name ? profile.name.slice(0, 2) : '会员'
-              )}
-            </div>
+            <UserAvatar user={profile} name={profile?.name || '会员'} size={36} rounded={999} />
             <div className="min-w-0 flex-1">
               <p className="text-sm font-black truncate" style={{ color: 'white', textShadow: sidebarTextShadow }}>{profile?.name || (lang === 'zh' ? '未知成员' : 'Unknown')}</p>
               <p className="text-[10px] font-semibold truncate mt-0.5" style={{ color: 'white', textShadow: sidebarTextShadow }}>

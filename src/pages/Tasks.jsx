@@ -1,6 +1,7 @@
 ﻿import React, { useState, useEffect } from 'react'
 import { supabase } from '../supabaseClient'
 import { createNotificationsAndPush } from '../utils/pushNotifications'
+import UserAvatar from '../components/UserAvatar'
 import {
   CheckSquare,
   Plus,
@@ -575,7 +576,8 @@ export default function Tasks({ currentUserProfile, lang }) {
           users (
             name,
             role,
-            custom_role_label
+            custom_role_label,
+            avatar_url
           )
         `)
         .eq('task_id', taskId)
@@ -977,15 +979,7 @@ export default function Tasks({ currentUserProfile, lang }) {
                                 </div>
                               ) : (
                                 assignees.slice(0, 3).map(u => (
-                                  <div key={u.id} className="w-6 h-6 rounded-full flex items-center justify-center font-black text-[9px] border-2 border-white"
-                                    style={{
-                                      background: u.id === currentUserProfile.id ? '#95CBFF' : '#f0f7ff',
-                                      color: u.id === currentUserProfile.id ? 'white' : '#6db8ff'
-                                    }}
-                                    title={u.name}
-                                  >
-                                    {u.name.slice(0, 2)}
-                                  </div>
+                                  <UserAvatar key={u.id} user={u} size={24} rounded={999} title={u.name} />
                                 ))
                               )}
                               {assignees.length > 3 && (
@@ -1224,12 +1218,7 @@ export default function Tasks({ currentUserProfile, lang }) {
                   <span className="text-[10px] font-black text-gray-400 block uppercase">{_('负责人', 'Assignees')}</span>
                   <div className="flex -space-x-1.5 overflow-hidden">
                     {users.filter(u => selectedTask.assigned_to?.includes(u.id)).map(u => (
-                      <div key={u.id} className="w-6 h-6 rounded-full flex items-center justify-center font-black text-[9px] border border-white"
-                        style={{ background: '#95CBFF', color: 'white' }}
-                        title={u.name}
-                      >
-                        {u.name.slice(0, 2)}
-                      </div>
+                      <UserAvatar key={u.id} user={u} size={24} rounded={999} title={u.name} />
                     ))}
                     {users.filter(u => selectedTask.assigned_to?.includes(u.id)).length === 0 && (
                       <span className="text-xs font-bold text-gray-500">{_('未指派人员', 'Unassigned')}</span>
@@ -1318,6 +1307,7 @@ export default function Tasks({ currentUserProfile, lang }) {
                         >
                           <div className="flex items-center justify-between gap-4">
                             <div className="flex items-center gap-1.5">
+                              <UserAvatar user={userDetails} size={24} rounded={10} />
                               <span className="font-black text-gray-800">{userDetails.name}</span>
                               <span className="text-[8px] font-bold px-1.5 py-0.5 rounded-full bg-white text-gray-400 border border-gray-100">
                                 {getTaskUserRoleLabel(userDetails, lang)}

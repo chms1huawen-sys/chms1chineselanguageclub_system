@@ -14,6 +14,8 @@ import {
   Trash2,
   ListTodo
 } from 'lucide-react'
+import UserAvatar from '../components/UserAvatar'
+import AvatarPreviewModal from '../components/AvatarPreviewModal'
 
 const BOARD_MANAGER_ROLES = ['convener_teacher', 'advisor_teacher', 'chairperson', 'vice_chairperson', 'advisor']
 const TASK_MANAGER_ROLES = [...BOARD_MANAGER_ROLES, 'secretary', 'vice_secretary', 'treasurer', 'vice_treasurer', 'general_affairs', 'vice_general_affairs', 'activity_lead', 'vice_activity_lead', 'media_lead', 'vice_media_lead']
@@ -57,6 +59,7 @@ export default function Committees({ currentUserProfile, lang }) {
   const [commDriveLink, setCommDriveLink] = useState('')
   const [driveEventId, setDriveEventId] = useState(null)
   const [canViewSelectedCommittee, setCanViewSelectedCommittee] = useState(null)
+  const [avatarPreviewUser, setAvatarPreviewUser] = useState(null)
 
   // Modals state
   const [showCreateModal, setShowCreateModal] = useState(false)
@@ -200,7 +203,8 @@ export default function Committees({ currentUserProfile, lang }) {
           users (
             name,
             email,
-            role
+            role,
+            avatar_url
           )
         `)
         .eq('team_id', commId)
@@ -691,11 +695,14 @@ export default function Committees({ currentUserProfile, lang }) {
                       const userDetails = m.users || { name: _('未知成员', 'Unknown'), email: '', role: '' }
                       return (
                         <div key={m.user_id} className="p-3.5 rounded-2xl border border-[#e0f1ff] flex justify-between items-center bg-[#fcfcfc]">
-                          <div>
-                            <h4 className="font-black text-sm text-gray-800">{userDetails.name}</h4>
-                            <span className="inline-block mt-1 text-[9px] font-black px-2 py-0.5 rounded-full bg-amber-50 text-amber-600 border border-amber-200">
-                              {m.position}
-                            </span>
+                          <div className="flex items-center gap-3 min-w-0">
+                            <UserAvatar user={userDetails} size={34} rounded={13} onClick={() => setAvatarPreviewUser(userDetails)} />
+                            <div className="min-w-0">
+                              <h4 className="font-black text-sm text-gray-800 truncate">{userDetails.name}</h4>
+                              <span className="inline-block mt-1 text-[9px] font-black px-2 py-0.5 rounded-full bg-amber-50 text-amber-600 border border-amber-200">
+                                {m.position}
+                              </span>
+                            </div>
                           </div>
                           {canManageSelectedCommittee && !selectedComm.is_archived && (
                             <button
@@ -1121,6 +1128,8 @@ export default function Committees({ currentUserProfile, lang }) {
           </div>
         </div>
       )}
+
+      <AvatarPreviewModal user={avatarPreviewUser} lang={lang} onClose={() => setAvatarPreviewUser(null)} />
 
     </div>
   )
