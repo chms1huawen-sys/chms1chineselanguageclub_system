@@ -170,32 +170,38 @@ export default function HistoricalMembers({ lang }) {
                   {_('该学期尚未绑定成员记录', 'No member records for this session.')}
                 </div>
               ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div className="overflow-hidden rounded-2xl bg-white border border-[#e0f1ff]" style={{ boxShadow: '0 4px 16px rgba(149,203,255,0.04)' }}>
+                  <div className="hidden md:grid grid-cols-[64px_1.1fr_1.6fr_1fr] gap-4 px-4 py-3 text-[10px] font-black uppercase tracking-wider" style={{ background: '#95CBFF', color: 'white' }}>
+                    <span>{_('序', 'No.')}</span>
+                    <span>{_('姓名', 'Name')}</span>
+                    <span>{_('邮箱', 'Email')}</span>
+                    <span>{_('职位', 'Position')}</span>
+                  </div>
+                  <div className="divide-y divide-[#f0f7ff]">
                   {members.map((member, idx) => {
                     const rawUser = Array.isArray(member.users) ? member.users[0] : member.users
                     const user = rawUser || { name: '已注销成员', email: 'N/A', role: '' }
                     return (
                       <div
                         key={member.user_id || idx}
-                        className="p-5 rounded-3xl bg-white border border-[#e0f1ff] flex items-center gap-4 relative overflow-hidden transition-transform hover:scale-[1.01]"
-                        style={{ boxShadow: '0 4px 16px rgba(149,203,255,0.04)' }}
+                        className="grid grid-cols-1 md:grid-cols-[64px_1.1fr_1.6fr_1fr] md:items-center gap-2 md:gap-4 px-4 py-3 text-sm"
                       >
-                        <div className="w-11 h-11 rounded-2xl flex items-center justify-center font-black text-xs shrink-0 bg-[#f0f7ff] text-[#6db8ff] border border-[#e0f1ff]">
-                          {user.name.slice(0, 2)}
-                        </div>
-
-                        <div className="space-y-1 min-w-0 flex-1">
-                          <div className="flex items-baseline justify-between gap-2">
-                            <h4 className="font-black text-sm text-gray-800 truncate">{user.name}</h4>
-                          </div>
-                          <p className="text-[10px] font-mono font-semibold text-gray-400 truncate">{user.email}</p>
-                          <span className="inline-block text-[9px] font-black px-2 py-0.5 rounded-full bg-blue-50 text-blue-600 border border-blue-200">
-                            {member.position}
+                        <div className="flex items-center gap-3 md:block">
+                          <span className="w-8 h-8 rounded-xl inline-flex items-center justify-center font-black text-xs md:hidden"
+                            style={{ background: '#f0f7ff', color: '#6db8ff', border: '1px solid #e0f1ff' }}>
+                            {user.name.slice(0, 2)}
                           </span>
+                          <span className="text-xs font-black text-gray-400">#{idx + 1}</span>
                         </div>
+                        <p className="font-black text-gray-800 truncate">{user.name}</p>
+                        <p className="text-xs font-mono font-semibold text-gray-400 truncate">{user.email}</p>
+                        <span className="w-fit text-[10px] font-black px-2.5 py-1 rounded-full bg-blue-50 text-blue-600 border border-blue-200">
+                          {member.position}
+                        </span>
                       </div>
                     )
                   })}
+                </div>
                 </div>
               )}
             </div>

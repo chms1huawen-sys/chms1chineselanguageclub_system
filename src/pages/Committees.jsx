@@ -45,6 +45,7 @@ export default function Committees({ currentUserProfile, lang }) {
   const _ = (zh, en) => lang === 'zh' ? zh : en
   const [committees, setCommittees] = useState([])
   const [activeTab, setActiveTab] = useState('active') // 'active' or 'archived'
+  const [archiveYearFilter, setArchiveYearFilter] = useState('all')
   const [loading, setLoading] = useState(true)
   const [errorMsg, setErrorMsg] = useState('')
   const [successMsg, setSuccessMsg] = useState('')
@@ -433,7 +434,16 @@ export default function Committees({ currentUserProfile, lang }) {
 
   const activeCommittees = committees.filter(c => !c.is_archived)
   const archivedCommittees = committees.filter(c => c.is_archived)
-  const currentTabComms = activeTab === 'active' ? activeCommittees : archivedCommittees
+  const getCommitteeYear = (committee) => {
+    const source = committee.session || committee.start_date || committee.end_date || committee.created_at || ''
+    const match = String(source).match(/\d{4}/)
+    return match ? match[0] : _('未设年份', 'No Year')
+  }
+  const archiveYears = [...new Set(archivedCommittees.map(getCommitteeYear))].sort((a, b) => String(b).localeCompare(String(a)))
+  const filteredArchivedCommittees = archiveYearFilter === 'all'
+    ? archivedCommittees
+    : archivedCommittees.filter(committee => getCommitteeYear(committee) === archiveYearFilter)
+  const currentTabComms = activeTab === 'active' ? activeCommittees : filteredArchivedCommittees
 
   return (
     <div className="space-y-6" style={{ fontFamily: "'Nunito', sans-serif" }}>
@@ -485,27 +495,43 @@ export default function Committees({ currentUserProfile, lang }) {
 
       {/* Tabs Menu */}
       {!selectedComm && (
-        <div className="flex gap-2 p-1 rounded-2xl max-w-xs shrink-0" style={{ background: '#f0f7ff', border: '1.5px solid #e0f1ff' }}>
-          <button
-            onClick={() => setActiveTab('active')}
-            className="flex-1 py-2 text-xs font-black rounded-xl transition cursor-pointer"
-            style={{
-              background: activeTab === 'active' ? 'white' : 'transparent',
-              color: activeTab === 'active' ? '#6db8ff' : '#6b7280'
-            }}
-          >
-             {_('进行中', 'Active')} ({activeCommittees.length})
-          </button>
-          <button
-            onClick={() => setActiveTab('archived')}
-            className="flex-1 py-2 text-xs font-black rounded-xl transition cursor-pointer"
-            style={{
-              background: activeTab === 'archived' ? 'white' : 'transparent',
-              color: activeTab === 'archived' ? '#6db8ff' : '#6b7280'
-            }}
-          >
-             {_('已归档', 'Archived')} ({archivedCommittees.length})
-          </button>
+        <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+          <div className="flex gap-2 p-1 rounded-2xl max-w-xs shrink-0" style={{ background: '#f0f7ff', border: '1.5px solid #e0f1ff' }}>
+            <button
+              onClick={() => setActiveTab('active')}
+              className="flex-1 py-2 text-xs font-black rounded-xl transition cursor-pointer"
+              style={{
+                background: activeTab === 'active' ? 'white' : 'transparent',
+                color: activeTab === 'active' ? '#6db8ff' : '#6b7280'
+              }}
+            >
+               {_('进行中', 'Active')} ({activeCommittees.length})
+            </button>
+            <button
+              onClick={() => setActiveTab('archived')}
+              className="flex-1 py-2 text-xs font-black rounded-xl transition cursor-pointer"
+              style={{
+                background: activeTab === 'archived' ? 'white' : 'transparent',
+                color: activeTab === 'archived' ? '#6db8ff' : '#6b7280'
+              }}
+            >
+               {_('已归档', 'Archived')} ({archivedCommittees.length})
+            </button>
+          </div>
+
+          {activeTab === 'archived' && (
+            <select
+              value={archiveYearFilter}
+              onChange={(event) => setArchiveYearFilter(event.target.value)}
+              className="w-full sm:w-48 text-xs font-black outline-none rounded-2xl cursor-pointer"
+              style={{ ...inputStyle, background: 'white', padding: '9px 12px' }}
+            >
+              <option value="all">{_('所有年份', 'All Years')}</option>
+              {archiveYears.map(year => (
+                <option key={year} value={year}>{year}</option>
+              ))}
+            </select>
+          )}
         </div>
       )}
 
@@ -548,6 +574,12 @@ export default function Committees({ currentUserProfile, lang }) {
                       </span>
                     )}
                   </div>
+                  {comm.is_archived && (
+                    <span className="inline-flex w-fit items-center gap-1 text-[10px] font-black px-2.5 py-1 rounded-full"
+                      style={{ background: '#f0f7ff', color: '#4b8ed8', border: '1px solid #e0f1ff' }}>
+                      {getCommitteeYear(comm)}
+                    </span>
+                  )}
 
                   <h3 className="font-black text-base text-gray-900 leading-snug line-clamp-1">
                     {comm.name}
