@@ -1,5 +1,5 @@
 // src/pages/Settings.jsx
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { supabase } from '../supabaseClient'
 import { KeyRound, User, Bell, CheckCircle, AlertCircle, Loader, ShieldCheck } from 'lucide-react'
 import { requestFcmToken } from '../firebase'
@@ -162,6 +162,33 @@ export default function Settings({ currentUserProfile, lang = 'zh' }) {
     typeof Notification !== 'undefined' ? Notification.permission : 'unsupported'
   )
   const [notifLoading, setNotifLoading] = useState(false)
+  const [localFcmToken, setLocalFcmToken] = useState(() =>
+    typeof window !== 'undefined' ? (window.localStorage.getItem('clc_fcm_token') || '') : ''
+  )
+
+  useEffect(() => {
+    let active = true
+
+    const verifyLocalPushToken = async () => {
+      if (!localFcmToken || !currentUserProfile?.id) return
+
+      const { data, error } = await supabase
+        .from('push_subscriptions')
+        .select('id, is_active')
+        .eq('fcm_token', localFcmToken)
+        .eq('user_id', currentUserProfile.id)
+        .maybeSingle()
+
+      if (!active) return
+      if (error || !data?.is_active) {
+        window.localStorage.removeItem('clc_fcm_token')
+        setLocalFcmToken('')
+      }
+    }
+
+    verifyLocalPushToken()
+    return () => { active = false }
+  }, [localFcmToken, currentUserProfile?.id])
 
   const handleChangePassword = async (e) => {
     e.preventDefault()
@@ -240,7 +267,9 @@ export default function Settings({ currentUserProfile, lang = 'zh' }) {
 
         // 没拿到 token
         if (!token) {
-          alert('Failed to get notification token.')
+          alert(lang === 'zh'
+            ? '没有取得推送 Token。请确认已允许通知权限，并将系统以 PWA/App 方式打开后再试一次。'
+            : 'Could not get a push token. Please make sure notifications are allowed and open the system as a PWA/App, then try again.')
           return
         }
 
@@ -256,6 +285,8 @@ export default function Settings({ currentUserProfile, lang = 'zh' }) {
           return
         }
 
+        window.localStorage.setItem('clc_fcm_token', token)
+        setLocalFcmToken(token)
         alert(t.notif_success_alert)
       }
 
@@ -274,6 +305,15 @@ export default function Settings({ currentUserProfile, lang = 'zh' }) {
     unsupported: { label: t.notif_badge_unsupported, bg: '#f5f5f5', color: '#6b7280', border: '#d1d5db' },
   }
   const badge = notifBadge[notifStatus] || notifBadge.default
+  const hasPushToken = Boolean(localFcmToken)
+  const displayBadge = notifStatus === 'granted' && !hasPushToken
+    ? {
+      label: lang === 'zh' ? '需重新注册' : 'Registration Needed',
+      bg: '#fef9c3',
+      color: '#ca8a04',
+      border: '#fde047',
+    }
+    : badge
 
   const userRoleText = currentUserProfile?.role
     ? (currentUserProfile.role === 'custom' && currentUserProfile.custom_role_label
@@ -401,8 +441,8 @@ export default function Settings({ currentUserProfile, lang = 'zh' }) {
             </div>
           </div>
           <span className="px-3 py-1 rounded-full text-xs font-black"
-            style={{ background: badge.bg, color: badge.color, border: `1.5px solid ${badge.border}` }}>
-            {badge.label}
+            style={{ background: displayBadge.bg, color: displayBadge.color, border: `1.5px solid ${displayBadge.border}` }}>
+            {displayBadge.label}
           </span>
         </div>
 
@@ -422,10 +462,19 @@ export default function Settings({ currentUserProfile, lang = 'zh' }) {
           </button>
         )}
 
-        {notifStatus === 'granted' && (
+        {notifStatus === 'granted' && hasPushToken && (
           <div className="flex items-center gap-2 text-sm font-black text-green-600">
             <CheckCircle size={16} />
             {t.notif_success}
+          </div>
+        )}
+
+        {notifStatus === 'granted' && !hasPushToken && (
+          <div className="p-3 rounded-2xl text-xs font-semibold"
+            style={{ background: '#fef9c3', border: '1.5px solid #fde047', color: '#ca8a04' }}>
+            {lang === 'zh'
+              ? '通知权限已经允许，但这台设备还没有完成推送注册。请点击「重新注册推送通知」，让系统重新取得这台设备的 Token。'
+              : 'Notification permission is allowed, but this device has not completed push registration. Click "Refresh Push Registration" to get a token for this device.'}
           </div>
         )}
 

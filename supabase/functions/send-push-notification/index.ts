@@ -23,6 +23,19 @@ type NotificationInput = {
   dedupe_key?: string | null
 }
 
+type UserPushSetting = {
+  id: string
+  fcm_token: string | null
+  notification_enabled: boolean
+}
+
+type PushSubscriptionRow = {
+  id: string
+  user_id: string
+  fcm_token: string
+  is_active: boolean
+}
+
 type AnnouncementSyncInput = {
   action: 'update' | 'delete'
   announcement_id: string
@@ -159,6 +172,9 @@ const sendFcmNotification = async (
     throw new Error(errorText || `FCM send failed with ${response.status}`)
   }
 }
+
+const isInvalidFcmTokenError = (message: string) =>
+  /UNREGISTERED|registration-token-not-registered|INVALID_ARGUMENT|Requested entity was not found/i.test(message)
 
 Deno.serve(async (request) => {
   console.log('[send-push-notification] request received', {
@@ -358,22 +374,69 @@ Deno.serve(async (request) => {
       return new Response(JSON.stringify({ error: usersError.message }), { status: 500, headers: corsHeaders })
     }
 
-    const usersById = new Map((users || []).map((user) => [user.id, user]))
-    const tokenCount = (users || []).filter((user) => user.notification_enabled && user.fcm_token).length
+    const { data: subscriptions, error: subscriptionsError } = await supabase
+      .from('push_subscriptions')
+      .select('id, user_id, fcm_token, is_active')
+      .in('user_id', userIds)
+      .eq('is_active', true)
+
+    if (subscriptionsError) {
+      console.error('[send-push-notification] fetch push subscriptions failed', subscriptionsError.message)
+      return new Response(JSON.stringify({ error: subscriptionsError.message }), { status: 500, headers: corsHeaders })
+    }
+
+    const usersById = new Map(((users || []) as UserPushSetting[]).map((user) => [user.id, user]))
+    const subscriptionsByUserId = new Map<string, PushSubscriptionRow[]>()
+    for (const subscription of ((subscriptions || []) as PushSubscriptionRow[])) {
+      if (!subscriptionsByUserId.has(subscription.user_id)) subscriptionsByUserId.set(subscription.user_id, [])
+      subscriptionsByUserId.get(subscription.user_id)!.push(subscription)
+    }
+    for (const user of ((users || []) as UserPushSetting[])) {
+      if (user.fcm_token && !subscriptionsByUserId.has(user.id)) {
+        subscriptionsByUserId.set(user.id, [{
+          id: '',
+          user_id: user.id,
+          fcm_token: user.fcm_token,
+          is_active: true,
+        }])
+      }
+    }
+
+    const tokenCount = [...subscriptionsByUserId.entries()]
+      .filter(([userId]) => usersById.get(userId)?.notification_enabled)
+      .reduce((sum, [, rows]) => sum + rows.length, 0)
     console.log('[send-push-notification] recipients loaded', {
       notifications: notifications.length,
       users: users?.length || 0,
+      devices: subscriptions?.length || 0,
       push_ready_users: tokenCount,
     })
 
     const accessToken = await getFirebaseAccessToken(serviceAccount)
 
     const pushResults = await Promise.allSettled(
-      (notifications as NotificationRow[]).map(async (notification) => {
+      (notifications as NotificationRow[]).flatMap((notification) => {
         const user = usersById.get(notification.user_id)
-        if (!user?.notification_enabled || !user.fcm_token) return 'skipped'
-        await sendFcmNotification(accessToken, firebaseProjectId, user.fcm_token, notification, url, linkUrl)
-        return 'sent'
+        const userSubscriptions = subscriptionsByUserId.get(notification.user_id) || []
+        if (!user?.notification_enabled || userSubscriptions.length === 0) {
+          return [Promise.resolve('skipped')]
+        }
+
+        return userSubscriptions.map(async (subscription) => {
+          try {
+            await sendFcmNotification(accessToken, firebaseProjectId, subscription.fcm_token, notification, url, linkUrl)
+            return 'sent'
+          } catch (error) {
+            const message = error.message || String(error)
+            if (subscription.id && isInvalidFcmTokenError(message)) {
+              await supabase
+                .from('push_subscriptions')
+                .update({ is_active: false })
+                .eq('id', subscription.id)
+            }
+            throw error
+          }
+        })
       }),
     )
 

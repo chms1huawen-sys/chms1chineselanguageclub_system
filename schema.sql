@@ -16,6 +16,7 @@ drop table if exists public.tasks cascade;
 drop table if exists public.events cascade;
 drop table if exists public.team_members cascade;
 drop table if exists public.teams cascade;
+drop table if exists public.push_subscriptions cascade;
 drop table if exists public.users cascade;
 
 -- 3. Create Users Table (extends auth.users)
@@ -29,6 +30,17 @@ create table public.users (
   fcm_token text,
   notification_enabled boolean not null default true,
   is_active boolean not null default true,
+  created_at timestamp with time zone default timezone('utc'::text, now()) not null
+);
+
+create table public.push_subscriptions (
+  id uuid default gen_random_uuid() primary key,
+  user_id uuid references public.users on delete cascade not null,
+  fcm_token text not null unique,
+  device_name text,
+  platform text,
+  is_active boolean not null default true,
+  last_seen_at timestamp with time zone default timezone('utc'::text, now()) not null,
   created_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
 
@@ -132,6 +144,7 @@ create table public.activity_log (
 
 -- 11. Enable Row Level Security (RLS) on public.users
 alter table public.users enable row level security;
+alter table public.push_subscriptions enable row level security;
 alter table public.teams enable row level security;
 alter table public.team_members enable row level security;
 alter table public.tasks enable row level security;
@@ -221,6 +234,13 @@ create policy "Advisors and Chairpersons can delete users." on public.users
       where id = auth.uid() and role in ('convener_teacher', 'advisor_teacher', 'chairperson', 'vice_chairperson')
     )
   );
+
+-- Push subscription policies:
+create policy "Users can view own push subscriptions." on public.push_subscriptions
+  for select to authenticated using (auth.uid() = user_id);
+
+create policy "Users can manage own push subscriptions." on public.push_subscriptions
+  for all to authenticated using (auth.uid() = user_id) with check (auth.uid() = user_id);
 
 -- Teams policies:
 create policy "Teams are viewable by all authenticated users." on public.teams
@@ -431,6 +451,30 @@ begin
   set fcm_token = p_fcm_token,
       notification_enabled = p_notification_enabled
   where id = auth.uid();
+
+  if p_fcm_token is not null and length(trim(p_fcm_token)) > 0 then
+    insert into public.push_subscriptions (
+      user_id,
+      fcm_token,
+      device_name,
+      platform,
+      is_active,
+      last_seen_at
+    )
+    values (
+      auth.uid(),
+      p_fcm_token,
+      null,
+      null,
+      p_notification_enabled,
+      now()
+    )
+    on conflict (fcm_token)
+    do update set
+      user_id = excluded.user_id,
+      is_active = excluded.is_active,
+      last_seen_at = now();
+  end if;
 end;
 $$;
 
