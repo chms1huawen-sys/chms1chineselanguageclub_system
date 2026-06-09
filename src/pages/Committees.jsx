@@ -55,6 +55,7 @@ export default function Committees({ currentUserProfile, lang }) {
   const [commTasks, setCommTasks] = useState([])
   const [commDriveLink, setCommDriveLink] = useState('')
   const [driveEventId, setDriveEventId] = useState(null)
+  const [canViewSelectedCommittee, setCanViewSelectedCommittee] = useState(null)
 
   // Modals state
   const [showCreateModal, setShowCreateModal] = useState(false)
@@ -92,12 +93,14 @@ export default function Committees({ currentUserProfile, lang }) {
   const canManageSelectedCommittee = isPowerUser || isSelectedCommitteeManager
 
   useEffect(() => {
+    if (!currentUserProfile?.id) return
     fetchCommittees()
     fetchUsers()
-  }, [])
+  }, [currentUserProfile?.id, currentUserProfile?.role])
 
   useEffect(() => {
     if (selectedComm) {
+      setCanViewSelectedCommittee(null)
       fetchCommitteeDetails(selectedComm.id)
     }
   }, [selectedComm])
@@ -165,6 +168,27 @@ export default function Committees({ currentUserProfile, lang }) {
 
   const fetchCommitteeDetails = async (commId) => {
     try {
+      if (!isPowerUser) {
+        const { data: ownMembership, error: ownMembershipError } = await supabase
+          .from('team_members')
+          .select('position')
+          .eq('team_id', commId)
+          .eq('user_id', currentUserProfile.id)
+          .maybeSingle()
+
+        if (ownMembershipError) throw ownMembershipError
+        if (!ownMembership) {
+          setCanViewSelectedCommittee(false)
+          setCommMembers([])
+          setCommTasks([])
+          setCommDriveLink('')
+          setDriveEventId(null)
+          return
+        }
+      }
+
+      setCanViewSelectedCommittee(true)
+
       // 1. Fetch team members (joined with users)
       const { data: members, error: mErr } = await supabase
         .from('team_members')
@@ -213,6 +237,7 @@ export default function Committees({ currentUserProfile, lang }) {
 
     } catch (err) {
       setErrorMsg(err.message || _('获取筹委团详情失败', 'Failed to load committee details.'))
+      setCanViewSelectedCommittee(false)
     }
   }
 
@@ -580,6 +605,27 @@ export default function Committees({ currentUserProfile, lang }) {
             <h2 className="font-black text-lg text-gray-900">{selectedComm.name}</h2>
           </div>
 
+          {canViewSelectedCommittee === null && (
+            <div className="flex flex-col items-center justify-center py-16 gap-3 rounded-3xl bg-white border border-[#e0f1ff] text-gray-500">
+              <Loader size={28} style={{ color: '#95CBFF', animation: 'spin 1s linear infinite' }} />
+              <p className="text-sm font-black">{_('检查筹委权限中...', 'Checking committee access...')}</p>
+            </div>
+          )}
+
+          {canViewSelectedCommittee === false && (
+            <div className="p-8 rounded-3xl bg-white border border-[#e0f1ff] text-center space-y-3"
+              style={{ boxShadow: '0 4px 20px rgba(149,203,255,0.08)' }}>
+              <Lock size={34} style={{ color: '#95CBFF', margin: '0 auto' }} />
+              <h3 className="text-lg font-black text-gray-900">
+                {_('仅限本筹委成员查看', 'Committee Members Only')}
+              </h3>
+              <p className="text-sm font-semibold text-gray-500 leading-relaxed max-w-lg mx-auto">
+                {_('你可以看到有哪些筹委团，但只有被加入该筹委团后，才能查看成员名单、任务追踪和 Google Drive 内容。', 'You can see the committee list, but only members of this committee can view its member list, tasks, and Google Drive content.')}
+              </p>
+            </div>
+          )}
+
+          {canViewSelectedCommittee === true && (
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
             
             {/* Left panels (2 columns): Members and Task checklist */}
@@ -769,6 +815,7 @@ export default function Committees({ currentUserProfile, lang }) {
             </div>
 
           </div>
+          )}
         </div>
       )}
 

@@ -167,6 +167,31 @@ $$;
 
 grant execute on function public.can_manage_committee(uuid) to authenticated;
 
+create or replace function public.can_view_committee(target_team_id uuid)
+returns boolean
+language sql
+security definer
+set search_path = public
+as $$
+  select exists (
+    select 1
+    from public.users
+    where id = auth.uid()
+      and role in ('convener_teacher', 'advisor_teacher', 'chairperson', 'vice_chairperson', 'advisor')
+      and is_active = true
+  )
+  or exists (
+    select 1
+    from public.team_members tm
+    join public.teams t on t.id = tm.team_id
+    where tm.team_id = target_team_id
+      and tm.user_id = auth.uid()
+      and t.type = 'event'
+  );
+$$;
+
+grant execute on function public.can_view_committee(uuid) to authenticated;
+
 -- 12. Create basic RLS Policies (allows authenticated users full read, restricted writes)
 -- For simplicity & full usability:
 -- Users policies:
@@ -210,8 +235,12 @@ create policy "Advisors and Chairpersons can manage teams." on public.teams
   );
 
 -- Team members policies:
-create policy "Team members are viewable by all authenticated users." on public.team_members
-  for select to authenticated using (true);
+create policy "Committee member rows are viewable by committee members." on public.team_members
+  for select to authenticated
+  using (
+    auth.uid() = user_id
+    or public.can_view_committee(team_id)
+  );
 
 create policy "Advisors and Chairpersons can manage team members." on public.team_members
   for all to authenticated using (
@@ -243,6 +272,10 @@ create policy "Task managers and related users can view tasks." on public.tasks
 create policy "Committee managers can view committee tasks." on public.tasks
   for select to authenticated
   using (public.can_manage_committee(team_id));
+
+create policy "Committee members can view committee tasks." on public.tasks
+  for select to authenticated
+  using (public.can_view_committee(team_id));
 
 create policy "Task managers can create tasks." on public.tasks
   for insert to authenticated with check (
@@ -302,8 +335,13 @@ create policy "Users can view own task reminder logs." on public.task_reminder_l
   for select to authenticated using (auth.uid() = user_id);
 
 -- Events policies:
-create policy "Events are viewable by all authenticated users." on public.events
-  for select to authenticated using (true);
+create policy "Events are viewable by authenticated users with private committee drive links." on public.events
+  for select to authenticated
+  using (
+    team_id is null
+    or title not ilike '%Google Drive%'
+    or public.can_view_committee(team_id)
+  );
 
 create policy "Advisors, chairpersons, secretaries, and treasurers can manage events." on public.events
   for all to authenticated using (
