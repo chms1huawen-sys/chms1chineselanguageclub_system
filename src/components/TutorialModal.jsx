@@ -1,7 +1,7 @@
 ﻿import React, { useState } from 'react'
 import {
   X, ChevronRight, ChevronLeft, Smartphone, Monitor,
-  CheckSquare, FolderGit, Shield, Bell, Download
+  CheckSquare, FolderGit, Shield, Bell, Camera
 } from 'lucide-react'
 
 const STEPS_ZH = [
@@ -65,6 +65,48 @@ const STEPS_ZH = [
     )
   },
   {
+    icon: <Camera size={32} style={{ color: '#FFB3C6' }} />,
+    title: '个人设置：头像与推送注册',
+    subtitle: '每台设备都需要独立开启推送',
+    body: (
+      <div className="space-y-3 text-sm leading-relaxed text-gray-600 font-semibold">
+        <p>点击左边菜单栏的 <strong className="text-gray-800">「设置」</strong>，可以管理你的个人资料与通知状态。</p>
+        <div className="grid grid-cols-1 gap-2 text-xs">
+          <div className="p-3 rounded-2xl" style={{ background: '#fff1f2', border: '1.5px solid #fecdd3' }}>
+            <p className="font-black text-rose-600">个人头像</p>
+            <p className="text-rose-500 mt-1">可上传 JPG、PNG 或 WEBP 头像；不上传时系统会使用默认首字头像。</p>
+          </div>
+          <div className="p-3 rounded-2xl" style={{ background: '#f0f7ff', border: '1.5px solid #bfdbfe' }}>
+            <p className="font-black text-blue-600">推送通知</p>
+            <p className="text-blue-500 mt-1">同一个账号可以登入多台设备，但每一台手机或电脑都要在设置里点击「重新注册推送通知」。</p>
+          </div>
+        </div>
+        <p className="text-xs text-gray-500">如果显示「需重新注册」，代表浏览器权限已允许，但这台设备还没有取得推送 Token。</p>
+      </div>
+    )
+  },
+  {
+    icon: <Camera size={32} style={{ color: '#FFB3C6' }} />,
+    title: 'Settings: Avatar & Push Registration',
+    subtitle: 'Each device needs its own push registration',
+    body: (
+      <div className="space-y-3 text-sm leading-relaxed text-gray-600 font-semibold">
+        <p>Open <strong className="text-gray-800">Settings</strong> from the sidebar to manage your profile and notification status.</p>
+        <div className="grid grid-cols-1 gap-2 text-xs">
+          <div className="p-3 rounded-2xl" style={{ background: '#fff1f2', border: '1.5px solid #fecdd3' }}>
+            <p className="font-black text-rose-600">Profile Avatar</p>
+            <p className="text-rose-500 mt-1">Upload a JPG, PNG, or WEBP avatar, or keep the default initials avatar.</p>
+          </div>
+          <div className="p-3 rounded-2xl" style={{ background: '#f0f7ff', border: '1.5px solid #bfdbfe' }}>
+            <p className="font-black text-blue-600">Push Notifications</p>
+            <p className="text-blue-500 mt-1">One account can be used on multiple devices, but each phone or computer must click "Refresh Push Registration" in Settings.</p>
+          </div>
+        </div>
+        <p className="text-xs text-gray-500">If you see "Registration Needed", permission is allowed but this device has not received a push token yet.</p>
+      </div>
+    )
+  },
+  {
     icon: <Smartphone size={32} style={{ color: '#f59e0b' }} />,
     title: '手机推送通知 — iPhone (Safari)',
     subtitle: '在 iPhone 上开启推送通知',
@@ -80,7 +122,7 @@ const STEPS_ZH = [
             { step: '②', text: '点击底部工具栏的「分享」按钮（方块+箭头图标）' },
             { step: '③', text: '在弹出菜单中选择「添加到主屏幕」' },
             { step: '④', text: '系统会以 App 图标形式保存到桌面，下次从桌面图标打开' },
-            { step: '⑤', text: '首次从桌面打开后，系统会弹出通知权限请求，点击「允许」即可' },
+            { step: '⑤', text: '从桌面图标打开系统，到「设置」点击「开启/重新注册推送通知」，并允许通知权限' },
           ].map(s => (
             <div key={s.step} className="flex items-start gap-3">
               <span className="w-6 h-6 rounded-full flex items-center justify-center font-black text-xs shrink-0"
@@ -109,7 +151,7 @@ const STEPS_ZH = [
           {[
             { step: '①', text: '在 Chrome 打开系统网址并登录' },
             { step: '②', text: '点击地址栏右侧的「安装」按钮，或从菜单选择「添加到主屏幕」' },
-            { step: '③', text: '系统将以原生 App 形式安装，通知权限自动开启' },
+            { step: '③', text: '安装后打开系统，到「设置」点击「开启/重新注册推送通知」，完成这台设备的注册' },
           ].map(s => (
             <div key={s.step} className="flex items-start gap-3">
               <span className="w-6 h-6 rounded-full flex items-center justify-center font-black text-xs shrink-0"
@@ -136,9 +178,10 @@ const STEPS_ZH = [
           <p className="text-xs font-black text-gray-700">快速上手检查清单：</p>
           {[
             '✅ 确认自己的账号可以正常登录',
+            '✅ 到设置上传头像，或保留系统默认头像',
             '✅ 在任务看板查看有没有分配给你的任务',
             '✅ 点击任务卡片，尝试更新一次状态或留下备注',
-            '✅ 在手机上完成 PWA 安装以开启推送通知',
+            '✅ 在每一台要收通知的设备完成 PWA 安装与推送注册',
             '✅ 查看活动行事历，了解近期学会安排',
           ].map((item, i) => (
             <div key={i} className="flex items-start gap-2 text-xs text-gray-600">
@@ -229,7 +272,7 @@ const STEPS_EN = [
             { step: '②', text: 'Tap the Share button (box with arrow) at the bottom toolbar' },
             { step: '③', text: 'Select "Add to Home Screen" from the menu' },
             { step: '④', text: 'The system saves as an App icon on your home screen' },
-            { step: '⑤', text: 'Open from the home screen icon — tap "Allow" when asked for notification permission' },
+            { step: '⑤', text: 'Open from the home screen icon, go to Settings, tap "Enable/Refresh Push Registration", then allow notifications' },
           ].map(s => (
             <div key={s.step} className="flex items-start gap-3">
               <span className="w-6 h-6 rounded-full flex items-center justify-center font-black text-xs shrink-0"
@@ -257,7 +300,7 @@ const STEPS_EN = [
           {[
             { step: '①', text: 'Open the system URL in Chrome on Android' },
             { step: '②', text: 'Tap "Install" button in address bar, or choose "Add to Home Screen" from the menu' },
-            { step: '③', text: 'System installs as a native-like App with notification support enabled' },
+            { step: '③', text: 'After installing, open Settings and tap "Enable/Refresh Push Registration" to register this device' },
           ].map(s => (
             <div key={s.step} className="flex items-start gap-3">
               <span className="w-6 h-6 rounded-full flex items-center justify-center font-black text-xs shrink-0"
@@ -284,9 +327,10 @@ const STEPS_EN = [
           <p className="text-xs font-black text-gray-700">Quick Start Checklist:</p>
           {[
             '✅ Confirm you can log in with your account',
+            '✅ Upload a profile avatar in Settings, or keep the default avatar',
             '✅ Check the Tasks Board for any tasks assigned to you',
             '✅ Click a task card and try updating its status',
-            '✅ Complete PWA installation on mobile to enable push notifications',
+            '✅ Complete PWA installation and push registration on every device that should receive notifications',
             '✅ Browse the Calendar to see upcoming activities',
           ].map((item, i) => (
             <div key={i} className="flex items-start gap-2 text-xs text-gray-600">
