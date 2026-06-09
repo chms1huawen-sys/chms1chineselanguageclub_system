@@ -151,6 +151,20 @@ export default function Handover({ currentUserProfile, lang }) {
       const today = getLocalDate()
 
       if (currentBoard) {
+        const archivedRosterRows = activeUsers.map(user => ({
+          team_id: currentBoard.id,
+          user_id: user.id,
+          position: getRoleLabel(user, 'zh'),
+        }))
+
+        if (archivedRosterRows.length > 0) {
+          const { error: snapshotError } = await supabase
+            .from('team_members')
+            .upsert(archivedRosterRows, { onConflict: 'team_id,user_id' })
+
+          if (snapshotError) throw snapshotError
+        }
+
         const { error: archiveError } = await supabase
           .from('teams')
           .update({ is_archived: true, end_date: today })
