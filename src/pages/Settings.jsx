@@ -1,7 +1,7 @@
 // src/pages/Settings.jsx
 import { useEffect, useState } from 'react'
 import { supabase } from '../supabaseClient'
-import { KeyRound, User, Bell, CheckCircle, AlertCircle, Loader, ShieldCheck } from 'lucide-react'
+import { KeyRound, User, Bell, CheckCircle, AlertCircle, Loader, ShieldCheck, Camera, Trash2 } from 'lucide-react'
 import { requestFcmToken } from '../firebase'
 
 const ROLE_LABELS = {
@@ -146,8 +146,17 @@ const withTimeout = (promise, ms = 20000) => {
   return Promise.race([promise, timeout]).finally(() => window.clearTimeout(timeoutId))
 }
 
-export default function Settings({ currentUserProfile, lang = 'zh' }) {
+export default function Settings({ currentUserProfile, lang = 'zh', onProfileUpdate }) {
   const t = T[lang] || T.zh
+
+  const [profileDraft, setProfileDraft] = useState(currentUserProfile || {})
+  const [avatarLoading, setAvatarLoading] = useState(false)
+  const [avatarError, setAvatarError] = useState('')
+  const [avatarSuccess, setAvatarSuccess] = useState('')
+
+  useEffect(() => {
+    setProfileDraft(currentUserProfile || {})
+  }, [currentUserProfile])
 
   // ── Password change ──
   const [pwCurrent, setPwCurrent] = useState('')
@@ -237,6 +246,80 @@ export default function Settings({ currentUserProfile, lang = 'zh' }) {
     }
   }
 
+  const syncProfile = (patch) => {
+    const nextProfile = { ...(profileDraft || {}), ...patch }
+    setProfileDraft(nextProfile)
+    onProfileUpdate?.(nextProfile)
+  }
+
+  const handleAvatarUpload = async (event) => {
+    const file = event.target.files?.[0]
+    event.target.value = ''
+    if (!file || !currentUserProfile?.id) return
+
+    setAvatarError('')
+    setAvatarSuccess('')
+
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/webp']
+    if (!allowedTypes.includes(file.type)) {
+      setAvatarError(lang === 'zh' ? '头像只支持 JPG、PNG 或 WEBP。' : 'Avatar must be JPG, PNG, or WEBP.')
+      return
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      setAvatarError(lang === 'zh' ? '头像大小不能超过 5MB。' : 'Avatar must be 5MB or smaller.')
+      return
+    }
+
+    setAvatarLoading(true)
+    try {
+      const ext = file.name.split('.').pop()?.toLowerCase() || 'jpg'
+      const filePath = `${currentUserProfile.id}/avatar-${Date.now()}.${ext}`
+      const { error: uploadError } = await supabase.storage
+        .from('avatars')
+        .upload(filePath, file, {
+          cacheControl: '3600',
+          contentType: file.type,
+          upsert: true,
+        })
+
+      if (uploadError) throw uploadError
+
+      const { data } = supabase.storage.from('avatars').getPublicUrl(filePath)
+      const avatarUrl = data.publicUrl
+
+      const { error: updateError } = await supabase.rpc('update_my_avatar_url', {
+        p_avatar_url: avatarUrl,
+      })
+
+      if (updateError) throw updateError
+
+      syncProfile({ avatar_url: avatarUrl })
+      setAvatarSuccess(lang === 'zh' ? '头像已更新。' : 'Avatar updated.')
+    } catch (err) {
+      setAvatarError(err.message || (lang === 'zh' ? '头像上传失败。' : 'Failed to upload avatar.'))
+    } finally {
+      setAvatarLoading(false)
+    }
+  }
+
+  const handleRemoveAvatar = async () => {
+    if (!currentUserProfile?.id) return
+    setAvatarError('')
+    setAvatarSuccess('')
+    setAvatarLoading(true)
+    try {
+      const { error } = await supabase.rpc('update_my_avatar_url', { p_avatar_url: '' })
+      if (error) throw error
+      syncProfile({ avatar_url: null })
+      setAvatarSuccess(lang === 'zh' ? '已恢复系统默认头像。' : 'Default avatar restored.')
+    } catch (err) {
+      setAvatarError(err.message || (lang === 'zh' ? '无法移除头像。' : 'Failed to remove avatar.'))
+    } finally {
+      setAvatarLoading(false)
+    }
+  }
+
   const handleRequestNotifPermission = async () => {
     if (!('Notification' in window)) {
       alert(t.notif_unsupported_alert)
@@ -321,6 +404,9 @@ export default function Settings({ currentUserProfile, lang = 'zh' }) {
       : (ROLE_LABELS[currentUserProfile.role]?.[lang] || currentUserProfile.role))
     : '—'
 
+  const avatarUrl = profileDraft?.avatar_url
+  const avatarInitials = (profileDraft?.name || currentUserProfile?.name || (lang === 'zh' ? '会员' : 'ME')).slice(0, 2)
+
   return (
     <div className="space-y-6 max-w-2xl animate-[fadeIn_0.4s_ease]" style={{ fontFamily: "'Nunito', sans-serif" }}>
 
@@ -335,6 +421,74 @@ export default function Settings({ currentUserProfile, lang = 'zh' }) {
       </div>
 
       {/* ── 账号信息 ── */}
+      <div style={cardStyle}>
+        <h2 className="font-black text-base flex items-center gap-2 mb-4" style={{ color: '#1a1a1a' }}>
+          <Camera size={18} style={{ color: '#95CBFF' }} />
+          {lang === 'zh' ? '个人头像' : 'Profile Avatar'}
+        </h2>
+
+        <div className="flex flex-col sm:flex-row sm:items-center gap-5">
+          <div className="w-24 h-24 rounded-3xl overflow-hidden flex items-center justify-center shrink-0"
+            style={{ background: 'linear-gradient(135deg, #95CBFF 0%, #FFB3C6 100%)', boxShadow: '0 6px 20px rgba(149,203,255,0.35)' }}>
+            {avatarUrl ? (
+              <img src={avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
+            ) : (
+              <span className="text-2xl font-black text-white" style={{ textShadow: '0 2px 8px rgba(40,96,150,0.35)' }}>
+                {avatarInitials}
+              </span>
+            )}
+          </div>
+
+          <div className="flex-1 space-y-3">
+            <p className="text-xs font-semibold" style={{ color: '#6b7280' }}>
+              {lang === 'zh'
+                ? '可上传 JPG、PNG 或 WEBP，最大 5MB。不上传时会使用系统默认头像。'
+                : 'Upload JPG, PNG, or WEBP up to 5MB. If empty, the system default avatar is used.'}
+            </p>
+
+            {avatarError && (
+              <div className="p-3 rounded-2xl text-xs font-semibold"
+                style={{ background: '#fee2e2', border: '1.5px solid #fca5a5', color: '#dc2626' }}>
+                {avatarError}
+              </div>
+            )}
+            {avatarSuccess && (
+              <div className="p-3 rounded-2xl text-xs font-semibold"
+                style={{ background: '#dcfce7', border: '1.5px solid #86efac', color: '#16a34a' }}>
+                {avatarSuccess}
+              </div>
+            )}
+
+            <div className="flex flex-wrap gap-2">
+              <label className="inline-flex items-center gap-2 px-4 py-2.5 rounded-2xl text-sm font-black cursor-pointer text-white"
+                style={{ background: avatarLoading ? '#b8deff' : '#95CBFF', boxShadow: '0 4px 16px rgba(149,203,255,0.25)' }}>
+                {avatarLoading ? <Loader size={14} className="animate-spin" /> : <Camera size={14} />}
+                {avatarLoading ? (lang === 'zh' ? '上传中...' : 'Uploading...') : (lang === 'zh' ? '上传头像' : 'Upload Avatar')}
+                <input
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp"
+                  onChange={handleAvatarUpload}
+                  disabled={avatarLoading}
+                  className="hidden"
+                />
+              </label>
+
+              {avatarUrl && (
+                <button
+                  type="button"
+                  onClick={handleRemoveAvatar}
+                  disabled={avatarLoading}
+                  className="inline-flex items-center gap-2 px-4 py-2.5 rounded-2xl text-sm font-black"
+                  style={{ background: '#f5f5f5', color: '#6b7280', border: '1.5px solid #d1d5db' }}>
+                  <Trash2 size={14} />
+                  {lang === 'zh' ? '恢复默认' : 'Use Default'}
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+
       <div style={cardStyle}>
         <h2 className="font-black text-base flex items-center gap-2 mb-4" style={{ color: '#1a1a1a' }}>
           <User size={18} style={{ color: '#95CBFF' }} />

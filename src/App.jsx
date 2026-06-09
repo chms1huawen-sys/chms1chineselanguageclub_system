@@ -179,7 +179,7 @@ function NotificationCenter({ profile, lang }) {
   )
 }
 
-function AppShell({ user, profile, onLogout, lang, setLang }) {
+function AppShell({ user, profile, onLogout, lang, setLang, onProfileUpdate }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [showTutorial, setShowTutorial] = useState(false)
   const location = useLocation()
@@ -349,9 +349,13 @@ function AppShell({ user, profile, onLogout, lang, setLang }) {
         <div className="space-y-3 pt-5" style={{ borderTop: '1.5px solid rgba(255,255,255,0.25)', position: 'relative', zIndex: 1 }}>
           {/* User card */}
           <div className="flex items-center gap-3 p-2 rounded-2xl" style={{ background: 'rgba(255,255,255,0.2)' }}>
-            <div className="w-9 h-9 rounded-full flex items-center justify-center font-black text-sm flex-shrink-0"
-              style={{ background: 'white', color: '#6db8ff' }}>
-              {profile?.name ? profile.name.slice(0, 2) : '会员'}
+            <div className="w-9 h-9 rounded-full flex items-center justify-center font-black text-sm flex-shrink-0 overflow-hidden"
+              style={{ background: 'white', color: '#6db8ff', boxShadow: '0 2px 10px rgba(40,96,150,0.2)' }}>
+              {profile?.avatar_url ? (
+                <img src={profile.avatar_url} alt="Avatar" className="w-full h-full object-cover" />
+              ) : (
+                profile?.name ? profile.name.slice(0, 2) : '会员'
+              )}
             </div>
             <div className="min-w-0 flex-1">
               <p className="text-sm font-black truncate" style={{ color: 'white', textShadow: sidebarTextShadow }}>{profile?.name || (lang === 'zh' ? '未知成员' : 'Unknown')}</p>
@@ -401,7 +405,7 @@ function AppShell({ user, profile, onLogout, lang, setLang }) {
           <Route path="/committees" element={<Committees currentUserProfile={profile} lang={lang} />} />
           <Route path="/calendar" element={<CalendarPage currentUserProfile={profile} lang={lang} />} />
           <Route path="/leave" element={<LeaveApplications currentUserProfile={profile} lang={lang} />} />
-          <Route path="/settings" element={<Settings currentUserProfile={profile} lang={lang} />} />
+          <Route path="/settings" element={<Settings currentUserProfile={profile} lang={lang} onProfileUpdate={onProfileUpdate} />} />
           <Route path="/historical-members" element={<HistoricalMembers lang={lang} />} />
           <Route path="/handover" element={
             isBoardManager
@@ -515,7 +519,7 @@ export default function App() {
   return (
     <Router>
       {user && profile ? (
-        <AppShell user={user} profile={profile} onLogout={handleLogout} lang={lang} setLang={setLang} />
+        <AppShell user={user} profile={profile} onLogout={handleLogout} lang={lang} setLang={setLang} onProfileUpdate={setProfile} />
       ) : (
         <Login onLoginSuccess={handleLoginSuccess} />
       )}

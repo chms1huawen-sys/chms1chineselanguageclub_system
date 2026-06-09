@@ -27,6 +27,7 @@ create table public.users (
   custom_role_label text,
   role text not null default 'ordinary_member' check (role in ('convener_teacher', 'advisor_teacher', 'chairperson', 'vice_chairperson', 'secretary', 'vice_secretary', 'treasurer', 'vice_treasurer', 'general_affairs', 'vice_general_affairs', 'activity_lead', 'vice_activity_lead', 'activity_member', 'media_lead', 'vice_media_lead', 'ordinary_member', 'custom')),
   birthday date,
+  avatar_url text,
   fcm_token text,
   notification_enabled boolean not null default true,
   is_active boolean not null default true,
@@ -479,6 +480,23 @@ end;
 $$;
 
 grant execute on function public.update_my_notification_settings(text, boolean) to authenticated;
+
+create or replace function public.update_my_avatar_url(
+  p_avatar_url text
+)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  update public.users
+  set avatar_url = nullif(trim(coalesce(p_avatar_url, '')), '')
+  where id = auth.uid();
+end;
+$$;
+
+grant execute on function public.update_my_avatar_url(text) to authenticated;
 
 -- Trigger to sync auth users with public.users
 create trigger on_auth_user_created
