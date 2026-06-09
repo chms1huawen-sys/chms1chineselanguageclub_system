@@ -19,6 +19,40 @@ const selectStyle = {
   cursor: 'pointer'
 }
 
+const ROLE_ORDER = [
+  'convener_teacher',
+  'advisor_teacher',
+  'advisor',
+  'chairperson',
+  'vice_chairperson',
+  'secretary',
+  'vice_secretary',
+  'treasurer',
+  'vice_treasurer',
+  'general_affairs',
+  'vice_general_affairs',
+  'activity_lead',
+  'vice_activity_lead',
+  'activity_member',
+  'media_lead',
+  'vice_media_lead',
+  'ordinary_member',
+  'custom',
+]
+
+const getRoleRank = (role) => {
+  const index = ROLE_ORDER.indexOf(role)
+  return index === -1 ? ROLE_ORDER.length : index
+}
+
+const sortMembersByRole = (members = []) => [...members].sort((a, b) => {
+  const userA = Array.isArray(a.users) ? a.users[0] : a.users
+  const userB = Array.isArray(b.users) ? b.users[0] : b.users
+  const roleDiff = getRoleRank(userA?.role) - getRoleRank(userB?.role)
+  if (roleDiff !== 0) return roleDiff
+  return (userA?.name || '').localeCompare(userB?.name || '', 'zh-Hans')
+})
+
 export default function HistoricalMembers({ lang }) {
   const _ = (zh, en) => lang === 'zh' ? zh : en
   const [sessions, setSessions] = useState([])
@@ -77,13 +111,14 @@ export default function HistoricalMembers({ lang }) {
           users (
             name,
             email,
-            role
+            role,
+            is_active
           )
         `)
         .eq('team_id', teamId)
 
       if (error) throw error
-      setMembers(data || [])
+      setMembers(sortMembersByRole(data || []))
     } catch (err) {
       setErrorMsg(err.message || _('获取该学期成员失败', 'Failed to load session members.'))
     } finally {
@@ -195,9 +230,16 @@ export default function HistoricalMembers({ lang }) {
                         </div>
                         <p className="font-black text-gray-800 truncate">{user.name}</p>
                         <p className="text-xs font-mono font-semibold text-gray-400 truncate">{user.email}</p>
-                        <span className="w-fit text-[10px] font-black px-2.5 py-1 rounded-full bg-blue-50 text-blue-600 border border-blue-200">
-                          {member.position}
-                        </span>
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className="w-fit text-[10px] font-black px-2.5 py-1 rounded-full bg-blue-50 text-blue-600 border border-blue-200">
+                            {member.position}
+                          </span>
+                          {user.is_active === false && (
+                            <span className="w-fit text-[10px] font-black px-2.5 py-1 rounded-full bg-gray-100 text-gray-500 border border-gray-200">
+                              {_('已停用', 'Inactive')}
+                            </span>
+                          )}
+                        </div>
                       </div>
                     )
                   })}

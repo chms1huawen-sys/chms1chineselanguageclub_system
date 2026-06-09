@@ -34,6 +34,32 @@ const ROLE_LABELS = {
   custom: { zh: '自定义', en: 'Custom' },
 }
 
+const ROLE_ORDER = [
+  'convener_teacher',
+  'advisor_teacher',
+  'advisor',
+  'chairperson',
+  'vice_chairperson',
+  'secretary',
+  'vice_secretary',
+  'treasurer',
+  'vice_treasurer',
+  'general_affairs',
+  'vice_general_affairs',
+  'activity_lead',
+  'vice_activity_lead',
+  'activity_member',
+  'media_lead',
+  'vice_media_lead',
+  'ordinary_member',
+  'custom',
+]
+
+const getRoleRank = (role) => {
+  const index = ROLE_ORDER.indexOf(role)
+  return index === -1 ? ROLE_ORDER.length : index
+}
+
 const inputStyle = {
   background: '#f0f7ff',
   border: '1.5px solid #95CBFF',
@@ -55,6 +81,12 @@ const getRoleLabel = (user, lang) => {
   const label = ROLE_LABELS[user?.role]
   return label ? label[lang] : user?.role || (lang === 'zh' ? '成员' : 'Member')
 }
+
+const sortUsersByRole = (users = []) => [...users].sort((a, b) => {
+  const roleDiff = getRoleRank(a.role) - getRoleRank(b.role)
+  if (roleDiff !== 0) return roleDiff
+  return (a.name || '').localeCompare(b.name || '', 'zh-Hans')
+})
 
 export default function Handover({ currentUserProfile, lang }) {
   const _ = (zh, en) => lang === 'zh' ? zh : en
@@ -98,16 +130,14 @@ export default function Handover({ currentUserProfile, lang }) {
         supabase
           .from('users')
           .select('id, name, email, role, custom_role_label, is_active')
-          .eq('is_active', true)
-          .order('role', { ascending: true })
-          .order('name', { ascending: true }),
+          .eq('is_active', true),
       ])
 
       if (boardResult.error) throw boardResult.error
       if (usersResult.error) throw usersResult.error
 
       setCurrentBoard(boardResult.data || null)
-      setActiveUsers(usersResult.data || [])
+      setActiveUsers(sortUsersByRole(usersResult.data || []))
     } catch (err) {
       setErrorMsg(err.message || _('获取学期切换资料失败', 'Failed to load handover data.'))
     } finally {
