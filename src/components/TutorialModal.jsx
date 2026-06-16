@@ -66,43 +66,22 @@ const STEPS_ZH = [
   },
   {
     icon: <Camera size={32} style={{ color: '#FFB3C6' }} />,
-    title: '个人设置：头像与推送注册',
-    subtitle: '每台设备都需要独立开启推送',
+    title: '个人设置：头像与资料',
+    subtitle: '管理你的个人头像与账号显示资料',
     body: (
       <div className="space-y-3 text-sm leading-relaxed text-gray-600 font-semibold">
-        <p>点击左边菜单栏的 <strong className="text-gray-800">「设置」</strong>，可以管理你的个人资料与通知状态。</p>
+        <p>点击左边菜单栏的 <strong className="text-gray-800">「个人设置」</strong>，可以管理你的个人资料、头像和设备通知状态。</p>
         <div className="grid grid-cols-1 gap-2 text-xs">
           <div className="p-3 rounded-2xl" style={{ background: '#fff1f2', border: '1.5px solid #fecdd3' }}>
             <p className="font-black text-rose-600">个人头像</p>
             <p className="text-rose-500 mt-1">可上传 JPG、PNG 或 WEBP 头像；不上传时系统会使用默认首字头像。</p>
           </div>
           <div className="p-3 rounded-2xl" style={{ background: '#f0f7ff', border: '1.5px solid #bfdbfe' }}>
-            <p className="font-black text-blue-600">推送通知</p>
-            <p className="text-blue-500 mt-1">同一个账号可以登入多台设备，但每一台手机或电脑都要在设置里点击「重新注册推送通知」。</p>
+            <p className="font-black text-blue-600">设备状态</p>
+            <p className="text-blue-500 mt-1">个人设置会显示当前设备是否已经取得推送 token，方便你确认手机或电脑有没有完成注册。</p>
           </div>
         </div>
-        <p className="text-xs text-gray-500">如果显示「需重新注册」，代表浏览器权限已允许，但这台设备还没有取得推送 Token。</p>
-      </div>
-    )
-  },
-  {
-    icon: <Camera size={32} style={{ color: '#FFB3C6' }} />,
-    title: '个人设置：头像与推送注册',
-    subtitle: '每一台设备都需要各自完成推送注册',
-    body: (
-      <div className="space-y-3 text-sm leading-relaxed text-gray-600 font-semibold">
-        <p>从左侧菜单进入<strong className="text-gray-800">个人设置</strong>，可以管理头像与推送通知状态。</p>
-        <div className="grid grid-cols-1 gap-2 text-xs">
-          <div className="p-3 rounded-2xl" style={{ background: '#fff1f2', border: '1.5px solid #fecdd3' }}>
-            <p className="font-black text-rose-600">个人头像</p>
-            <p className="text-rose-500 mt-1">可上传 JPG、PNG 或 WEBP 头像；不上传也会使用系统默认姓名头像。</p>
-          </div>
-          <div className="p-3 rounded-2xl" style={{ background: '#f0f7ff', border: '1.5px solid #bfdbfe' }}>
-            <p className="font-black text-blue-600">推送通知</p>
-            <p className="text-blue-500 mt-1">同一个账号可以登入多台设备，但每一台手机或电脑都需要在个人设置点击「开启/重新注册推送通知」。</p>
-          </div>
-        </div>
-        <p className="text-xs text-gray-500">如果看到「需要重新注册」，代表浏览器权限已允许，但这台设备还没有取得推送 token。</p>
+        <p className="text-xs text-gray-500">如果更换手机、重新安装 App 或通知失效，可以回到个人设置重新注册推送。</p>
       </div>
     )
   },
@@ -253,6 +232,27 @@ const STEPS_EN = [
             <li>→ View all committee members and their roles</li>
           </ul>
         </div>
+      </div>
+    )
+  },
+  {
+    icon: <Camera size={32} style={{ color: '#FFB3C6' }} />,
+    title: 'Settings: Avatar & Profile',
+    subtitle: 'Manage your avatar and account display details',
+    body: (
+      <div className="space-y-3 text-sm leading-relaxed text-gray-600 font-semibold">
+        <p>Open <strong className="text-gray-800">Settings</strong> from the sidebar to manage your profile, avatar and device notification status.</p>
+        <div className="grid grid-cols-1 gap-2 text-xs">
+          <div className="p-3 rounded-2xl" style={{ background: '#fff1f2', border: '1.5px solid #fecdd3' }}>
+            <p className="font-black text-rose-600">Profile Avatar</p>
+            <p className="text-rose-500 mt-1">Upload a JPG, PNG, or WEBP avatar, or keep the default initials avatar.</p>
+          </div>
+          <div className="p-3 rounded-2xl" style={{ background: '#f0f7ff', border: '1.5px solid #bfdbfe' }}>
+            <p className="font-black text-blue-600">Device Status</p>
+            <p className="text-blue-500 mt-1">Settings shows whether this device has received a push token, so you can confirm if notifications are ready.</p>
+          </div>
+        </div>
+        <p className="text-xs text-gray-500">If you change phones, reinstall the App, or notifications stop working, return to Settings and refresh push registration.</p>
       </div>
     )
   },
