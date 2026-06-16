@@ -20,7 +20,7 @@ const TRANSLATIONS = {
     footer: '一中华文学会系统'
   },
   en: {
-    title: 'CHMS1 Chinese Language Club System',
+    title: 'CLC_sys',
     subtitle: 'Internal Management & Task Reminder Platform',
     email: 'Email Address',
     emailPlaceholder: 'Enter your email',
@@ -31,7 +31,7 @@ const TRANSLATIONS = {
     errorTitle: 'Sign In Failed',
     invalidCreds: 'Incorrect email or password. Please try again.',
     installNotice: 'Please log in with the account and password given by the president and teachers.',
-    footer: 'CHMS1 Chinese Language Club System'
+    footer: 'CLC_sys'
   }
 }
 
@@ -109,7 +109,7 @@ export default function Login({ onLoginSuccess }) {
         <div className="hidden md:flex relative p-10 items-end">
           <div className="max-w-md text-white">
             <p className="text-xs font-black uppercase tracking-[0.2em]" style={{ textShadow: '0 2px 10px rgba(38, 88, 132, 0.45)' }}>
-              {lang === 'zh' ? '中华文学会系统' : 'Chinese Language Club'}
+              {lang === 'zh' ? '中华文学会系统' : 'CLC_sys'}
             </p>
             <p className="text-3xl font-black mt-2" style={{ textShadow: '0 2px 14px rgba(38, 88, 132, 0.5)' }}>
               一中华文学会系统

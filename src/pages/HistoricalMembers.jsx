@@ -223,18 +223,17 @@ export default function HistoricalMembers({ lang }) {
                     return (
                       <div
                         key={member.user_id || idx}
-                        className="grid grid-cols-1 md:grid-cols-[64px_1.1fr_1.6fr_1fr] md:items-center gap-2 md:gap-4 px-4 py-3 text-sm"
+                        className="grid grid-cols-[48px_1fr] md:grid-cols-[64px_1.1fr_1.6fr_1fr] md:items-center gap-2 md:gap-4 px-4 py-3 text-sm"
                       >
-                        <div className="flex items-center gap-3 md:block">
-                          <UserAvatar user={user} size={32} rounded={12} className="md:hidden" onClick={() => setAvatarPreviewUser(user)} />
+                        <div className="flex items-center">
                           <span className="text-xs font-black text-gray-400">#{idx + 1}</span>
                         </div>
                         <div className="flex items-center gap-2 min-w-0">
-                          <UserAvatar user={user} size={30} rounded={12} className="hidden md:inline-flex" onClick={() => setAvatarPreviewUser(user)} />
+                          <UserAvatar user={user} size={30} rounded={12} onClick={() => setAvatarPreviewUser(user)} />
                           <p className="font-black text-gray-800 truncate">{user.name}</p>
                         </div>
-                        <p className="text-xs font-mono font-semibold text-gray-400 truncate">{user.email}</p>
-                        <div className="flex flex-wrap items-center gap-2">
+                        <p className="text-xs font-mono font-semibold text-gray-400 truncate col-start-2 md:col-auto">{user.email}</p>
+                        <div className="flex flex-wrap items-center gap-2 col-start-2 md:col-auto">
                           <span className="w-fit text-[10px] font-black px-2.5 py-1 rounded-full bg-blue-50 text-blue-600 border border-blue-200">
                             {member.position}
                           </span>

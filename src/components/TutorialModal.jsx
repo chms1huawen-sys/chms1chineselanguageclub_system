@@ -200,11 +200,11 @@ const STEPS_ZH = [
 const STEPS_EN = [
   {
     icon: <Shield size={32} style={{ color: '#95CBFF' }} />,
-    title: 'Welcome to CHMS1 Chinese Language Club System',
+    title: 'Welcome to CLC_sys',
     subtitle: 'Internal Task Management & Activity Collaboration Platform',
     body: (
       <div className="space-y-3 text-sm leading-relaxed text-gray-600 font-semibold">
-        <p>This system is designed for SMJK Yoke Kuan Chinese Literary Society committee members. With one account, you can:</p>
+        <p>CLC_sys is designed for committee members to manage tasks, activities and internal records with one account. You can:</p>
         <ul className="space-y-1.5 pl-3">
           <li className="flex items-start gap-2"><span className="text-blue-400 mt-0.5">•</span> View and update all tasks assigned to you</li>
           <li className="flex items-start gap-2"><span className="text-green-400 mt-0.5">•</span> Leave comments and progress updates on any task</li>
@@ -353,7 +353,7 @@ export default function TutorialModal({ onClose, lang = 'zh' }) {
   const current = steps[step]
 
   const handleClose = () => {
-    localStorage.setItem('cls_tutorial_completed', '1')
+    localStorage.setItem(`cls_tutorial_completed_${lang}`, '1')
     onClose()
   }
 

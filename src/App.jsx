@@ -191,11 +191,11 @@ function AppShell({ user, profile, onLogout, lang, setLang, onProfileUpdate }) {
 
   // Check for first-time login tutorial
   useEffect(() => {
-    const done = localStorage.getItem('cls_tutorial_completed')
+    const done = localStorage.getItem(`cls_tutorial_completed_${lang}`)
     if (!done) {
       setShowTutorial(true)
     }
-  }, [])
+  }, [lang])
 
   useEffect(() => {
     let unsubscribe = () => {}
@@ -268,7 +268,7 @@ function AppShell({ user, profile, onLogout, lang, setLang, onProfileUpdate }) {
             style={{ background: 'transparent', boxShadow: '0 4px 14px rgba(74, 163, 236, 0.48), 0 0 0 2px rgba(255,255,255,0.32)' }}>
             <img src="/logo-192.png" alt="CLC_sys" className="w-full h-full object-cover rounded-full" />
           </div>
-          <span className="font-black text-xs leading-tight tracking-wide max-w-[180px]" style={{ color: 'white', textShadow: sidebarTextShadow }}>{lang === 'zh' ? '\u4e00\u4e2d\u534e\u6587\u5b66\u4f1a' : 'CHMS1 Chinese Language Club'}</span>
+          <span className="font-black text-xs leading-tight tracking-wide max-w-[180px]" style={{ color: 'white', textShadow: sidebarTextShadow }}>{lang === 'zh' ? '\u4e00\u4e2d\u534e\u6587\u5b66\u4f1a' : 'CLC_sys'}</span>
         </div>
         <div className="flex items-center gap-2">
           {/* Mobile lang toggle */}
@@ -305,7 +305,7 @@ function AppShell({ user, profile, onLogout, lang, setLang, onProfileUpdate }) {
                 <img src="/logo-192.png" alt="CLC_sys" className="w-full h-full object-cover rounded-full" />
               </div>
               <div className="min-w-0 flex-1">
-                <h2 className="font-black text-xs leading-tight break-words" style={{ color: 'white', textShadow: sidebarTextShadow }}>{lang === 'zh' ? '\u4e00\u4e2d\u534e\u6587\u5b66\u4f1a' : 'CHMS1 Chinese Language Club'}</h2>
+                <h2 className="font-black text-xs leading-tight break-words" style={{ color: 'white', textShadow: sidebarTextShadow }}>{lang === 'zh' ? '\u4e00\u4e2d\u534e\u6587\u5b66\u4f1a' : 'CLC_sys'}</h2>
               </div>
             </div>
             {/* Language Toggle */}

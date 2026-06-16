@@ -70,7 +70,7 @@ const LEAVE_TYPE_LABELS = {
 }
 
 const STATUS_LABELS = {
-  pending: { zh: '待审批', en: 'Pending', bg: '#fffbeb', color: '#ca8a04', border: '#fde047' },
+  pending: { zh: '已记录', en: 'Recorded', bg: '#eff6ff', color: '#2563eb', border: '#bfdbfe' },
   approved: { zh: '已批准', en: 'Approved', bg: '#ecfdf5', color: '#059669', border: '#a7f3d0' },
   rejected: { zh: '已驳回', en: 'Rejected', bg: '#fef2f2', color: '#dc2626', border: '#fca5a5' },
   recorded: { zh: '已记录', en: 'Recorded', bg: '#eff6ff', color: '#2563eb', border: '#bfdbfe' },
@@ -216,7 +216,7 @@ export default function Dashboard({ currentUserProfile, lang = 'zh', onShowTutor
         supabase.from('events').select('*').gte('date', todayStr).lte('date', weekEndStr).in('type', ['event', 'meeting']).in('color', ['blue', 'green']).neq('title', 'EXEC_DRIVE_LINK').not('title', 'ilike', 'Google Drive%').order('date', { ascending: true }),
         supabase.rpc('get_active_member_count'),
         isLeaveManager
-          ? supabase.from('leave_applications').select('*, applicant:users(id, name, email)').order('created_at', { ascending: false }).limit(5)
+          ? supabase.from('leave_applications').select('*').order('created_at', { ascending: false }).limit(5)
           : Promise.resolve({ data: [] }),
         supabase.from('users').select('id, name, birthday, avatar_url').eq('is_active', true).not('birthday', 'is', null),
         supabase.from('announcements').select('*, author:users(id, name), target_team:teams(id, name)').order('is_pinned', { ascending: false }).order('created_at', { ascending: false }).limit(20),
@@ -228,8 +228,20 @@ export default function Dashboard({ currentUserProfile, lang = 'zh', onShowTutor
 
       const myPendingTasks = (tasksResult.data || []).filter(task => task.status !== 'completed').length
       const monthActivities = (monthEventsResult.data || []).filter(isClubActivityEvent)
-      const latestLeaves = leavesResult.data || []
-      const pendingLeaves = latestLeaves.filter(leave => (leave.status || 'pending') === 'pending').length
+      let latestLeaves = leavesResult.data || []
+      if (latestLeaves.length > 0) {
+        const leaveUserIds = [...new Set(latestLeaves.map(leave => leave.user_id).filter(Boolean))]
+        if (leaveUserIds.length > 0) {
+          const { data: leaveUsers, error: leaveUsersError } = await supabase
+            .from('users')
+            .select('id, name, email, avatar_url')
+            .in('id', leaveUserIds)
+          if (leaveUsersError) throw leaveUsersError
+          const usersById = new Map((leaveUsers || []).map(user => [user.id, user]))
+          latestLeaves = latestLeaves.map(leave => ({ ...leave, applicant: usersById.get(leave.user_id) || null }))
+        }
+      }
+      const leaveRecords = latestLeaves.length
       const monthNumber = now.getMonth() + 1
       const thisMonthBirthdays = (birthdaysResult.data || [])
         .filter(user => {
@@ -249,7 +261,7 @@ export default function Dashboard({ currentUserProfile, lang = 'zh', onShowTutor
         myPendingTasks,
         monthEvents: monthActivities.length,
         activeMembers: Number(membersResult.data || 0),
-        pendingLeaves,
+        pendingLeaves: leaveRecords,
       })
       setWeekEvents((weekEventsResult.data || []).filter(isClubActivityEvent))
       setLeaveApplications(latestLeaves)
@@ -513,7 +525,7 @@ export default function Dashboard({ currentUserProfile, lang = 'zh', onShowTutor
       { label: lang === 'zh' ? '\u672c\u5c4a\u6210\u5458\u4eba\u6570' : 'Active Members', value: stats.activeMembers, icon: Users, color: '#FFB3C6', path: '/members' },
     ]
     if (isLeaveManager) {
-      cards.push({ label: lang === 'zh' ? '请假历史' : 'Leave History', value: stats.pendingLeaves, icon: ClipboardList, color: '#f59e0b', path: '/leave' })
+      cards.push({ label: lang === 'zh' ? '请假记录' : 'Leave Records', value: stats.pendingLeaves, icon: ClipboardList, color: '#f59e0b', path: '/leave' })
     }
     return cards
   }, [isLeaveManager, stats, lang])
@@ -671,9 +683,9 @@ export default function Dashboard({ currentUserProfile, lang = 'zh', onShowTutor
         {isLeaveManager && (
           <div className="p-4 sm:p-5 space-y-4 min-w-0" style={cardStyle}>
             <h2 className="font-black text-base flex items-center gap-2" style={{ color: '#1a1a1a' }}>
-              <ClipboardList size={18} color="#95CBFF" /> {lang === 'zh' ? '最新请假状态' : 'Recent Leave'}
+              <ClipboardList size={18} color="#95CBFF" /> {lang === 'zh' ? '最新请假记录' : 'Recent Leave Records'}
             </h2>
-            {leaveApplications.length === 0 || leaveApplications.every(item => (item.status || 'pending') !== 'pending') ? (
+            {leaveApplications.length === 0 ? (
               <EmptyText text={lang === 'zh' ? '暂无请假历史' : 'No leave applications'} />
             ) : (
               <div className="space-y-3">
@@ -690,11 +702,9 @@ export default function Dashboard({ currentUserProfile, lang = 'zh', onShowTutor
                           {status.zh}
                         </span>
                       </div>
-                      {(leave.status || 'pending') === 'pending' && (
-                        <button onClick={() => navigate('/leave')} className="mt-3 text-xs font-black" style={{ color: '#6db8ff' }}>
-                          立即审批 →
-                        </button>
-                      )}
+                      <button onClick={() => navigate('/leave')} className="mt-3 text-xs font-black" style={{ color: '#6db8ff' }}>
+                        {lang === 'zh' ? '查看记录 →' : 'View record →'}
+                      </button>
                     </div>
                   )
                 })}

@@ -7,6 +7,7 @@ import {
   Plus,
   ExternalLink,
   Trash2,
+  Pencil,
   AlertCircle,
   CheckCircle,
   Clock,
@@ -45,6 +46,7 @@ export default function CalendarPage({ currentUserProfile, lang }) {
   // Date selection state
   const [selectedDate, setSelectedDate] = useState(new Date())
   const [showAddModal, setShowAddModal] = useState(false)
+  const [editingEvent, setEditingEvent] = useState(null)
   const [formSubmitting, setFormSubmitting] = useState(false)
 
   // Event form data
@@ -52,7 +54,8 @@ export default function CalendarPage({ currentUserProfile, lang }) {
     title: '',
     type: 'event',
     team_id: '',
-    drive_link: ''
+    drive_link: '',
+    notes: ''
   })
 
   const isPowerUser = TASK_MANAGER_ROLES.includes(currentUserProfile?.role)
@@ -186,7 +189,34 @@ export default function CalendarPage({ currentUserProfile, lang }) {
     return { events: dateEvents, tasks: dateTasks }
   }
 
-  const handleAddEventSubmit = async (e) => {
+  const resetEventForm = () => {
+    setFormData({ title: '', type: 'event', team_id: ALL_MEMBERS_SCOPE, drive_link: '', notes: '' })
+    setEditingEvent(null)
+  }
+
+  const openCreateEventModal = () => {
+    resetEventForm()
+    setShowAddModal(true)
+  }
+
+  const openEditEventModal = (event) => {
+    setEditingEvent(event)
+    setFormData({
+      title: event.title || '',
+      type: event.type || 'event',
+      team_id: event.team_id || ALL_MEMBERS_SCOPE,
+      drive_link: event.drive_link || '',
+      notes: event.notes || ''
+    })
+    setShowAddModal(true)
+  }
+
+  const closeEventModal = () => {
+    setShowAddModal(false)
+    resetEventForm()
+  }
+
+  const handleEventSubmit = async (e) => {
     e.preventDefault()
     if (!selectedDate) return
     setFormSubmitting(true)
@@ -210,21 +240,25 @@ export default function CalendarPage({ currentUserProfile, lang }) {
         throw new Error('系统无法自动绑定记录范围，请先前往“任务”初始化执委层。')
       }
 
-      const { error } = await supabase
-        .from('events')
-        .insert({
-          title: formData.title,
-          date: dateStr,
-          type: formData.type,
-          color: color,
-          team_id: teamId,
-          drive_link: formData.drive_link || null
-        })
+      const payload = {
+        title: formData.title,
+        date: dateStr,
+        type: formData.type,
+        color: color,
+        team_id: teamId,
+        drive_link: formData.drive_link || null,
+        notes: formData.notes || null
+      }
+
+      const { error } = editingEvent
+        ? await supabase.from('events').update(payload).eq('id', editingEvent.id)
+        : await supabase.from('events').insert(payload)
 
       if (error) throw error
-      setSuccessMsg(lang === 'zh' ? '日程成功添加到日历中！' : 'Event successfully added to calendar!')
-      setShowAddModal(false)
-      setFormData({ title: '', type: 'event', team_id: ALL_MEMBERS_SCOPE, drive_link: '' })
+      setSuccessMsg(editingEvent
+        ? (lang === 'zh' ? '日程已成功更新！' : 'Event updated successfully!')
+        : (lang === 'zh' ? '日程成功添加到日历中！' : 'Event successfully added to calendar!'))
+      closeEventModal()
       fetchCalendarData(true)  // silent: don't trigger full loading state
     } catch (err) {
       setErrorMsg(err.message)
@@ -422,10 +456,7 @@ export default function CalendarPage({ currentUserProfile, lang }) {
 
                 {isPowerUser && (
                   <button
-                    onClick={() => {
-                      setFormData({ title: '', type: 'event', team_id: ALL_MEMBERS_SCOPE, drive_link: '' })
-                      setShowAddModal(true)
-                    }}
+                    onClick={openCreateEventModal}
                     className="flex items-center gap-1 px-3 py-1.5 text-xs font-black rounded-xl text-white transition cursor-pointer"
                     style={{ background: '#95CBFF' }}
                   >
@@ -457,15 +488,30 @@ export default function CalendarPage({ currentUserProfile, lang }) {
                             </div>
                             
                             {isPowerUser && (
-                              <button
-                                onClick={() => handleDeleteEvent(e.id)}
-                                className="text-red-400 hover:text-red-600 transition p-1 cursor-pointer shrink-0"
-                                title={lang === 'zh' ? '删除日程' : 'Delete event'}
-                              >
-                                <Trash2 size={12} />
-                              </button>
+                              <div className="flex items-center gap-1 shrink-0">
+                                <button
+                                  onClick={() => openEditEventModal(e)}
+                                  className="text-blue-400 hover:text-blue-600 transition p-1 cursor-pointer"
+                                  title={lang === 'zh' ? '修改日程' : 'Edit event'}
+                                >
+                                  <Pencil size={12} />
+                                </button>
+                                <button
+                                  onClick={() => handleDeleteEvent(e.id)}
+                                  className="text-red-400 hover:text-red-600 transition p-1 cursor-pointer"
+                                  title={lang === 'zh' ? '删除日程' : 'Delete event'}
+                                >
+                                  <Trash2 size={12} />
+                                </button>
+                              </div>
                             )}
                           </div>
+
+                          {e.notes && (
+                            <p className="text-[10px] font-semibold leading-relaxed text-gray-500 bg-white px-3 py-2 rounded-xl border border-[#f0f7ff]">
+                              {e.notes}
+                            </p>
+                          )}
 
                           {e.drive_link && (
                             <a
@@ -513,12 +559,12 @@ export default function CalendarPage({ currentUserProfile, lang }) {
             <div className="px-6 py-4 flex items-center justify-between border-b-1.5 border-[#e0f1ff]">
               <h3 className="font-black text-base flex items-center gap-2 text-gray-900">
                 <CalendarIcon size={18} style={{ color: '#95CBFF' }} />
-                {lang === 'zh' ? '添加日历日程' : 'Add Calendar Event'}
+                {editingEvent ? (lang === 'zh' ? '修改日历日程' : 'Edit Calendar Event') : (lang === 'zh' ? '添加日历日程' : 'Add Calendar Event')}
               </h3>
-              <button onClick={() => setShowAddModal(false)} className="text-lg transition cursor-pointer font-black text-gray-400 hover:text-gray-600">✕</button>
+              <button onClick={closeEventModal} className="text-lg transition cursor-pointer font-black text-gray-400 hover:text-gray-600">✕</button>
             </div>
 
-            <form onSubmit={handleAddEventSubmit} className="p-6 space-y-4">
+            <form onSubmit={handleEventSubmit} className="p-6 space-y-4">
               <div>
                 <label className="block text-xs font-black uppercase tracking-wider mb-1.5 text-gray-500">
                   {lang === 'zh' ? '活动主题' : 'Event Title'}
@@ -590,8 +636,22 @@ export default function CalendarPage({ currentUserProfile, lang }) {
                 />
               </div>
 
+              <div>
+                <label className="block text-xs font-black uppercase tracking-wider mb-1.5 text-gray-500">
+                  {lang === 'zh' ? '备注' : 'Notes'}
+                </label>
+                <textarea
+                  value={formData.notes}
+                  onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                  placeholder={lang === 'zh' ? '例如：集合地点、服装、携带物品、负责老师...' : 'e.g. venue, attire, items to bring, teacher in charge...'}
+                  rows={3}
+                  className="w-full text-sm font-semibold outline-none py-2.5 transition resize-none"
+                  style={{ ...inputStyle, borderRadius: 20 }}
+                />
+              </div>
+
               <div className="flex justify-end gap-3 pt-3 border-t-1.5 border-[#f0f7ff]">
-                <button type="button" onClick={() => setShowAddModal(false)}
+                <button type="button" onClick={closeEventModal}
                   className="px-4 py-2 rounded-2xl text-xs font-bold transition cursor-pointer"
                   style={{ background: '#f0f7ff', border: '1.5px solid #e0f1ff', color: '#6b7280' }}>
                   {lang === 'zh' ? '取消' : 'Cancel'}
@@ -600,7 +660,7 @@ export default function CalendarPage({ currentUserProfile, lang }) {
                   className="px-4 py-2 rounded-2xl text-xs font-black text-white transition cursor-pointer"
                   style={{ background: '#95CBFF', opacity: formSubmitting ? 0.7 : 1 }}
                 >
-                  {formSubmitting ? (lang === 'zh' ? '保存中...' : 'Saving...') : (lang === 'zh' ? '确认添加' : 'Add Event')}
+                  {formSubmitting ? (lang === 'zh' ? '保存中...' : 'Saving...') : editingEvent ? (lang === 'zh' ? '保存修改' : 'Save Changes') : (lang === 'zh' ? '确认添加' : 'Add Event')}
                 </button>
               </div>
             </form>

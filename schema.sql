@@ -109,6 +109,7 @@ create table public.events (
   color text not null check (color in ('blue', 'green', 'red')),
   team_id uuid references public.teams on delete cascade not null,
   drive_link text,
+  notes text,
   created_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
 
