@@ -27,6 +27,17 @@ const ROLE_OPTIONS = [
 ]
 
 const ROLE_LABELS = Object.fromEntries(ROLE_OPTIONS.map(role => [role.value, role]))
+const ROLE_ORDER = ROLE_OPTIONS.map(role => role.value)
+const getRoleRank = (role) => {
+  const index = ROLE_ORDER.indexOf(role)
+  return index === -1 ? ROLE_ORDER.length : index
+}
+const sortMembersByRole = (list = []) => [...list].sort((a, b) => {
+  const roleDiff = getRoleRank(a.role) - getRoleRank(b.role)
+  if (roleDiff !== 0) return roleDiff
+  if (a.is_active !== b.is_active) return a.is_active ? -1 : 1
+  return (a.name || '').localeCompare(b.name || '', 'zh-Hans')
+})
 const getMemberRoleLabel = (member) => {
   const base = ROLE_LABELS[member.role] || { zh: member.role, en: member.role, bg: '#f5f5f5', color: '#6b7280', border: '#d1d5db' }
   if (member.role === 'custom' && member.custom_role_label) {
@@ -85,9 +96,9 @@ export default function Members({ currentUserProfile, lang }) {
     setLoading(true)
     setErrorMsg('')
     try {
-      const { data, error } = await supabase.from('users').select('*').order('created_at', { ascending: false })
+      const { data, error } = await supabase.from('users').select('*')
       if (error) throw error
-      setMembers(data || [])
+      setMembers(sortMembersByRole(data || []))
     } catch (err) {
       setErrorMsg(err.message || _('获取成员列表失败', 'Failed to load members.'))
     } finally {
@@ -201,12 +212,12 @@ export default function Members({ currentUserProfile, lang }) {
     setShowEditModal(true)
   }
 
-  const filteredMembers = members.filter(m => {
+  const filteredMembers = sortMembersByRole(members.filter(m => {
     const matchesSearch = m.name.toLowerCase().includes(searchTerm.toLowerCase()) || m.email.toLowerCase().includes(searchTerm.toLowerCase())
     const matchesRole = roleFilter === 'all' || m.role === roleFilter
     const matchesStatus = statusFilter === 'all' || (statusFilter === 'active' && m.is_active) || (statusFilter === 'inactive' && !m.is_active)
     return matchesSearch && matchesRole && matchesStatus
-  })
+  }))
 
   const modalOverlay = { position: 'fixed', inset: 0, zIndex: 50, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(149,203,255,0.15)', backdropFilter: 'blur(4px)', padding: 16 }
   const modalCard = { background: 'white', border: '1.5px solid #e0f1ff', borderRadius: 24, width: '100%', maxWidth: 440, overflow: 'hidden', boxShadow: '0 8px 40px rgba(149,203,255,0.3)' }
