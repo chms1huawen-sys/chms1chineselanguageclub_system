@@ -87,22 +87,22 @@ const STEPS_ZH = [
   },
   {
     icon: <Camera size={32} style={{ color: '#FFB3C6' }} />,
-    title: 'Settings: Avatar & Push Registration',
-    subtitle: 'Each device needs its own push registration',
+    title: '个人设置：头像与推送注册',
+    subtitle: '每一台设备都需要各自完成推送注册',
     body: (
       <div className="space-y-3 text-sm leading-relaxed text-gray-600 font-semibold">
-        <p>Open <strong className="text-gray-800">Settings</strong> from the sidebar to manage your profile and notification status.</p>
+        <p>从左侧菜单进入<strong className="text-gray-800">个人设置</strong>，可以管理头像与推送通知状态。</p>
         <div className="grid grid-cols-1 gap-2 text-xs">
           <div className="p-3 rounded-2xl" style={{ background: '#fff1f2', border: '1.5px solid #fecdd3' }}>
-            <p className="font-black text-rose-600">Profile Avatar</p>
-            <p className="text-rose-500 mt-1">Upload a JPG, PNG, or WEBP avatar, or keep the default initials avatar.</p>
+            <p className="font-black text-rose-600">个人头像</p>
+            <p className="text-rose-500 mt-1">可上传 JPG、PNG 或 WEBP 头像；不上传也会使用系统默认姓名头像。</p>
           </div>
           <div className="p-3 rounded-2xl" style={{ background: '#f0f7ff', border: '1.5px solid #bfdbfe' }}>
-            <p className="font-black text-blue-600">Push Notifications</p>
-            <p className="text-blue-500 mt-1">One account can be used on multiple devices, but each phone or computer must click "Refresh Push Registration" in Settings.</p>
+            <p className="font-black text-blue-600">推送通知</p>
+            <p className="text-blue-500 mt-1">同一个账号可以登入多台设备，但每一台手机或电脑都需要在个人设置点击「开启/重新注册推送通知」。</p>
           </div>
         </div>
-        <p className="text-xs text-gray-500">If you see "Registration Needed", permission is allowed but this device has not received a push token yet.</p>
+        <p className="text-xs text-gray-500">如果看到「需要重新注册」，代表浏览器权限已允许，但这台设备还没有取得推送 token。</p>
       </div>
     )
   },
