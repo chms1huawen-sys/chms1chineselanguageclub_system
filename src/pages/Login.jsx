@@ -2,7 +2,10 @@ import React, { useState } from 'react'
 import { supabase } from '../supabaseClient'
 import { Globe, ShieldAlert } from 'lucide-react'
 
-const LOGIN_PHOTO_URL = 'https://images.unsplash.com/photo-1523050854058-8df90110c9f1?auto=format&fit=crop&w=1400&q=80'
+const LOGIN_PHOTOS = [
+  { src: '/login-group-2026.jpeg', label: { zh: '一中华文学会 · 2026', en: 'CHMS1 Chinese Language Club · 2026' } },
+  { src: '/login-event-2026.jpeg', label: { zh: '第四届“传承”全校性华语诗歌朗诵比赛', en: 'The 4th “Inheritance” School-wide Chinese Poetry Recitation Competition' } },
+]
 
 const TRANSLATIONS = {
   zh: {
@@ -96,24 +99,36 @@ export default function Login({ onLoginSuccess }) {
     <div
       className="relative min-h-screen flex items-center justify-center px-4 py-8 overflow-hidden"
       style={{ background: '#e0f1ff', fontFamily: "'Nunito', sans-serif" }}>
-      <img
-        src={LOGIN_PHOTO_URL}
-        alt=""
-        className="absolute inset-0 w-full h-full object-cover login-photo-motion"
-      />
-      <div className="absolute inset-0" style={{ background: 'linear-gradient(135deg, rgba(224, 241, 255, 0.82) 0%, rgba(240, 247, 255, 0.68) 48%, rgba(255, 233, 240, 0.72) 100%)' }} />
+      <img src="/login-group-2026.jpeg" alt="" className="absolute inset-0 w-full h-full object-cover opacity-20 login-photo-bg-motion" />
+      <div className="absolute inset-0" style={{ background: 'linear-gradient(135deg, rgba(224, 241, 255, 0.90) 0%, rgba(240, 247, 255, 0.78) 48%, rgba(255, 233, 240, 0.78) 100%)' }} />
       <div className="absolute inset-0" style={{ background: 'radial-gradient(circle at 18% 18%, rgba(149,203,255,0.45), transparent 34%), radial-gradient(circle at 82% 80%, rgba(255,179,198,0.38), transparent 30%)' }} />
       <div
         className="relative z-10 w-full max-w-6xl min-h-[680px] md:min-h-[760px] grid grid-cols-1 md:grid-cols-[1fr_440px] overflow-hidden rounded-3xl"
         style={{ boxShadow: '0 18px 56px rgba(90, 149, 202, 0.24)' }}>
-        <div className="hidden md:flex relative p-10 items-end">
-          <div className="max-w-md text-white">
-            <p className="text-xs font-black uppercase tracking-[0.2em]" style={{ textShadow: '0 2px 10px rgba(38, 88, 132, 0.45)' }}>
-              {lang === 'zh' ? '中华文学会系统' : 'CLC_sys'}
-            </p>
-            <p className="text-3xl font-black mt-2" style={{ textShadow: '0 2px 14px rgba(38, 88, 132, 0.5)' }}>
-              一中华文学会系统
-            </p>
+        <div className="hidden md:flex relative overflow-hidden items-stretch"
+          style={{ background: 'linear-gradient(135deg, #dff1ff 0%, #f0f7ff 48%, #ffe9f0 100%)' }}>
+          <div className="relative w-full overflow-hidden flex items-center justify-center">
+            {LOGIN_PHOTOS.map((photo, index) => (
+              <div key={photo.src} className={`login-carousel-slide login-carousel-slide-${index + 1}`}>
+                <img src={photo.src} alt={photo.label[lang]} className={`absolute inset-0 w-full h-full object-cover login-photo-pan login-photo-pan-${index + 1}`} />
+                <div className="absolute inset-0" style={{ background: 'linear-gradient(180deg, rgba(255,255,255,0.04), rgba(41,95,150,0.32))' }} />
+                <div className="absolute left-6 right-6 bottom-6 z-20 flex items-end justify-between gap-4">
+                  <div>
+                    <p className="text-xs font-black uppercase tracking-[0.18em]" style={{ color: 'white', textShadow: '0 2px 8px rgba(34,91,145,0.88)' }}>
+                      {lang === 'zh' ? '一中华文学会系统' : 'CLC_sys'}
+                    </p>
+                    <p className="text-2xl font-black mt-1 leading-tight" style={{ color: 'white', textShadow: '0 2px 12px rgba(34,91,145,0.88)' }}>
+                      {photo.label[lang]}
+                    </p>
+                  </div>
+                  <div className="flex gap-1.5 shrink-0">
+                    {LOGIN_PHOTOS.map((_, dotIndex) => (
+                      <span key={dotIndex} className={`w-2 h-2 rounded-full login-carousel-dot login-carousel-dot-${dotIndex + 1}`} />
+                    ))}
+                  </div>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
 

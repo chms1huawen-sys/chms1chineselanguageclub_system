@@ -48,9 +48,54 @@ body {
   opacity: 1;
 }
 
-.login-photo-motion {
-  animation: login-photo-drift 18s ease-in-out infinite alternate;
+.login-photo-bg-motion {
+  animation: login-photo-drift 22s ease-in-out infinite alternate;
   transform-origin: center;
+}
+
+.login-photo-pan {
+  transform: scale(1.03);
+  transform-origin: center;
+  will-change: object-position;
+}
+
+.login-carousel-slide {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+}
+
+.login-carousel-slide-1 {
+  animation: login-carousel-first 72s ease-in-out infinite;
+}
+
+.login-carousel-slide-2 {
+  animation: login-carousel-second 72s ease-in-out infinite;
+}
+
+.login-photo-pan-1 {
+  animation: login-photo-first-pan 72s linear infinite;
+}
+
+.login-photo-pan-2 {
+  animation: login-photo-second-pan 72s linear infinite;
+}
+
+.login-carousel-dot {
+  background: rgba(255, 255, 255, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.65);
+  box-shadow: 0 2px 8px rgba(34, 91, 145, 0.26);
+}
+
+.login-carousel-dot-1 {
+  animation: login-carousel-dot-first 72s linear infinite;
+}
+
+.login-carousel-dot-2 {
+  animation: login-carousel-dot-second 72s linear infinite;
 }
 
 @keyframes login-photo-drift {
@@ -60,5 +105,123 @@ body {
 
   to {
     transform: scale(1.1) translate3d(1.5%, 1%, 0);
+  }
+}
+
+@keyframes login-photo-first-pan {
+  0% {
+    object-position: left center;
+  }
+
+  24.5% {
+    object-position: right center;
+  }
+
+  25%,
+  74.9% {
+    object-position: right center;
+  }
+
+  99.5%,
+  100% {
+    object-position: left center;
+  }
+}
+
+@keyframes login-photo-second-pan {
+  0%,
+  24.9% {
+    object-position: right center;
+  }
+
+  25% {
+    object-position: right center;
+  }
+
+  49.5% {
+    object-position: left center;
+  }
+
+  50% {
+    object-position: left center;
+  }
+
+  74.5%,
+  100% {
+    object-position: right center;
+  }
+}
+
+@keyframes login-carousel-first {
+  0%,
+  23.8% {
+    opacity: 1;
+  }
+
+  25.2%,
+  73.8% {
+    opacity: 0;
+  }
+
+  75.2%,
+  100% {
+    opacity: 1;
+  }
+}
+
+@keyframes login-carousel-second {
+  0%,
+  23.8% {
+    opacity: 0;
+  }
+
+  25.2%,
+  73.8% {
+    opacity: 1;
+  }
+
+  75.2%,
+  100% {
+    opacity: 0;
+  }
+}
+
+@keyframes login-carousel-dot-first {
+  0%,
+  23.8% {
+    background: rgba(255, 255, 255, 0.95);
+    transform: scale(1.25);
+  }
+
+  25.2%,
+  73.8% {
+    background: rgba(255, 255, 255, 0.5);
+    transform: scale(1);
+  }
+
+  75.2%,
+  100% {
+    background: rgba(255, 255, 255, 0.95);
+    transform: scale(1.25);
+  }
+}
+
+@keyframes login-carousel-dot-second {
+  0%,
+  23.8% {
+    background: rgba(255, 255, 255, 0.5);
+    transform: scale(1);
+  }
+
+  25.2%,
+  73.8% {
+    background: rgba(255, 255, 255, 0.95);
+    transform: scale(1.25);
+  }
+
+  75.2%,
+  100% {
+    background: rgba(255, 255, 255, 0.5);
+    transform: scale(1);
   }
 }

@@ -38,6 +38,7 @@ create table public.push_subscriptions (
   id uuid default gen_random_uuid() primary key,
   user_id uuid references public.users on delete cascade not null,
   fcm_token text not null unique,
+  device_key text,
   device_name text,
   platform text,
   is_active boolean not null default true,
@@ -77,6 +78,7 @@ create table public.tasks (
   due_date timestamp with time zone,
   priority text not null check (priority in ('high', 'medium', 'low')),
   status text not null check (status in ('pending', 'in_progress', 'completed', 'need_help')) default 'pending',
+  completed_at timestamp with time zone,
   created_at timestamp with time zone default timezone('utc'::text, now()) not null,
   updated_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
@@ -409,7 +411,31 @@ create policy "Announcement managers can create announcements." on public.announ
     created_by = auth.uid()
     and exists (
       select 1 from public.users
-      where id = auth.uid() and role in ('convener_teacher', 'advisor_teacher', 'chairperson')
+      where id = auth.uid() and role in ('convener_teacher', 'advisor_teacher', 'chairperson', 'vice_chairperson')
+    )
+  );
+
+create policy "Announcement managers can update announcements." on public.announcements
+  for update to authenticated
+  using (
+    exists (
+      select 1 from public.users
+      where id = auth.uid() and is_active = true and role in ('convener_teacher', 'advisor_teacher', 'chairperson', 'vice_chairperson')
+    )
+  )
+  with check (
+    exists (
+      select 1 from public.users
+      where id = auth.uid() and is_active = true and role in ('convener_teacher', 'advisor_teacher', 'chairperson', 'vice_chairperson')
+    )
+  );
+
+create policy "Announcement managers can delete announcements." on public.announcements
+  for delete to authenticated
+  using (
+    exists (
+      select 1 from public.users
+      where id = auth.uid() and is_active = true and role in ('convener_teacher', 'advisor_teacher', 'chairperson', 'vice_chairperson')
     )
   );
 
@@ -441,7 +467,9 @@ $$ language plpgsql security definer;
 -- Allow each logged-in user to save their own push-notification token without opening role updates.
 create or replace function public.update_my_notification_settings(
   p_fcm_token text,
-  p_notification_enabled boolean default true
+  p_notification_enabled boolean default true,
+  p_device_key text default null,
+  p_platform text default null
 )
 returns void
 language plpgsql
@@ -455,9 +483,27 @@ begin
   where id = auth.uid();
 
   if p_fcm_token is not null and length(trim(p_fcm_token)) > 0 then
+    if p_device_key is not null and length(trim(p_device_key)) > 0 then
+      update public.push_subscriptions
+      set is_active = false
+      where user_id = auth.uid()
+        and (
+          device_key = p_device_key
+          or device_key is null
+        )
+        and fcm_token <> p_fcm_token;
+    elsif p_platform is not null and length(trim(p_platform)) > 0 then
+      update public.push_subscriptions
+      set is_active = false
+      where user_id = auth.uid()
+        and platform = p_platform
+        and fcm_token <> p_fcm_token;
+    end if;
+
     insert into public.push_subscriptions (
       user_id,
       fcm_token,
+      device_key,
       device_name,
       platform,
       is_active,
@@ -466,21 +512,24 @@ begin
     values (
       auth.uid(),
       p_fcm_token,
+      nullif(trim(coalesce(p_device_key, '')), ''),
       null,
-      null,
+      nullif(trim(coalesce(p_platform, '')), ''),
       p_notification_enabled,
       now()
     )
     on conflict (fcm_token)
     do update set
       user_id = excluded.user_id,
+      device_key = excluded.device_key,
+      platform = excluded.platform,
       is_active = excluded.is_active,
       last_seen_at = now();
   end if;
 end;
 $$;
 
-grant execute on function public.update_my_notification_settings(text, boolean) to authenticated;
+grant execute on function public.update_my_notification_settings(text, boolean, text, text) to authenticated;
 
 create or replace function public.update_my_avatar_url(
   p_avatar_url text

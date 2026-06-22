@@ -146,6 +146,25 @@ const withTimeout = (promise, ms = 20000) => {
   return Promise.race([promise, timeout]).finally(() => window.clearTimeout(timeoutId))
 }
 
+const getDeviceKey = () => {
+  if (typeof window === 'undefined') return ''
+  const existing = window.localStorage.getItem('clc_device_key')
+  if (existing) return existing
+  const key = crypto?.randomUUID ? crypto.randomUUID() : `device-${Date.now()}-${Math.random().toString(16).slice(2)}`
+  window.localStorage.setItem('clc_device_key', key)
+  return key
+}
+
+const getDevicePlatform = () => {
+  if (typeof navigator === 'undefined') return 'unknown'
+  const ua = navigator.userAgent || ''
+  if (/iphone|ipad|ipod/i.test(ua)) return 'ios'
+  if (/android/i.test(ua)) return 'android'
+  if (/windows/i.test(ua)) return 'windows'
+  if (/macintosh|mac os/i.test(ua)) return 'macos'
+  return 'desktop'
+}
+
 export default function Settings({ currentUserProfile, lang = 'zh', onProfileUpdate }) {
   const t = T[lang] || T.zh
 
@@ -360,6 +379,8 @@ export default function Settings({ currentUserProfile, lang = 'zh', onProfileUpd
         const { error } = await supabase.rpc('update_my_notification_settings', {
           p_fcm_token: token,
           p_notification_enabled: true,
+          p_device_key: getDeviceKey(),
+          p_platform: getDevicePlatform(),
         })
 
         if (error) {

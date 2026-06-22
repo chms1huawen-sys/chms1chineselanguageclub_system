@@ -44,7 +44,7 @@ type AnnouncementSyncInput = {
   recipient_ids?: string[]
 }
 
-const announcementManagerRoles = ['convener_teacher', 'advisor_teacher', 'chairperson']
+const announcementManagerRoles = ['convener_teacher', 'advisor_teacher', 'chairperson', 'vice_chairperson']
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',

@@ -421,6 +421,7 @@ export default function Tasks({ currentUserProfile, lang }) {
     due_date: dueDate ? new Date(dueDate).toISOString() : null,
     priority: formData.priority,
     status: formData.status,
+    completed_at: formData.status === 'completed' ? new Date().toISOString() : null,
     team_id: activeTeam.id,
     created_by: currentUserProfile.id
   })
@@ -435,6 +436,9 @@ export default function Tasks({ currentUserProfile, lang }) {
       const payload = buildTaskPayload(formData.due_date || null)
 
       if (isEditing && selectedTask) {
+        payload.completed_at = payload.status === 'completed'
+          ? (selectedTask.status === 'completed' ? selectedTask.completed_at || new Date().toISOString() : new Date().toISOString())
+          : null
         const { error } = await supabase
           .from('tasks')
           .update(payload)
@@ -534,9 +538,13 @@ export default function Tasks({ currentUserProfile, lang }) {
   const handleUpdateStatus = async (task, newStatus) => {
     setErrorMsg('')
     try {
+      const statusPayload = {
+        status: newStatus,
+        completed_at: newStatus === 'completed' ? new Date().toISOString() : null,
+      }
       const { error } = await supabase
         .from('tasks')
-        .update({ status: newStatus })
+        .update(statusPayload)
         .eq('id', task.id)
 
       if (error) throw error
@@ -553,9 +561,9 @@ export default function Tasks({ currentUserProfile, lang }) {
       }
       
       // Update local state for immediate feedback
-      setTasks(prev => prev.map(t => t.id === task.id ? { ...t, status: newStatus } : t))
+      setTasks(prev => prev.map(t => t.id === task.id ? { ...t, ...statusPayload } : t))
       if (selectedTask?.id === task.id) {
-        setSelectedTask(prev => ({ ...prev, status: newStatus }))
+        setSelectedTask(prev => ({ ...prev, ...statusPayload }))
       }
     } catch (err) {
       setErrorMsg(err.message)
@@ -656,13 +664,20 @@ export default function Tasks({ currentUserProfile, lang }) {
     return new Date(task.due_date) < new Date()
   }
 
+  const isCompletedLate = (task) => {
+    if (!task.due_date || task.status !== 'completed' || !task.completed_at) return false
+    return new Date(task.completed_at) > new Date(task.due_date)
+  }
+
   const memberPerformance = users.map(user => {
     const assignedTasks = tasks.filter(task => task.assigned_to?.includes(user.id))
     const completed = assignedTasks.filter(task => task.status === 'completed').length
     const pending = assignedTasks.filter(task => task.status === 'pending').length
     const inProgress = assignedTasks.filter(task => task.status === 'in_progress').length
     const needHelp = assignedTasks.filter(task => task.status === 'need_help').length
-    const overdue = assignedTasks.filter(isOverdue).length
+    const activeOverdue = assignedTasks.filter(isOverdue).length
+    const completedLate = assignedTasks.filter(isCompletedLate).length
+    const overdue = activeOverdue + completedLate
     const total = assignedTasks.length
     const completionRate = total ? Math.round((completed / total) * 100) : 0
 
@@ -693,6 +708,8 @@ export default function Tasks({ currentUserProfile, lang }) {
       inProgress,
       needHelp,
       overdue,
+      activeOverdue,
+      completedLate,
       completionRate,
       label,
       labelColor,
@@ -885,9 +902,14 @@ export default function Tasks({ currentUserProfile, lang }) {
                     </div>
                     <div className="p-2 rounded-xl bg-red-50 border border-red-100">
                       <p className="text-sm font-black text-red-600">{item.overdue}</p>
-                      <p className="text-[9px] font-bold text-red-500">{_('逾期', 'Late')}</p>
+                      <p className="text-[9px] font-bold text-red-500">{_('逾期/迟交', 'Late')}</p>
                     </div>
                   </div>
+                  {item.overdue > 0 && (
+                    <p className="text-[10px] font-bold text-red-500">
+                      {_('未完成逾期', 'Overdue open')}: {item.activeOverdue} · {_('完成迟交', 'Completed late')}: {item.completedLate}
+                    </p>
+                  )}
                 </div>
               ))}
             </div>

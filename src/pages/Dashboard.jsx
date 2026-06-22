@@ -25,7 +25,7 @@ import {
 } from 'lucide-react'
 
 const MANAGER_ROLES = ['convener_teacher', 'advisor_teacher', 'chairperson', 'secretary', 'vice_secretary']
-const ANNOUNCEMENT_ROLES = ['convener_teacher', 'advisor_teacher', 'chairperson']
+const ANNOUNCEMENT_ROLES = ['convener_teacher', 'advisor_teacher', 'chairperson', 'vice_chairperson']
 const MEMBER_MANAGER_ROLES = ['convener_teacher', 'advisor_teacher', 'chairperson', 'vice_chairperson']
 const TASK_QUICK_ACCESS_ROLES = ['convener_teacher', 'advisor_teacher', 'chairperson', 'vice_chairperson', 'secretary', 'vice_secretary', 'treasurer', 'vice_treasurer', 'general_affairs', 'vice_general_affairs', 'activity_lead', 'vice_activity_lead', 'media_lead', 'vice_media_lead']
 const BOARD_ROLES = [
