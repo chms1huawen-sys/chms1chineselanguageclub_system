@@ -48,9 +48,92 @@ body {
   opacity: 1;
 }
 
-.login-cartoon-bg-motion {
-  animation: login-cartoon-drift 22s ease-in-out infinite alternate;
-  transform-origin: center;
+.login-symbol-field {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.login-symbol {
+  position: absolute;
+  color: rgba(109, 184, 255, 0.42);
+  font-weight: 900;
+  text-shadow: 0 8px 18px rgba(149, 203, 255, 0.24);
+  animation: login-symbol-float 9s ease-in-out infinite alternate;
+}
+
+.login-symbol-1 {
+  left: 8%;
+  top: 10%;
+  font-size: 34px;
+}
+
+.login-symbol-2 {
+  right: 16%;
+  top: 13%;
+  font-size: 26px;
+  color: rgba(255, 179, 198, 0.48);
+  animation-delay: -2s;
+}
+
+.login-symbol-3 {
+  left: 12%;
+  bottom: 12%;
+  font-size: 28px;
+  color: rgba(255, 179, 198, 0.42);
+  animation-delay: -4s;
+}
+
+.login-symbol-4 {
+  right: 8%;
+  bottom: 18%;
+  font-size: 32px;
+  animation-delay: -1s;
+}
+
+.login-symbol-5 {
+  left: 45%;
+  top: 8%;
+  font-size: 18px;
+  color: rgba(255, 179, 198, 0.42);
+  animation-delay: -5s;
+}
+
+.login-symbol-6 {
+  right: 36%;
+  bottom: 8%;
+  font-size: 22px;
+  animation-delay: -3s;
+}
+
+.login-dot {
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  background: rgba(255, 179, 198, 0.36);
+  box-shadow: 0 0 0 8px rgba(255, 179, 198, 0.1);
+  animation: login-symbol-float 8s ease-in-out infinite alternate;
+}
+
+.login-dot-1 {
+  left: 6%;
+  top: 45%;
+}
+
+.login-dot-2 {
+  right: 9%;
+  top: 43%;
+  background: rgba(109, 184, 255, 0.36);
+  box-shadow: 0 0 0 8px rgba(149, 203, 255, 0.12);
+  animation-delay: -2.5s;
+}
+
+.login-dot-3 {
+  left: 55%;
+  bottom: 12%;
+  animation-delay: -4.5s;
 }
 
 .login-photo-pan {
@@ -98,13 +181,13 @@ body {
   animation: login-carousel-dot-second 72s linear infinite;
 }
 
-@keyframes login-cartoon-drift {
+@keyframes login-symbol-float {
   from {
-    transform: scale(1.02) translate3d(-1%, -1%, 0);
+    transform: translate3d(-6px, -8px, 0) rotate(-4deg);
   }
 
   to {
-    transform: scale(1.1) translate3d(1.5%, 1%, 0);
+    transform: translate3d(7px, 9px, 0) rotate(5deg);
   }
 }
 
