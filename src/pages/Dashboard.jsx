@@ -161,6 +161,8 @@ export default function Dashboard({ currentUserProfile, lang = 'zh', onShowTutor
   const [birthdayWishTarget, setBirthdayWishTarget] = useState(null)
   const [birthdayWishText, setBirthdayWishText] = useState('')
   const [birthdayWishSubmitting, setBirthdayWishSubmitting] = useState(false)
+  const [showBirthdayReminder, setShowBirthdayReminder] = useState(false)
+  const [receivedBirthdayWishes, setReceivedBirthdayWishes] = useState([])
   const [errorMsg, setErrorMsg] = useState('')
 
   const isLeaveManager = MANAGER_ROLES.includes(currentUserProfile?.role)
@@ -223,7 +225,7 @@ export default function Dashboard({ currentUserProfile, lang = 'zh', onShowTutor
         supabase.from('teams').select('id, name, session').eq('type', 'event').eq('is_archived', false).order('created_at', { ascending: false }),
         supabase.from('team_members').select('team_id, teams(id, type, is_archived)').eq('user_id', currentUserProfile.id),
         supabase.from('activity_log').select('*, actor:users(id, name)').order('created_at', { ascending: false }).limit(10),
-        supabase.from('notifications').select('id, title, body, sent_at').order('sent_at', { ascending: false }).limit(10),
+        supabase.from('notifications').select('id, type, title, body, sent_at, read_at').order('sent_at', { ascending: false }).limit(20),
       ])
 
       const myPendingTasks = (tasksResult.data || []).filter(task => task.status !== 'completed').length
@@ -256,6 +258,9 @@ export default function Dashboard({ currentUserProfile, lang = 'zh', onShowTutor
         message: `${item.title}${item.body ? ` - ${item.body}` : ''}`,
         created_at: item.sent_at,
       }))
+      const unreadBirthdayWishes = (notificationsResult.data || [])
+        .filter(item => item.type === 'birthday_wish' && !item.read_at)
+        .slice(0, 3)
 
       setStats({
         myPendingTasks,
@@ -281,6 +286,7 @@ export default function Dashboard({ currentUserProfile, lang = 'zh', onShowTutor
       setMyCommitteeTeamIds(committeeIds)
       setAnnouncements(visibleAnnouncements)
       setActivityFeed((activityResult.data?.length ? activityResult.data : notificationFeed).slice(0, 10))
+      setReceivedBirthdayWishes(unreadBirthdayWishes)
     } catch (err) {
       console.error('Dashboard fetch error:', err)
       setErrorMsg(err.message || (lang === 'zh' ? '加载仪表盘失败' : 'Dashboard loading failed.'))
@@ -506,7 +512,7 @@ export default function Dashboard({ currentUserProfile, lang = 'zh', onShowTutor
             dedupe_key: `birthday-wish-${birthdayWishTarget.id}-${currentUserProfile?.id || 'member'}-${Date.now()}`,
           },
         ],
-        '/',
+        '/dashboard',
       )
       setBirthdayWishTarget(null)
       setBirthdayWishText('')
@@ -531,6 +537,56 @@ export default function Dashboard({ currentUserProfile, lang = 'zh', onShowTutor
   }, [isLeaveManager, stats, lang])
 
   const todayKey = getLocalDate()
+  const todayBirthdayUsers = useMemo(
+    () => birthdays.filter(user => user.birthday?.slice(5) === todayKey.slice(5)),
+    [birthdays, todayKey],
+  )
+  const birthdayWishCandidate = todayBirthdayUsers.find(user => user.id !== currentUserProfile?.id)
+
+  useEffect(() => {
+    if (!currentUserProfile?.id || todayBirthdayUsers.length === 0) return
+    const reminderKey = `birthday-reminder-${currentUserProfile.id}-${todayKey}`
+    try {
+      if (localStorage.getItem(reminderKey) !== 'seen') {
+        setShowBirthdayReminder(true)
+      }
+    } catch {
+      setShowBirthdayReminder(true)
+    }
+  }, [currentUserProfile?.id, todayBirthdayUsers.length, todayKey])
+
+  const closeBirthdayReminder = () => {
+    if (currentUserProfile?.id) {
+      try {
+        localStorage.setItem(`birthday-reminder-${currentUserProfile.id}-${todayKey}`, 'seen')
+      } catch {
+        // Ignore localStorage errors; the reminder can safely show again later.
+      }
+    }
+    setShowBirthdayReminder(false)
+  }
+
+  const markBirthdayWishesRead = async () => {
+    const wishIds = receivedBirthdayWishes.map(item => item.id).filter(Boolean)
+    if (wishIds.length === 0) {
+      setReceivedBirthdayWishes([])
+      return
+    }
+
+    const readAt = new Date().toISOString()
+    setReceivedBirthdayWishes([])
+    const { error } = await supabase
+      .from('notifications')
+      .update({ read_at: readAt })
+      .in('id', wishIds)
+
+    if (error) {
+      setErrorMsg(error.message || (lang === 'zh' ? '更新生日祝福通知失败' : 'Failed to update birthday wish notifications.'))
+      return
+    }
+
+    fetchDashboardData()
+  }
 
   return (
     <div className="space-y-4 sm:space-y-6 max-w-full overflow-x-hidden" style={{ fontFamily: "'Nunito', sans-serif" }}>
@@ -717,6 +773,36 @@ export default function Dashboard({ currentUserProfile, lang = 'zh', onShowTutor
           <h2 className="font-black text-base flex items-center gap-2" style={{ color: '#1a1a1a' }}>
             <Cake size={18} color="#FFB3C6" /> {lang === 'zh' ? '本月生日' : 'Birthdays This Month'}
           </h2>
+          {todayBirthdayUsers.length > 0 && (
+            <div className="p-4 rounded-3xl relative overflow-hidden" style={{ background: 'linear-gradient(135deg, #fff7fb 0%, #f0f7ff 100%)', border: '2px solid #FFB3C6', boxShadow: '0 10px 28px rgba(255,179,198,0.26)' }}>
+              <div className="absolute -right-8 -top-8 w-24 h-24 rounded-full opacity-45" style={{ background: '#FFB3C6' }} />
+              <p className="relative text-xs font-black uppercase tracking-wider mb-3" style={{ color: '#ff6f9a' }}>
+                {lang === 'zh' ? '今日寿星' : 'Today\'s Birthday'}
+              </p>
+              <div className="relative space-y-3">
+                {todayBirthdayUsers.map(user => (
+                  <div key={user.id} className="flex flex-wrap sm:flex-nowrap items-center gap-3">
+                    <UserAvatar user={user} size={54} rounded={20} />
+                    <div className="min-w-0 flex-1">
+                      <p className="text-lg font-black leading-tight" style={{ color: '#1a1a1a' }}>🎂 {user.name}</p>
+                      <p className="text-xs font-bold mt-1" style={{ color: '#6b7280' }}>
+                        {lang === 'zh' ? '祝你生日快乐，愿新的一岁平安顺利。' : 'Happy birthday. Wishing you a bright and smooth year ahead.'}
+                      </p>
+                    </div>
+                    {user.id !== currentUserProfile?.id && (
+                      <button
+                        type="button"
+                        onClick={() => openBirthdayWish(user, true)}
+                        className="px-4 py-2 rounded-2xl text-xs font-black shrink-0"
+                        style={{ background: '#FFB3C6', color: 'white', boxShadow: '0 8px 18px rgba(255,179,198,0.34)' }}>
+                        {lang === 'zh' ? '马上写祝福' : 'Send Wish'}
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
           {birthdays.length === 0 ? (
             <EmptyText text={lang === 'zh' ? '本月暂无生日' : 'No birthdays this month'} />
           ) : (
@@ -814,6 +900,86 @@ export default function Dashboard({ currentUserProfile, lang = 'zh', onShowTutor
         </div>
       )}
 
+      {receivedBirthdayWishes.length > 0 && (
+        <div className="fixed inset-0 z-50 flex items-start sm:items-center justify-center p-3 sm:p-4 overflow-y-auto" style={{ background: 'rgba(149,203,255,0.22)', backdropFilter: 'blur(5px)' }}>
+          <div className="w-full max-w-lg p-5 sm:p-6 my-4 space-y-4" style={{ ...cardStyle, border: '2px solid #FFB3C6', boxShadow: '0 18px 46px rgba(255,179,198,0.26)' }}>
+            <div className="text-center space-y-2">
+              <div className="mx-auto w-16 h-16 rounded-3xl flex items-center justify-center text-3xl" style={{ background: '#fff7fb', border: '1.5px solid #FFB3C6' }}>
+                🎂
+              </div>
+              <p className="text-xs font-black uppercase tracking-wider" style={{ color: '#ff6f9a' }}>
+                {lang === 'zh' ? '你收到生日祝福啦' : 'You received birthday wishes'}
+              </p>
+              <h3 className="text-xl font-black leading-tight" style={{ color: '#1a1a1a' }}>
+                {lang === 'zh' ? '生日快乐！' : 'Happy Birthday!'}
+              </h3>
+            </div>
+            <div className="space-y-3">
+              {receivedBirthdayWishes.map(wish => (
+                <div key={wish.id} className="p-4 rounded-3xl" style={{ background: '#fff7fb', border: '1.5px solid #ffd5e1' }}>
+                  <p className="text-xs font-black mb-1" style={{ color: '#ff6f9a' }}>{wish.title}</p>
+                  <p className="text-sm font-bold leading-relaxed" style={{ color: '#1a1a1a' }}>{wish.body}</p>
+                  <p className="text-[11px] font-bold mt-2" style={{ color: '#9ca3af' }}>{formatDate(wish.sent_at, lang)}</p>
+                </div>
+              ))}
+            </div>
+            <div className="flex justify-center">
+              <button
+                type="button"
+                onClick={markBirthdayWishesRead}
+                className="px-5 py-2.5 rounded-2xl text-sm font-black"
+                style={{ background: '#95CBFF', color: 'white' }}>
+                {lang === 'zh' ? '谢谢，我看到了' : 'Thanks, I saw them'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {receivedBirthdayWishes.length === 0 && showBirthdayReminder && todayBirthdayUsers.length > 0 && (
+        <div className="fixed inset-0 z-50 flex items-start sm:items-center justify-center p-3 sm:p-4 overflow-y-auto" style={{ background: 'rgba(149,203,255,0.22)', backdropFilter: 'blur(5px)' }}>
+          <div className="w-full max-w-md p-5 sm:p-6 my-4 space-y-4 text-center" style={{ ...cardStyle, border: '2px solid #FFB3C6', boxShadow: '0 18px 46px rgba(255,179,198,0.26)' }}>
+            <div className="mx-auto w-16 h-16 rounded-3xl flex items-center justify-center text-3xl" style={{ background: '#fff7fb', border: '1.5px solid #FFB3C6' }}>
+              🎂
+            </div>
+            <div>
+              <p className="text-xs font-black uppercase tracking-wider" style={{ color: '#ff6f9a' }}>
+                {lang === 'zh' ? '今日生日提醒' : 'Birthday Reminder'}
+              </p>
+              <h3 className="mt-2 text-xl font-black leading-tight" style={{ color: '#1a1a1a' }}>
+                {lang === 'zh'
+                  ? `今天是 ${todayBirthdayUsers.map(user => user.name).join('、')} 的生日！`
+                  : `Today is ${todayBirthdayUsers.map(user => user.name).join(', ')}'s birthday!`}
+              </h3>
+              <p className="mt-2 text-sm font-bold" style={{ color: '#6b7280' }}>
+                {lang === 'zh' ? '别忘了送上一句祝福。发送后，对方有开启 PWA 推送就会在手机收到。' : 'Send a birthday wish. If they enabled PWA push, it will arrive on their phone.'}
+              </p>
+            </div>
+            <div className="flex flex-col sm:flex-row justify-center gap-3">
+              {birthdayWishCandidate && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    closeBirthdayReminder()
+                    openBirthdayWish(birthdayWishCandidate, true)
+                  }}
+                  className="px-4 py-2 rounded-2xl text-sm font-black flex items-center justify-center gap-2"
+                  style={{ background: '#FFB3C6', color: 'white' }}>
+                  <Send size={14} /> {lang === 'zh' ? '写祝福' : 'Send Wish'}
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={closeBirthdayReminder}
+                className="px-4 py-2 rounded-2xl text-sm font-bold"
+                style={{ background: '#f0f7ff', color: '#6b7280' }}>
+                {lang === 'zh' ? '今天知道了' : 'Got it today'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {birthdayWishTarget && (
         <div className="fixed inset-0 z-50 flex items-start sm:items-center justify-center p-3 sm:p-4 overflow-y-auto" style={{ background: 'rgba(149,203,255,0.18)', backdropFilter: 'blur(4px)' }}>
           <form onSubmit={handleSendBirthdayWish} className="w-full max-w-lg p-4 sm:p-6 my-4 space-y-4 max-h-[92vh] overflow-y-auto" style={cardStyle}>
@@ -835,7 +1001,7 @@ export default function Dashboard({ currentUserProfile, lang = 'zh', onShowTutor
               style={inputStyle}
             />
             <p className="text-xs font-semibold" style={{ color: '#6b7280' }}>
-              {lang === 'zh' ? '发送后，祝福会出现在对方右上角的站内通知里。' : 'The wish will appear in their in-app notifications.'}
+              {lang === 'zh' ? '发送后，对方会收到站内通知；若已开启 PWA 推送，也会在手机跳出提醒。' : 'After sending, they will receive an in-app notification. If PWA push is enabled, it will also appear on their phone.'}
             </p>
             <div className="flex justify-end gap-3">
               <button type="button" onClick={() => setBirthdayWishTarget(null)} className="px-4 py-2 rounded-2xl text-sm font-bold" style={{ background: '#f0f7ff', color: '#6b7280' }}>{lang === 'zh' ? '取消' : 'Cancel'}</button>

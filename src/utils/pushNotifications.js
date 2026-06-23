@@ -6,6 +6,7 @@ const HASH_ROUTE_MAP = {
   '/leave': '/#/leave',
   '/members': '/#/members',
   '/settings': '/#/settings',
+  '/dashboard': '/#/dashboard',
 }
 
 const normalizeNotificationUrl = (url = '/') => {

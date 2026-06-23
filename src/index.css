@@ -48,8 +48,8 @@ body {
   opacity: 1;
 }
 
-.login-photo-bg-motion {
-  animation: login-photo-drift 22s ease-in-out infinite alternate;
+.login-cartoon-bg-motion {
+  animation: login-cartoon-drift 22s ease-in-out infinite alternate;
   transform-origin: center;
 }
 
@@ -98,7 +98,7 @@ body {
   animation: login-carousel-dot-second 72s linear infinite;
 }
 
-@keyframes login-photo-drift {
+@keyframes login-cartoon-drift {
   from {
     transform: scale(1.02) translate3d(-1%, -1%, 0);
   }

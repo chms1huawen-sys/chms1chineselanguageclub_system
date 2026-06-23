@@ -99,7 +99,12 @@ export default function Login({ onLoginSuccess }) {
     <div
       className="relative min-h-screen flex items-center justify-center px-4 py-8 overflow-hidden"
       style={{ background: '#e0f1ff', fontFamily: "'Nunito', sans-serif" }}>
-      <img src="/login-group-2026.jpeg" alt="" className="absolute inset-0 w-full h-full object-cover opacity-20 login-photo-bg-motion" />
+      <img
+        src="/cls-cartoon.png"
+        alt=""
+        className="absolute -right-16 bottom-0 w-[520px] md:w-[760px] max-w-none opacity-16 login-cartoon-bg-motion pointer-events-none select-none"
+        style={{ mixBlendMode: 'multiply' }}
+      />
       <div className="absolute inset-0" style={{ background: 'linear-gradient(135deg, rgba(224, 241, 255, 0.90) 0%, rgba(240, 247, 255, 0.78) 48%, rgba(255, 233, 240, 0.78) 100%)' }} />
       <div className="absolute inset-0" style={{ background: 'radial-gradient(circle at 18% 18%, rgba(149,203,255,0.45), transparent 34%), radial-gradient(circle at 82% 80%, rgba(255,179,198,0.38), transparent 30%)' }} />
       <div
