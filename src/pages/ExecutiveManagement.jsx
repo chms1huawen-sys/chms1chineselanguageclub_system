@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import { supabase } from '../supabaseClient'
+import UserAvatar from '../components/UserAvatar'
 import {
   AlertCircle,
   BriefcaseBusiness,
@@ -15,6 +16,26 @@ const EXECUTIVE_DRIVE_SETTING_KEY = 'executive_drive_folder_url'
 const DEFAULT_EXECUTIVE_DRIVE_URL = import.meta.env.VITE_EXECUTIVE_DRIVE_FOLDER_URL || ''
 
 const EXECUTIVE_ROLES = [
+  'convener_teacher',
+  'advisor_teacher',
+  'advisor',
+  'chairperson',
+  'vice_chairperson',
+  'secretary',
+  'vice_secretary',
+  'treasurer',
+  'vice_treasurer',
+  'general_affairs',
+  'vice_general_affairs',
+  'activity_lead',
+  'vice_activity_lead',
+  'activity_member',
+  'media_lead',
+  'vice_media_lead',
+  'custom',
+]
+
+const ROLE_ORDER = [
   'convener_teacher',
   'advisor_teacher',
   'advisor',
@@ -88,11 +109,19 @@ const getRoleText = (profile, lang) => {
   return ROLE_LABELS[profile.role]?.[lang] || profile.role || '-'
 }
 
+const sortExecutiveMembers = (members = []) => [...members].sort((a, b) => {
+  const roleDiff = ROLE_ORDER.indexOf(a.role) - ROLE_ORDER.indexOf(b.role)
+  if (roleDiff !== 0) return roleDiff
+  return (a.name || '').localeCompare(b.name || '', 'zh-Hans')
+})
+
 export default function ExecutiveManagement({ currentUserProfile, lang = 'zh', notify }) {
   const [driveUrl, setDriveUrl] = useState(DEFAULT_EXECUTIVE_DRIVE_URL)
   const [driveDraft, setDriveDraft] = useState(DEFAULT_EXECUTIVE_DRIVE_URL)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
+  const [membersLoading, setMembersLoading] = useState(true)
+  const [executiveMembers, setExecutiveMembers] = useState([])
   const [errorMsg, setErrorMsg] = useState('')
   const [successMsg, setSuccessMsg] = useState('')
 
@@ -103,8 +132,9 @@ export default function ExecutiveManagement({ currentUserProfile, lang = 'zh', n
   useEffect(() => {
     if (!currentUserProfile?.id || !isExecutive) return
     fetchDriveSetting()
+    fetchExecutiveMembers()
 
-    const channel = supabase
+    const settingsChannel = supabase
       .channel('executive-drive-setting')
       .on(
         'postgres_changes',
@@ -113,7 +143,19 @@ export default function ExecutiveManagement({ currentUserProfile, lang = 'zh', n
       )
       .subscribe()
 
-    return () => { supabase.removeChannel(channel) }
+    const usersChannel = supabase
+      .channel('executive-members-list')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'users' },
+        () => fetchExecutiveMembers(true),
+      )
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(settingsChannel)
+      supabase.removeChannel(usersChannel)
+    }
   }, [currentUserProfile?.id, isExecutive])
 
   useEffect(() => {
@@ -169,6 +211,24 @@ export default function ExecutiveManagement({ currentUserProfile, lang = 'zh', n
       setErrorMsg(err.message || (lang === 'zh' ? '保存 Google Drive 链接失败。' : 'Failed to save Google Drive link.'))
     } finally {
       setSaving(false)
+    }
+  }
+
+  const fetchExecutiveMembers = async (silent = false) => {
+    if (!silent) setMembersLoading(true)
+    try {
+      const { data, error } = await supabase
+        .from('users')
+        .select('id, name, email, role, custom_role_label, avatar_url, is_active')
+        .eq('is_active', true)
+        .in('role', EXECUTIVE_ROLES)
+
+      if (error) throw error
+      setExecutiveMembers(sortExecutiveMembers(data || []))
+    } catch (err) {
+      setErrorMsg(err.message || (lang === 'zh' ? '无法读取本届执委层名单。' : 'Failed to load executive member list.'))
+    } finally {
+      if (!silent) setMembersLoading(false)
     }
   }
 
@@ -342,6 +402,69 @@ export default function ExecutiveManagement({ currentUserProfile, lang = 'zh', n
           </div>
         </section>
       </div>
+
+      <section className="p-6 sm:p-7" style={cardStyle}>
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-5">
+          <div>
+            <h2 className="text-lg font-black flex items-center gap-2" style={{ color: '#1a1a1a' }}>
+              <ShieldCheck size={20} style={{ color: '#95CBFF' }} />
+              {lang === 'zh' ? '本届执委层名单' : 'Current Executive Members'}
+            </h2>
+            <p className="text-xs font-bold mt-1" style={{ color: '#6b7280' }}>
+              {lang === 'zh'
+                ? '方便执委层确认彼此岗位与联系资料。'
+                : 'Use this list to identify roles and contact details within the executive team.'}
+            </p>
+          </div>
+          <span className="px-3 py-1 rounded-full text-xs font-black"
+            style={{ background: '#f0f7ff', color: '#6db8ff', border: '1.5px solid #b8deff' }}>
+            {executiveMembers.length}
+          </span>
+        </div>
+
+        {membersLoading ? (
+          <div className="flex items-center justify-center gap-2 py-10 text-sm font-bold" style={{ color: '#6b7280' }}>
+            <Loader size={18} className="animate-spin" style={{ color: '#95CBFF' }} />
+            {lang === 'zh' ? '读取名单中...' : 'Loading members...'}
+          </div>
+        ) : executiveMembers.length === 0 ? (
+          <div className="p-6 rounded-3xl text-center text-sm font-bold"
+            style={{ background: '#f0f7ff', border: '1.5px dashed #b8deff', color: '#8ca0b3' }}>
+            {lang === 'zh' ? '暂无执委层成员。' : 'No executive members yet.'}
+          </div>
+        ) : (
+          <div className="overflow-hidden rounded-3xl" style={{ border: '1.5px solid #e0f1ff' }}>
+            {executiveMembers.map((member, index) => (
+              <div
+                key={member.id}
+                className="grid grid-cols-[auto_1fr] md:grid-cols-[auto_1fr_1fr] gap-3 md:gap-5 items-center p-4"
+                style={{
+                  background: index % 2 === 0 ? 'white' : '#f8fbff',
+                  borderBottom: index === executiveMembers.length - 1 ? 'none' : '1px solid #e0f1ff',
+                }}>
+                <div className="flex items-center gap-3 min-w-0">
+                  <UserAvatar user={member} name={member.name} size={42} rounded={18} />
+                  <div className="min-w-0">
+                    <p className="text-sm font-black truncate" style={{ color: '#1a1a1a' }}>{member.name || '-'}</p>
+                    <p className="text-xs font-bold mt-0.5 md:hidden truncate" style={{ color: '#6b7280' }}>{member.email || '-'}</p>
+                  </div>
+                </div>
+
+                <div className="min-w-0">
+                  <span className="inline-flex px-3 py-1 rounded-full text-xs font-black"
+                    style={{ background: '#f0f7ff', color: '#4a9dea', border: '1px solid #b8deff' }}>
+                    {getRoleText(member, lang)}
+                  </span>
+                </div>
+
+                <p className="hidden md:block text-sm font-bold truncate" style={{ color: '#6b7280' }}>
+                  {member.email || '-'}
+                </p>
+              </div>
+            ))}
+          </div>
+        )}
+      </section>
     </div>
   )
 }
