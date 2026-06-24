@@ -88,7 +88,7 @@ const sortUsersByRole = (users = []) => [...users].sort((a, b) => {
   return (a.name || '').localeCompare(b.name || '', 'zh-Hans')
 })
 
-export default function Handover({ currentUserProfile, lang }) {
+export default function Handover({ currentUserProfile, lang, notify }) {
   const _ = (zh, en) => lang === 'zh' ? zh : en
   const [currentBoard, setCurrentBoard] = useState(null)
   const [activeUsers, setActiveUsers] = useState([])
@@ -104,6 +104,14 @@ export default function Handover({ currentUserProfile, lang }) {
   const isPowerUser = BOARD_MANAGER_ROLES.includes(currentUserProfile?.role)
   const sessionLabel = `${newYear} ${newHalf}`
   const sessionCode = `${newYear}-${newHalf === '上半年' ? 'H1' : 'H2'}`
+
+  useEffect(() => {
+    if (successMsg) notify?.({ type: 'success', title: lang === 'zh' ? '操作成功' : 'Success', message: successMsg })
+  }, [successMsg])
+
+  useEffect(() => {
+    if (errorMsg) notify?.({ type: 'error', title: lang === 'zh' ? '操作失败' : 'Failed', message: errorMsg })
+  }, [errorMsg])
 
   const keptUsers = useMemo(
     () => activeUsers.filter(user => !deactivateIds.includes(user.id)),

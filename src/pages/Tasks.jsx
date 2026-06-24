@@ -74,7 +74,7 @@ const inputStyle = {
   padding: '10px 14px'
 }
 
-export default function Tasks({ currentUserProfile, lang }) {
+export default function Tasks({ currentUserProfile, lang, notify }) {
   const _ = (zh, en) => lang === 'zh' ? zh : en
   const [tasks, setTasks] = useState([])
   const [teams, setTeams] = useState([])
@@ -112,6 +112,14 @@ export default function Tasks({ currentUserProfile, lang }) {
 
   const isPowerUser = TASK_MANAGER_ROLES.includes(currentUserProfile?.role)
   const canViewPerformance = PERFORMANCE_VIEW_ROLES.includes(currentUserProfile?.role)
+
+  useEffect(() => {
+    if (successMsg) notify?.({ type: 'success', title: lang === 'zh' ? '操作成功' : 'Success', message: successMsg })
+  }, [successMsg])
+
+  useEffect(() => {
+    if (errorMsg) notify?.({ type: 'error', title: lang === 'zh' ? '操作失败' : 'Failed', message: errorMsg })
+  }, [errorMsg])
 
   useEffect(() => {
     fetchInitialData()

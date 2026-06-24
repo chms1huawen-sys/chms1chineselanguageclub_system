@@ -141,7 +141,7 @@ const getAnnouncementTargetLabel = (announcement) => {
   return '全部'
 }
 
-export default function Dashboard({ currentUserProfile, lang = 'zh', onShowTutorial }) {
+export default function Dashboard({ currentUserProfile, lang = 'zh', onShowTutorial, notify }) {
   const navigate = useNavigate()
   const bannerTextShadow = '0 1px 2px rgba(34, 91, 145, 0.9), 0 0 2px rgba(34, 91, 145, 0.65)'
   const [loading, setLoading] = useState(true)
@@ -169,6 +169,10 @@ export default function Dashboard({ currentUserProfile, lang = 'zh', onShowTutor
   const canPublishAnnouncements = ANNOUNCEMENT_ROLES.includes(currentUserProfile?.role)
   const canManageMembers = MEMBER_MANAGER_ROLES.includes(currentUserProfile?.role)
   const canCreateTasks = TASK_QUICK_ACCESS_ROLES.includes(currentUserProfile?.role)
+
+  useEffect(() => {
+    if (errorMsg) notify?.({ type: 'error', title: lang === 'zh' ? '操作失败' : 'Failed', message: errorMsg })
+  }, [errorMsg])
 
   useEffect(() => {
     if (!currentUserProfile?.id) return
@@ -371,6 +375,7 @@ export default function Dashboard({ currentUserProfile, lang = 'zh', onShowTutor
         message: `${currentUserProfile.name} 删除了公告《${announcement.title}》`,
       })
 
+      notify?.({ type: 'success', title: lang === 'zh' ? '删除成功' : 'Deleted', message: lang === 'zh' ? '公告已删除。' : 'Announcement deleted.' })
       fetchDashboardData()
     } catch (err) {
       setErrorMsg(err.message || (lang === 'zh' ? '删除公告失败' : 'Failed to delete announcement.'))
@@ -416,6 +421,7 @@ export default function Dashboard({ currentUserProfile, lang = 'zh', onShowTutor
           message: `${currentUserProfile.name} 修改了公告《${data.title}》`,
         })
 
+        notify?.({ type: 'success', title: lang === 'zh' ? '保存成功' : 'Saved', message: lang === 'zh' ? '公告已更新。' : 'Announcement updated.' })
         resetAnnouncementModal()
         fetchDashboardData()
         return
@@ -478,6 +484,7 @@ export default function Dashboard({ currentUserProfile, lang = 'zh', onShowTutor
 
       setAnnouncementForm({ title: '', body: '', is_pinned: false, target_type: 'all', target_team_id: '' })
       setShowAnnouncementModal(false)
+      notify?.({ type: 'success', title: lang === 'zh' ? '发布成功' : 'Published', message: lang === 'zh' ? '公告已发布，并已发送通知。' : 'Announcement published and notifications sent.' })
       fetchDashboardData()
     } catch (err) {
       setErrorMsg(err.message || (lang === 'zh' ? '发布公告失败' : 'Failed to publish announcement.'))
@@ -516,6 +523,7 @@ export default function Dashboard({ currentUserProfile, lang = 'zh', onShowTutor
       )
       setBirthdayWishTarget(null)
       setBirthdayWishText('')
+      notify?.({ type: 'success', title: lang === 'zh' ? '发送成功' : 'Sent', message: lang === 'zh' ? '生日祝福已发送。' : 'Birthday wish sent.' })
       fetchDashboardData()
     } catch (err) {
       setErrorMsg(err.message || (lang === 'zh' ? '发送生日祝福失败' : 'Failed to send birthday wish.'))

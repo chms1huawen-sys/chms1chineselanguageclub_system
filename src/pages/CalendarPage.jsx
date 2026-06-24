@@ -34,7 +34,7 @@ const inputStyle = {
   padding: '10px 14px'
 }
 
-export default function CalendarPage({ currentUserProfile, lang }) {
+export default function CalendarPage({ currentUserProfile, lang, notify }) {
   const [currentDate, setCurrentDate] = useState(new Date())
   const [events, setEvents] = useState([])
   const [tasks, setTasks] = useState([])
@@ -60,6 +60,14 @@ export default function CalendarPage({ currentUserProfile, lang }) {
 
   const isPowerUser = TASK_MANAGER_ROLES.includes(currentUserProfile?.role)
   const activeBoardTeam = teams.find(t => t.type === 'board') || teams[0] || null
+
+  useEffect(() => {
+    if (successMsg) notify?.({ type: 'success', title: lang === 'zh' ? '操作成功' : 'Success', message: successMsg })
+  }, [successMsg])
+
+  useEffect(() => {
+    if (errorMsg) notify?.({ type: 'error', title: lang === 'zh' ? '操作失败' : 'Failed', message: errorMsg })
+  }, [errorMsg])
 
   useEffect(() => {
     fetchCalendarData()

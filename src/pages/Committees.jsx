@@ -43,7 +43,7 @@ const inputStyle = {
   padding: '10px 14px'
 }
 
-export default function Committees({ currentUserProfile, lang }) {
+export default function Committees({ currentUserProfile, lang, notify }) {
   const _ = (zh, en) => lang === 'zh' ? zh : en
   const [committees, setCommittees] = useState([])
   const [activeTab, setActiveTab] = useState('active') // 'active' or 'archived'
@@ -60,6 +60,14 @@ export default function Committees({ currentUserProfile, lang }) {
   const [driveEventId, setDriveEventId] = useState(null)
   const [canViewSelectedCommittee, setCanViewSelectedCommittee] = useState(null)
   const [avatarPreviewUser, setAvatarPreviewUser] = useState(null)
+
+  useEffect(() => {
+    if (successMsg) notify?.({ type: 'success', title: lang === 'zh' ? '操作成功' : 'Success', message: successMsg })
+  }, [successMsg])
+
+  useEffect(() => {
+    if (errorMsg) notify?.({ type: 'error', title: lang === 'zh' ? '操作失败' : 'Failed', message: errorMsg })
+  }, [errorMsg])
 
   // Modals state
   const [showCreateModal, setShowCreateModal] = useState(false)

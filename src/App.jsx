@@ -18,7 +18,7 @@ import {
   LayoutDashboard, Users, LogOut, Menu, X, Shield,
   Calendar, CheckSquare, FolderGit, Loader, CircleAlert,
   History, ShieldAlert, Globe, HelpCircle, Bell, Settings as SettingsIcon,
-  ClipboardList
+  ClipboardList, CheckCircle
 } from 'lucide-react'
 
 const APP_ROLE_LABELS = {
@@ -180,9 +180,47 @@ function NotificationCenter({ profile, lang }) {
   )
 }
 
+function ToastStack({ toasts, onDismiss }) {
+  return (
+    <div className="fixed top-4 right-4 z-[80] w-[calc(100vw-2rem)] max-w-sm space-y-2 pointer-events-none">
+      {toasts.map(toast => {
+        const isError = toast.type === 'error'
+        const Icon = isError ? CircleAlert : CheckCircle
+        return (
+          <div
+            key={toast.id}
+            className="pointer-events-auto flex items-start gap-3 rounded-3xl px-4 py-3"
+            style={{
+              background: 'white',
+              border: `1.5px solid ${isError ? '#fecaca' : '#bfdbfe'}`,
+              boxShadow: '0 14px 34px rgba(15,23,42,0.14)',
+            }}>
+            <div className="w-9 h-9 rounded-2xl flex items-center justify-center shrink-0"
+              style={{ background: isError ? '#fef2f2' : '#f0f7ff', color: isError ? '#dc2626' : '#2563eb' }}>
+              <Icon size={18} />
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-black" style={{ color: '#1a1a1a' }}>{toast.title}</p>
+              {toast.message && <p className="text-xs font-bold mt-0.5 leading-snug" style={{ color: '#6b7280' }}>{toast.message}</p>}
+            </div>
+            <button
+              type="button"
+              onClick={() => onDismiss(toast.id)}
+              className="p-1 rounded-full shrink-0"
+              style={{ color: '#9ca3af' }}>
+              <X size={14} />
+            </button>
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
 function AppShell({ user, profile, onLogout, lang, setLang, onProfileUpdate }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [showTutorial, setShowTutorial] = useState(false)
+  const [toasts, setToasts] = useState([])
   const location = useLocation()
   const navigate = useNavigate()
 
@@ -252,8 +290,21 @@ function AppShell({ user, profile, onLogout, lang, setLang, onProfileUpdate }) {
     navigate(path)
   }
 
+  const notify = ({ type = 'success', title, message }) => {
+    const id = `${Date.now()}-${Math.random().toString(16).slice(2)}`
+    setToasts(prev => [...prev.slice(-3), { id, type, title, message }])
+    window.setTimeout(() => {
+      setToasts(prev => prev.filter(toast => toast.id !== id))
+    }, 3600)
+  }
+
+  const dismissToast = (id) => {
+    setToasts(prev => prev.filter(toast => toast.id !== id))
+  }
+
   return (
     <div className="min-h-screen flex flex-col md:flex-row overflow-x-hidden" style={{ background: '#f0f7ff', fontFamily: "'Nunito', sans-serif" }}>
+      <ToastStack toasts={toasts} onDismiss={dismissToast} />
 
       {/* Tutorial Modal */}
       {showTutorial && (
@@ -394,21 +445,21 @@ function AppShell({ user, profile, onLogout, lang, setLang, onProfileUpdate }) {
       {/* Main Content */}
       <main className="flex-1 p-4 sm:p-6 md:p-10 overflow-y-auto max-w-7xl mx-auto w-full min-w-0">
         <Routes>
-          <Route path="/" element={<Dashboard currentUserProfile={profile} lang={lang} onShowTutorial={() => setShowTutorial(true)} />} />
-          <Route path="/tasks" element={<Tasks currentUserProfile={profile} lang={lang} />} />
-          <Route path="/committees" element={<Committees currentUserProfile={profile} lang={lang} />} />
-          <Route path="/calendar" element={<CalendarPage currentUserProfile={profile} lang={lang} />} />
-          <Route path="/leave" element={<LeaveApplications currentUserProfile={profile} lang={lang} />} />
-          <Route path="/settings" element={<Settings currentUserProfile={profile} lang={lang} onProfileUpdate={onProfileUpdate} />} />
+          <Route path="/" element={<Dashboard currentUserProfile={profile} lang={lang} onShowTutorial={() => setShowTutorial(true)} notify={notify} />} />
+          <Route path="/tasks" element={<Tasks currentUserProfile={profile} lang={lang} notify={notify} />} />
+          <Route path="/committees" element={<Committees currentUserProfile={profile} lang={lang} notify={notify} />} />
+          <Route path="/calendar" element={<CalendarPage currentUserProfile={profile} lang={lang} notify={notify} />} />
+          <Route path="/leave" element={<LeaveApplications currentUserProfile={profile} lang={lang} notify={notify} />} />
+          <Route path="/settings" element={<Settings currentUserProfile={profile} lang={lang} onProfileUpdate={onProfileUpdate} notify={notify} />} />
           <Route path="/historical-members" element={<HistoricalMembers lang={lang} />} />
           <Route path="/handover" element={
             isBoardManager
-              ? <Handover currentUserProfile={profile} lang={lang} />
+              ? <Handover currentUserProfile={profile} lang={lang} notify={notify} />
               : <Navigate to="/" replace />
           } />
           <Route path="/members" element={
             isBoardManager
-              ? <Members currentUserProfile={profile} lang={lang} />
+              ? <Members currentUserProfile={profile} lang={lang} notify={notify} />
               : <Navigate to="/" replace />
           } />
           {/* Legacy placeholder redirects */}

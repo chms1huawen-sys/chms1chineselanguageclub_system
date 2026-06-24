@@ -65,7 +65,7 @@ const selectStyle = {
   fontWeight: 700
 }
 
-export default function Members({ currentUserProfile, lang }) {
+export default function Members({ currentUserProfile, lang, notify }) {
   const _ = (zh, en) => lang === 'zh' ? zh : en
   const [members, setMembers] = useState([])
   const [loading, setLoading] = useState(true)
@@ -82,6 +82,14 @@ export default function Members({ currentUserProfile, lang }) {
   const [formSubmitting, setFormSubmitting] = useState(false)
 
   const isPowerUser = BOARD_MANAGER_ROLES.includes(currentUserProfile?.role)
+
+  useEffect(() => {
+    if (successMsg) notify?.({ type: 'success', title: lang === 'zh' ? '操作成功' : 'Success', message: successMsg })
+  }, [successMsg])
+
+  useEffect(() => {
+    if (errorMsg) notify?.({ type: 'error', title: lang === 'zh' ? '操作失败' : 'Failed', message: errorMsg })
+  }, [errorMsg])
 
   useEffect(() => { fetchMembers() }, [])
 

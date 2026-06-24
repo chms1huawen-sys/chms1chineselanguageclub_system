@@ -165,7 +165,7 @@ const getDevicePlatform = () => {
   return 'desktop'
 }
 
-export default function Settings({ currentUserProfile, lang = 'zh', onProfileUpdate }) {
+export default function Settings({ currentUserProfile, lang = 'zh', onProfileUpdate, notify }) {
   const t = T[lang] || T.zh
 
   const [profileDraft, setProfileDraft] = useState(currentUserProfile || {})
@@ -341,7 +341,7 @@ export default function Settings({ currentUserProfile, lang = 'zh', onProfileUpd
 
   const handleRequestNotifPermission = async () => {
     if (!('Notification' in window)) {
-      alert(t.notif_unsupported_alert)
+      notify?.({ type: 'error', title: lang === 'zh' ? '无法开启通知' : 'Notifications Unavailable', message: t.notif_unsupported_alert })
       return
     }
 
@@ -355,7 +355,7 @@ export default function Settings({ currentUserProfile, lang = 'zh', onProfileUpd
 
       // 2. 用户拒绝
       if (permission === 'denied') {
-        alert(t.notif_denied_alert)
+        notify?.({ type: 'error', title: lang === 'zh' ? '通知权限被拒绝' : 'Notification Permission Denied', message: t.notif_denied_alert })
         return
       }
 
@@ -369,9 +369,13 @@ export default function Settings({ currentUserProfile, lang = 'zh', onProfileUpd
 
         // 没拿到 token
         if (!token) {
-          alert(lang === 'zh'
-            ? '没有取得推送 Token。请确认已允许通知权限，并将系统以 PWA/App 方式打开后再试一次。'
-            : 'Could not get a push token. Please make sure notifications are allowed and open the system as a PWA/App, then try again.')
+          notify?.({
+            type: 'error',
+            title: lang === 'zh' ? '推送注册失败' : 'Push Registration Failed',
+            message: lang === 'zh'
+              ? '没有取得推送 Token。请确认已允许通知权限，并将系统以 PWA/App 方式打开后再试一次。'
+              : 'Could not get a push token. Please make sure notifications are allowed and open the system as a PWA/App, then try again.',
+          })
           return
         }
 
@@ -385,18 +389,18 @@ export default function Settings({ currentUserProfile, lang = 'zh', onProfileUpd
 
         if (error) {
           console.error(error)
-          alert('Failed to save notification token.')
+          notify?.({ type: 'error', title: lang === 'zh' ? '保存推送失败' : 'Failed to Save Push Token', message: error.message || 'Failed to save notification token.' })
           return
         }
 
         window.localStorage.setItem('clc_fcm_token', token)
         setLocalFcmToken(token)
-        alert(t.notif_success_alert)
+        notify?.({ type: 'success', title: lang === 'zh' ? '推送通知已开启' : 'Push Notifications Enabled', message: t.notif_success_alert })
       }
 
     } catch (err) {
       console.error(err)
-      alert(err.message || 'Notification setup failed.')
+      notify?.({ type: 'error', title: lang === 'zh' ? '推送设置失败' : 'Notification Setup Failed', message: err.message || 'Notification setup failed.' })
     } finally {
       setNotifLoading(false)
     }
@@ -418,6 +422,22 @@ export default function Settings({ currentUserProfile, lang = 'zh', onProfileUpd
       border: '#fde047',
     }
     : badge
+
+  useEffect(() => {
+    if (pwSuccess) notify?.({ type: 'success', title: lang === 'zh' ? '密码已更新' : 'Password Updated', message: pwSuccess })
+  }, [pwSuccess])
+
+  useEffect(() => {
+    if (pwError) notify?.({ type: 'error', title: lang === 'zh' ? '密码更新失败' : 'Password Update Failed', message: pwError })
+  }, [pwError])
+
+  useEffect(() => {
+    if (avatarSuccess) notify?.({ type: 'success', title: lang === 'zh' ? '头像已更新' : 'Avatar Updated', message: avatarSuccess })
+  }, [avatarSuccess])
+
+  useEffect(() => {
+    if (avatarError) notify?.({ type: 'error', title: lang === 'zh' ? '头像操作失败' : 'Avatar Action Failed', message: avatarError })
+  }, [avatarError])
 
   const userRoleText = currentUserProfile?.role
     ? (currentUserProfile.role === 'custom' && currentUserProfile.custom_role_label

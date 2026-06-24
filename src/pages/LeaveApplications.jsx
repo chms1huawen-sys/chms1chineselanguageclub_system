@@ -83,7 +83,7 @@ const attachApplicants = async (rows = []) => {
   return rows.map(row => ({ ...row, applicant: usersById.get(row.user_id) || null }))
 }
 
-export default function LeaveApplications({ currentUserProfile, lang = 'zh' }) {
+export default function LeaveApplications({ currentUserProfile, lang = 'zh', notify }) {
   const [applications, setApplications] = useState([])
   const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
@@ -107,6 +107,14 @@ export default function LeaveApplications({ currentUserProfile, lang = 'zh' }) {
   })
 
   const isManager = MANAGER_ROLES.includes(currentUserProfile?.role)
+
+  useEffect(() => {
+    if (successMsg) notify?.({ type: 'success', title: lang === 'zh' ? '操作成功' : 'Success', message: successMsg })
+  }, [successMsg])
+
+  useEffect(() => {
+    if (errorMsg) notify?.({ type: 'error', title: lang === 'zh' ? '操作失败' : 'Failed', message: errorMsg })
+  }, [errorMsg])
 
   useEffect(() => {
     fetchApplications()
