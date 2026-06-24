@@ -298,10 +298,7 @@ export default function ExecutiveManagement({ currentUserProfile, lang = 'zh', n
       <div className="grid grid-cols-1 xl:grid-cols-[1fr_0.9fr] gap-6">
         <section className="p-6 sm:p-7" style={cardStyle}>
           <div className="flex items-start gap-4">
-            <div className="w-12 h-12 rounded-3xl flex items-center justify-center shrink-0"
-              style={{ background: '#f0f7ff', color: '#6db8ff' }}>
-              <BriefcaseBusiness size={22} />
-            </div>
+            <UserAvatar user={currentUserProfile} name={currentUserProfile?.name} size={58} rounded={22} />
             <div className="min-w-0 flex-1">
               <p className="text-xs font-black uppercase tracking-wide" style={{ color: '#95CBFF' }}>
                 {lang === 'zh' ? '我的岗位' : 'My Role'}
