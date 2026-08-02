@@ -14,17 +14,18 @@ const ROLE_LABELS = {
   treasurer: { zh: '正财政', en: 'Treasurer' },
   vice_treasurer: { zh: '副财政', en: 'Vice Treasurer' },
   general_affairs: { zh: '正总务', en: 'General Affairs' },
-  vice_general_affairs: { zh: '副总务', en: 'Vice General Affairs' },
-  activity_lead: { zh: '活动组组长', en: 'Activity Lead' },
-  vice_activity_lead: { zh: '活动组副组长', en: 'Vice Activity Lead' },
-  activity_member: { zh: '活动组组员', en: 'Activity Member' },
+  vice_general_affairs: { zh: '副总务', en: 'Assistant General Affairs' },
+  activity_lead: { zh: '活动组组长', en: 'Activity Organiser' },
+  vice_activity_lead: { zh: '活动组副组长', en: 'Vice Activity Organiser' },
+  activity_member: { zh: '活动组组员', en: 'Assistant Activity Organiser' },
   media_lead: { zh: '正摄影', en: 'Photographer' },
-  vice_media_lead: { zh: '副摄影', en: 'Vice Photographer' },
+  vice_media_lead: { zh: '副摄影', en: 'Assistant Photographer' },
+  social_media_editor: { zh: '媒体', en: 'Social Media Editor' },
   ordinary_member: { zh: '普通会员', en: 'Ordinary Member' },
   custom: { zh: '自定义', en: 'Custom' },
   advisor: { zh: '指导老师', en: 'Advisor Teacher' },
   committee: { zh: '自定义', en: 'Custom' },
-  event_member: { zh: '活动组组员', en: 'Activity Member' }
+  event_member: { zh: '活动组组员', en: 'Assistant Activity Organiser' }
 }
 
 const cardStyle = {

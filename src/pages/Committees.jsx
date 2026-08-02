@@ -18,7 +18,7 @@ import UserAvatar from '../components/UserAvatar'
 import AvatarPreviewModal from '../components/AvatarPreviewModal'
 
 const BOARD_MANAGER_ROLES = ['convener_teacher', 'advisor_teacher', 'chairperson', 'vice_chairperson', 'advisor']
-const TASK_MANAGER_ROLES = [...BOARD_MANAGER_ROLES, 'secretary', 'vice_secretary', 'treasurer', 'vice_treasurer', 'general_affairs', 'vice_general_affairs', 'activity_lead', 'vice_activity_lead', 'media_lead', 'vice_media_lead']
+const TASK_MANAGER_ROLES = [...BOARD_MANAGER_ROLES, 'secretary', 'vice_secretary', 'treasurer', 'vice_treasurer', 'general_affairs', 'vice_general_affairs', 'activity_lead', 'vice_activity_lead', 'media_lead', 'vice_media_lead', 'social_media_editor']
 const CUSTOM_POSITION_VALUE = '__custom__'
 const COMMITTEE_POSITION_OPTIONS = [
   { value: '召集老师', zh: '召集老师', en: 'Convener Teacher' },

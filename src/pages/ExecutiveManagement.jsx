@@ -32,6 +32,7 @@ const EXECUTIVE_ROLES = [
   'activity_member',
   'media_lead',
   'vice_media_lead',
+  'social_media_editor',
   'custom',
 ]
 
@@ -52,6 +53,7 @@ const ROLE_ORDER = [
   'activity_member',
   'media_lead',
   'vice_media_lead',
+  'social_media_editor',
   'custom',
 ]
 
@@ -76,13 +78,73 @@ const ROLE_LABELS = {
   treasurer: { zh: '正财政', en: 'Treasurer' },
   vice_treasurer: { zh: '副财政', en: 'Vice Treasurer' },
   general_affairs: { zh: '正总务', en: 'General Affairs' },
-  vice_general_affairs: { zh: '副总务', en: 'Vice General Affairs' },
-  activity_lead: { zh: '活动组组长', en: 'Activity Lead' },
-  vice_activity_lead: { zh: '活动组副组长', en: 'Vice Activity Lead' },
-  activity_member: { zh: '活动组组员', en: 'Activity Member' },
+  vice_general_affairs: { zh: '副总务', en: 'Assistant General Affairs' },
+  activity_lead: { zh: '活动组组长', en: 'Activity Organiser' },
+  vice_activity_lead: { zh: '活动组副组长', en: 'Vice Activity Organiser' },
+  activity_member: { zh: '活动组组员', en: 'Assistant Activity Organiser' },
   media_lead: { zh: '正摄影', en: 'Photographer' },
-  vice_media_lead: { zh: '副摄影', en: 'Vice Photographer' },
+  vice_media_lead: { zh: '副摄影', en: 'Assistant Photographer' },
+  social_media_editor: { zh: '媒体', en: 'Social Media Editor' },
   custom: { zh: '自定义岗位', en: 'Custom Position' },
+}
+
+const ROLE_DESCRIPTIONS = {
+  chairperson: {
+    zh: '暂时空着',
+    en: 'Not filled yet.',
+  },
+  vice_chairperson: {
+    zh: '副主席主要负责协助主席处理学会事务，确保每项活动能够顺利进行，并协助现场控场。同时，副主席需留意会员的出席情况，提醒缺席会员完成请假程序，协助维持学会整体运作。',
+    en: 'The Vice President assists the President in handling society affairs, ensuring activities run smoothly and supporting on-site coordination. The Vice President also monitors attendance, reminds absent members to complete leave procedures, and helps maintain overall society operations.',
+  },
+  secretary: {
+    zh: '文书负责联课点名、处理会员请假单、整理会员资料及保存学会所有官方文件，并于会议期间负责记录会议内容，确保学会行政事务完整且有系统地进行。',
+    en: 'The Secretary manages co-curricular attendance, member leave records, member information, official society documents, and meeting minutes so that administrative matters are complete and well organised.',
+  },
+  vice_secretary: {
+    zh: '文书负责联课点名、处理会员请假单、整理会员资料及保存学会所有官方文件，并于会议期间负责记录会议内容，确保学会行政事务完整且有系统地进行。',
+    en: 'The Vice Secretary assists with co-curricular attendance, member leave records, member information, official society documents, and meeting minutes so that administrative matters are complete and well organised.',
+  },
+  treasurer: {
+    zh: '财政负责收取团费、团服等相关费用，并做好完整记录。同时负责学会所有收入、支出及报销事项，确认收齐团服费用后交还老师，并于每月将财务资料上传至 Google Drive。',
+    en: 'The Treasurer collects society fees, uniform payments, and related fees with complete records. The Treasurer also manages all income, expenses, and claims, returns collected uniform payments to the teacher, and uploads monthly financial records to Google Drive.',
+  },
+  vice_treasurer: {
+    zh: '财政负责收取团费、团服等相关费用，并做好完整记录。同时负责学会所有收入、支出及报销事项，确认收齐团服费用后交还老师，并于每月将财务资料上传至 Google Drive。',
+    en: 'The Vice Treasurer assists with collecting society fees, uniform payments, and related fees with complete records, while supporting income, expenses, claims, and monthly Google Drive financial uploads.',
+  },
+  general_affairs: {
+    zh: '总务负责申请活动场地、安排每周联课值日工作，并负责拍摄及上传鸟瞰图，确保场地使用及环境整理工作顺利完成，另外也要管理并整理好学会的用具。',
+    en: 'General Affairs handles venue applications, weekly duty arrangements, aerial-view photo uploads, venue use, environment organisation, and the management of society equipment.',
+  },
+  vice_general_affairs: {
+    zh: '总务负责申请活动场地、安排每周联课值日工作，并负责拍摄及上传鸟瞰图，确保场地使用及环境整理工作顺利完成，另外也要管理并整理好学会的用具。',
+    en: 'Assistant General Affairs assists with venue applications, weekly duty arrangements, aerial-view photo uploads, venue use, environment organisation, and society equipment management.',
+  },
+  media_lead: {
+    zh: '媒体负责拍摄联课及活动照片，管理华文学会所有社交媒体平台，并负责发布活动贴文及撰写相关文案。',
+    en: 'The Photographer / Social Media role captures co-curricular and activity photos, manages the Chinese Language Club social media platforms, publishes activity posts, and writes related captions.',
+  },
+  vice_media_lead: {
+    zh: '媒体负责拍摄联课及活动照片，管理华文学会所有社交媒体平台，并负责发布活动贴文及撰写相关文案。',
+    en: 'The Assistant Photographer / Social Media role assists with photos, social media management, activity posts, and related captions.',
+  },
+  social_media_editor: {
+    zh: '媒体负责拍摄联课及活动照片，管理华文学会所有社交媒体平台，并负责发布活动贴文及撰写相关文案。',
+    en: 'The Social Media Editor manages the Chinese Language Club social media platforms, publishes activity posts, writes related captions, and supports photo organisation.',
+  },
+  activity_lead: {
+    zh: '活动组负责策划每周游戏及活动内容、制作活动所需 PPT，并于联课期间主持及带领活动、带动气氛，确保活动顺利进行。',
+    en: 'The Activity Organiser plans weekly games and activities, prepares the required PPT, hosts and leads activities during co-curricular sessions, builds the atmosphere, and ensures activities run smoothly.',
+  },
+  vice_activity_lead: {
+    zh: '活动组负责策划每周游戏及活动内容、制作活动所需 PPT，并于联课期间主持及带领活动、带动气氛，确保活动顺利进行。',
+    en: 'The Vice Activity Organiser assists with weekly games, activity planning, PPT preparation, hosting, leading activities, and keeping activities running smoothly.',
+  },
+  activity_member: {
+    zh: '活动组负责策划每周游戏及活动内容、制作活动所需 PPT，并于联课期间主持及带领活动、带动气氛，确保活动顺利进行。',
+    en: 'The Assistant Activity Organiser supports weekly games, activity planning, PPT preparation, hosting, leading activities, and keeping activities running smoothly.',
+  },
 }
 
 const cardStyle = {
@@ -128,6 +190,7 @@ export default function ExecutiveManagement({ currentUserProfile, lang = 'zh', n
   const isExecutive = EXECUTIVE_ROLES.includes(currentUserProfile?.role)
   const canManageDrive = DRIVE_MANAGER_ROLES.includes(currentUserProfile?.role)
   const roleText = getRoleText(currentUserProfile, lang)
+  const roleDescription = ROLE_DESCRIPTIONS[currentUserProfile?.role]?.[lang] || ''
 
   useEffect(() => {
     if (!currentUserProfile?.id || !isExecutive) return
@@ -307,25 +370,31 @@ export default function ExecutiveManagement({ currentUserProfile, lang = 'zh', n
                 {lang === 'zh' ? `你好，${roleText}` : `Hello, ${roleText}`}
               </h2>
               <p className="text-sm font-bold mt-2" style={{ color: '#6b7280' }}>
-                {lang === 'zh'
-                  ? '这里之后会显示你的岗位工作说明。'
-                  : 'Your role description will appear here later.'}
+                {lang === 'zh' ? '这里是你的执委层主要职责。' : 'These are your main executive responsibilities.'}
               </p>
             </div>
           </div>
 
-          <div className="mt-6 p-5 rounded-3xl min-h-[180px] flex items-center justify-center text-center"
+          <div className="mt-6 p-5 rounded-3xl min-h-[180px]"
             style={{ background: '#f0f7ff', border: '1.5px dashed #b8deff' }}>
-            <div>
-              <p className="text-sm font-black" style={{ color: '#4b5563' }}>
-                {lang === 'zh' ? '岗位说明尚未填写' : 'Role description is not filled yet'}
+            {roleDescription ? (
+              <p className="text-sm font-bold leading-relaxed whitespace-pre-line" style={{ color: '#4b5563' }}>
+                {roleDescription}
               </p>
-              <p className="text-xs font-bold mt-2 max-w-md" style={{ color: '#8ca0b3' }}>
-                {lang === 'zh'
-                  ? '等你给我各岗位说明后，我会把内容整理到这里。'
-                  : 'Once you provide the role descriptions, they can be added here.'}
-              </p>
-            </div>
+            ) : (
+              <div className="h-full min-h-[130px] flex items-center justify-center text-center">
+                <div>
+                  <p className="text-sm font-black" style={{ color: '#4b5563' }}>
+                    {lang === 'zh' ? '岗位说明尚未填写' : 'Role description is not filled yet'}
+                  </p>
+                  <p className="text-xs font-bold mt-2 max-w-md" style={{ color: '#8ca0b3' }}>
+                    {lang === 'zh'
+                      ? '这个岗位的职责说明之后可以再补上。'
+                      : 'This role description can be added later.'}
+                  </p>
+                </div>
+              </div>
+            )}
           </div>
         </section>
 

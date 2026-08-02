@@ -42,17 +42,18 @@ const TASK_ROLE_LABELS = {
   treasurer: { zh: '正财政', en: 'Treasurer' },
   vice_treasurer: { zh: '副财政', en: 'Vice Treasurer' },
   general_affairs: { zh: '正总务', en: 'General Affairs' },
-  vice_general_affairs: { zh: '副总务', en: 'Vice General Affairs' },
-  activity_lead: { zh: '活动组组长', en: 'Activity Lead' },
-  vice_activity_lead: { zh: '活动组副组长', en: 'Vice Activity Lead' },
-  activity_member: { zh: '活动组组员', en: 'Activity Member' },
-  media_lead: { zh: '正摄影', en: 'Media Lead' },
-  vice_media_lead: { zh: '副摄影', en: 'Vice Media Lead' },
+  vice_general_affairs: { zh: '副总务', en: 'Assistant General Affairs' },
+  activity_lead: { zh: '活动组组长', en: 'Activity Organiser' },
+  vice_activity_lead: { zh: '活动组副组长', en: 'Vice Activity Organiser' },
+  activity_member: { zh: '活动组组员', en: 'Assistant Activity Organiser' },
+  media_lead: { zh: '正摄影', en: 'Photographer' },
+  vice_media_lead: { zh: '副摄影', en: 'Assistant Photographer' },
+  social_media_editor: { zh: '媒体', en: 'Social Media Editor' },
   ordinary_member: { zh: '普通会员', en: 'Member' },
   custom: { zh: '自定义', en: 'Custom' },
   advisor: { zh: '指导老师', en: 'Advisor' },
   committee: { zh: '自定义', en: 'Custom' },
-  event_member: { zh: '活动组组员', en: 'Activity Member' }
+  event_member: { zh: '活动组组员', en: 'Assistant Activity Organiser' }
 }
 const getTaskUserRoleLabel = (user, lang) => {
   if (user?.role === 'custom' && user.custom_role_label) return user.custom_role_label
@@ -60,7 +61,7 @@ const getTaskUserRoleLabel = (user, lang) => {
   return label ? label[lang] : (lang === 'zh' ? '干部' : 'Board')
 }
 const BOARD_MANAGER_ROLES = ['convener_teacher', 'advisor_teacher', 'chairperson', 'vice_chairperson', 'advisor']
-const TASK_MANAGER_ROLES = [...BOARD_MANAGER_ROLES, 'secretary', 'vice_secretary', 'treasurer', 'vice_treasurer', 'general_affairs', 'vice_general_affairs', 'activity_lead', 'vice_activity_lead', 'media_lead', 'vice_media_lead']
+const TASK_MANAGER_ROLES = [...BOARD_MANAGER_ROLES, 'secretary', 'vice_secretary', 'treasurer', 'vice_treasurer', 'general_affairs', 'vice_general_affairs', 'activity_lead', 'vice_activity_lead', 'media_lead', 'vice_media_lead', 'social_media_editor']
 const TASK_COMPLETION_NOTIFY_ROLES = ['convener_teacher', 'advisor_teacher', 'chairperson', 'vice_chairperson']
 const PERFORMANCE_VIEW_ROLES = ['convener_teacher', 'advisor_teacher', 'chairperson', 'vice_chairperson']
 

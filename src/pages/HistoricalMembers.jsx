@@ -38,6 +38,7 @@ const ROLE_ORDER = [
   'activity_member',
   'media_lead',
   'vice_media_lead',
+  'social_media_editor',
   'ordinary_member',
   'custom',
 ]

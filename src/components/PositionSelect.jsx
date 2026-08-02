@@ -15,12 +15,13 @@ const ROLE_OPTIONS = [
   { value: 'treasurer',        zh: '正财政',   en: 'Treasurer' },
   { value: 'vice_treasurer',   zh: '副财政',   en: 'Vice Treasurer' },
   { value: 'general_affairs',       zh: '正总务',     en: 'General Affairs' },
-  { value: 'vice_general_affairs',  zh: '副总务',     en: 'Vice General Affairs' },
-  { value: 'activity_lead',         zh: '活动组组长', en: 'Activity Lead' },
-  { value: 'vice_activity_lead',    zh: '活动组副组长', en: 'Vice Activity Lead' },
-  { value: 'activity_member',       zh: '活动组组员', en: 'Activity Member' },
+  { value: 'vice_general_affairs',  zh: '副总务',     en: 'Assistant General Affairs' },
+  { value: 'activity_lead',         zh: '活动组组长', en: 'Activity Organiser' },
+  { value: 'vice_activity_lead',    zh: '活动组副组长', en: 'Vice Activity Organiser' },
+  { value: 'activity_member',       zh: '活动组组员', en: 'Assistant Activity Organiser' },
   { value: 'media_lead',            zh: '正摄影', en: 'Photographer' },
-  { value: 'vice_media_lead',       zh: '副摄影', en: 'Vice Photographer' },
+  { value: 'vice_media_lead',       zh: '副摄影', en: 'Assistant Photographer' },
+  { value: 'social_media_editor',   zh: '媒体', en: 'Social Media Editor' },
   { value: 'ordinary_member',       zh: '普通会员', en: 'Ordinary Member' },
 ]
 

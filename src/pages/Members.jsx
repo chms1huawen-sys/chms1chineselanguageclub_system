@@ -16,12 +16,13 @@ const ROLE_OPTIONS = [
   { value: 'treasurer', zh: '正财政', en: 'Treasurer', bg: '#fef9c3', color: '#ca8a04', border: '#fde047' },
   { value: 'vice_treasurer', zh: '副财政', en: 'Vice Treasurer', bg: '#fffbeb', color: '#b45309', border: '#fde68a' },
   { value: 'general_affairs', zh: '正总务', en: 'General Affairs', bg: '#e0f2fe', color: '#0369a1', border: '#7dd3fc' },
-  { value: 'vice_general_affairs', zh: '副总务', en: 'Vice General Affairs', bg: '#f0f9ff', color: '#0284c7', border: '#bae6fd' },
-  { value: 'activity_lead', zh: '活动组组长', en: 'Activity Lead', bg: '#fef3c7', color: '#d97706', border: '#fcd34d' },
-  { value: 'vice_activity_lead', zh: '活动组副组长', en: 'Vice Activity Lead', bg: '#fff7ed', color: '#ea580c', border: '#fed7aa' },
-  { value: 'activity_member', zh: '活动组组员', en: 'Activity Member', bg: '#f5f5f5', color: '#6b7280', border: '#d1d5db' },
+  { value: 'vice_general_affairs', zh: '副总务', en: 'Assistant General Affairs', bg: '#f0f9ff', color: '#0284c7', border: '#bae6fd' },
+  { value: 'activity_lead', zh: '活动组组长', en: 'Activity Organiser', bg: '#fef3c7', color: '#d97706', border: '#fcd34d' },
+  { value: 'vice_activity_lead', zh: '活动组副组长', en: 'Vice Activity Organiser', bg: '#fff7ed', color: '#ea580c', border: '#fed7aa' },
+  { value: 'activity_member', zh: '活动组组员', en: 'Assistant Activity Organiser', bg: '#f5f5f5', color: '#6b7280', border: '#d1d5db' },
   { value: 'media_lead', zh: '正摄影', en: 'Photographer', bg: '#fce7f3', color: '#db2777', border: '#f9a8d4' },
-  { value: 'vice_media_lead', zh: '副摄影', en: 'Vice Photographer', bg: '#fdf2f8', color: '#be185d', border: '#fbcfe8' },
+  { value: 'vice_media_lead', zh: '副摄影', en: 'Assistant Photographer', bg: '#fdf2f8', color: '#be185d', border: '#fbcfe8' },
+  { value: 'social_media_editor', zh: '媒体', en: 'Social Media Editor', bg: '#f0fdfa', color: '#0f766e', border: '#99f6e4' },
   { value: 'ordinary_member', zh: '普通会员', en: 'Ordinary Member', bg: '#eef2ff', color: '#4f46e5', border: '#c7d2fe' },
   { value: 'custom', zh: '自定义', en: 'Custom', bg: '#f3f4f6', color: '#4b5563', border: '#d1d5db' }
 ]
@@ -46,7 +47,7 @@ const getMemberRoleLabel = (member) => {
   return base
 }
 const BOARD_MANAGER_ROLES = ['convener_teacher', 'advisor_teacher', 'chairperson', 'vice_chairperson', 'advisor']
-const TASK_MANAGER_ROLES = [...BOARD_MANAGER_ROLES, 'secretary', 'vice_secretary', 'treasurer', 'vice_treasurer', 'general_affairs', 'vice_general_affairs', 'activity_lead', 'vice_activity_lead', 'media_lead', 'vice_media_lead']
+const TASK_MANAGER_ROLES = [...BOARD_MANAGER_ROLES, 'secretary', 'vice_secretary', 'treasurer', 'vice_treasurer', 'general_affairs', 'vice_general_affairs', 'activity_lead', 'vice_activity_lead', 'media_lead', 'vice_media_lead', 'social_media_editor']
 const inputStyle = {
   background: '#f0f7ff',
   border: '1.5px solid #95CBFF',
