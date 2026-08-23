@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { supabase } from '../supabaseClient'
 import { createNotificationsAndPush, syncAnnouncementNotifications } from '../utils/pushNotifications'
 import UserAvatar from '../components/UserAvatar'
-import { canViewLeaveRecords, hasPermission } from '../utils/permissions'
+import { canViewExecutiveManagement, canViewLeaveRecords, hasPermission } from '../utils/permissions'
 import {
   AlertCircle,
   Bell,
@@ -276,7 +276,7 @@ export default function Dashboard({ currentUserProfile, lang = 'zh', onShowTutor
       const committeeIds = (myCommitteeMembershipResult.data || [])
         .filter(item => item.teams?.type === 'event' && !item.teams?.is_archived)
         .map(item => item.team_id)
-      const canSeeBoardAnnouncements = BOARD_ROLES.includes(currentUserProfile?.role)
+      const canSeeBoardAnnouncements = canViewExecutiveManagement(currentUserProfile)
       const visibleAnnouncements = (announcementsResult.data || []).filter(item => {
         if (canPublishAnnouncements || item.created_by === currentUserProfile.id) return true
         if (!item.target_type || item.target_type === 'all') return true
@@ -300,11 +300,11 @@ export default function Dashboard({ currentUserProfile, lang = 'zh', onShowTutor
   const getAnnouncementRecipientIds = async (targetType, targetTeamId) => {
     let recipientQuery = supabase
       .from('users')
-      .select('id')
+      .select('id, role, can_manage_executive')
       .eq('is_active', true)
 
     if (targetType === 'board') {
-      recipientQuery = recipientQuery.in('role', BOARD_ROLES)
+      recipientQuery = recipientQuery.or(`role.in.(${BOARD_ROLES.join(',')}),can_manage_executive.eq.true`)
     }
 
     const { data: recipientUsers, error: recipientError } = await recipientQuery
@@ -440,29 +440,7 @@ export default function Dashboard({ currentUserProfile, lang = 'zh', onShowTutor
 
       if (error) throw error
 
-      let recipientQuery = supabase
-        .from('users')
-        .select('id')
-        .eq('is_active', true)
-
-      if (announcementForm.target_type === 'board') {
-        recipientQuery = recipientQuery.in('role', BOARD_ROLES)
-      }
-
-      const { data: recipientUsers, error: recipientError } = await recipientQuery
-      if (recipientError) throw recipientError
-
-      let recipientIds = (recipientUsers || []).map(user => user.id)
-      if (announcementForm.target_type === 'committee' && announcementForm.target_team_id) {
-        const { data: committeeMembers, error: committeeError } = await supabase
-          .from('team_members')
-          .select('user_id')
-          .eq('team_id', announcementForm.target_team_id)
-
-        if (committeeError) throw committeeError
-        const committeeIds = new Set((committeeMembers || []).map(item => item.user_id))
-        recipientIds = recipientIds.filter(id => committeeIds.has(id))
-      }
+      const recipientIds = await getAnnouncementRecipientIds(announcementForm.target_type, announcementForm.target_team_id)
 
       const notificationRows = [...new Set(recipientIds)].map(userId => ({
         user_id: userId,

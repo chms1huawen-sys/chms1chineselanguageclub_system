@@ -16,6 +16,7 @@ alter table public.users
   add column if not exists can_create_tasks boolean not null default false,
   add column if not exists can_manage_announcements boolean not null default false,
   add column if not exists can_manage_calendar boolean not null default false,
+  add column if not exists can_view_leave_records boolean not null default false,
   add column if not exists can_manage_handover boolean not null default false;
 
 alter table public.users
@@ -77,6 +78,8 @@ as $$
             'convener_teacher', 'advisor_teacher', 'advisor', 'chairperson', 'vice_chairperson',
             'secretary', 'vice_secretary', 'treasurer', 'vice_treasurer'
           )
+        when 'can_view_leave_records' then
+          u.can_view_leave_records or u.role in ('convener_teacher', 'advisor_teacher', 'advisor', 'chairperson', 'secretary', 'vice_secretary')
         when 'can_manage_handover' then
           u.can_manage_handover or u.role in ('convener_teacher', 'advisor_teacher', 'advisor', 'chairperson', 'vice_chairperson')
         else false
@@ -176,5 +179,9 @@ drop policy if exists "Permission users can update system settings." on public.s
 create policy "Permission users can update system settings." on public.system_settings
   for update to authenticated using (public.current_user_has_permission('can_manage_executive'))
   with check (public.current_user_has_permission('can_manage_executive'));
+
+drop policy if exists "Permission users can view leave applications." on public.leave_applications;
+create policy "Permission users can view leave applications." on public.leave_applications
+  for select to authenticated using (public.current_user_has_permission('can_view_leave_records'));
 
 notify pgrst, 'reload schema';

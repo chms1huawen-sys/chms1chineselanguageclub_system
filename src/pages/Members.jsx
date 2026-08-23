@@ -53,6 +53,7 @@ const DEFAULT_PERMISSIONS = {
   can_create_tasks: false,
   can_manage_announcements: false,
   can_manage_calendar: false,
+  can_view_leave_records: false,
   can_manage_handover: false,
 }
 const PERMISSION_LABELS = {
@@ -61,6 +62,7 @@ const PERMISSION_LABELS = {
   can_create_tasks: { zh: '可发布任务', en: 'Create Tasks' },
   can_manage_announcements: { zh: '可管理公告', en: 'Manage Announcements' },
   can_manage_calendar: { zh: '可管理行事历', en: 'Manage Calendar' },
+  can_view_leave_records: { zh: '可查看请假记录', en: 'View Leave Records' },
   can_manage_handover: { zh: '可执行学期切换', en: 'Term Handover' },
 }
 const PermissionControls = ({ formData, setFormData, lang, disabled = false }) => (
@@ -69,19 +71,30 @@ const PermissionControls = ({ formData, setFormData, lang, disabled = false }) =
       {lang === 'zh' ? '系统权限' : 'System Permissions'}
     </p>
     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-      {PERMISSION_FIELDS.map(field => (
-        <label key={field} className="flex items-center gap-2 text-xs font-bold rounded-xl px-2 py-1.5"
-          style={{ background: 'white', color: '#4b5563', border: '1px solid #e0f1ff' }}>
-          <input
-            type="checkbox"
-            disabled={disabled}
-            checked={Boolean(formData[field])}
-            onChange={(event) => setFormData(prev => ({ ...prev, [field]: event.target.checked }))}
-            style={{ accentColor: '#95CBFF' }}
-          />
-          {PERMISSION_LABELS[field][lang]}
-        </label>
-      ))}
+      {PERMISSION_FIELDS.map(field => {
+        const hasDefaultPermission = hasPermission({ ...formData, [field]: false }, field)
+        const hasManualPermission = Boolean(formData[field])
+        const checked = hasDefaultPermission || hasManualPermission
+        return (
+          <label key={field} className="flex items-center gap-2 text-xs font-bold rounded-xl px-2 py-1.5"
+            style={{ background: 'white', color: '#4b5563', border: '1px solid #e0f1ff' }}>
+            <input
+              type="checkbox"
+              disabled={disabled || hasDefaultPermission}
+              checked={checked}
+              onChange={(event) => setFormData(prev => ({ ...prev, [field]: event.target.checked }))}
+              style={{ accentColor: '#95CBFF' }}
+            />
+            <span className="flex-1">{PERMISSION_LABELS[field][lang]}</span>
+            {hasDefaultPermission && (
+              <span className="px-1.5 py-0.5 rounded-full text-[10px] font-black"
+                style={{ background: '#e0f1ff', color: '#2E86C1' }}>
+                {lang === 'zh' ? '默认' : 'Default'}
+              </span>
+            )}
+          </label>
+        )
+      })}
     </div>
   </div>
 )

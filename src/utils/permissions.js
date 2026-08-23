@@ -43,6 +43,7 @@ export const PERMISSION_FIELDS = [
   'can_create_tasks',
   'can_manage_announcements',
   'can_manage_calendar',
+  'can_view_leave_records',
   'can_manage_handover',
 ]
 
@@ -56,6 +57,7 @@ export const hasPermission = (profile, permission) => {
   if (permission === 'can_create_tasks') return TASK_CREATOR_ROLES.includes(role)
   if (permission === 'can_manage_announcements') return ANNOUNCEMENT_MANAGER_ROLES.includes(role)
   if (permission === 'can_manage_calendar') return CALENDAR_MANAGER_ROLES.includes(role)
+  if (permission === 'can_view_leave_records') return LEAVE_VIEWER_ROLES.includes(role)
   if (permission === 'can_manage_handover') return ACCOUNT_MANAGER_ROLES.includes(role)
   return false
 }
@@ -66,8 +68,7 @@ export const canViewExecutiveManagement = (profile) => {
 }
 
 export const canViewLeaveRecords = (profile) => {
-  if (!profile) return false
-  return LEAVE_VIEWER_ROLES.includes(profile.role)
+  return hasPermission(profile, 'can_view_leave_records')
 }
 
 export const canViewTaskPerformance = (profile) => {

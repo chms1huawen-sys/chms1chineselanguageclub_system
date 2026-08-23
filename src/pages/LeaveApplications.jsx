@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import { supabase } from '../supabaseClient'
 import { createNotificationsAndPush } from '../utils/pushNotifications'
+import { canViewLeaveRecords } from '../utils/permissions'
 import UserAvatar from '../components/UserAvatar'
 import AvatarPreviewModal from '../components/AvatarPreviewModal'
 import {
@@ -17,7 +18,6 @@ import {
   User,
 } from 'lucide-react'
 
-const MANAGER_ROLES = ['convener_teacher', 'advisor_teacher', 'chairperson', 'secretary', 'vice_secretary']
 const DEFAULT_LEAVE_DRIVE_FOLDER_URL = import.meta.env.VITE_LEAVE_DRIVE_FOLDER_URL || ''
 const LEAVE_DRIVE_SETTING_KEY = 'leave_drive_folder_url'
 
@@ -106,7 +106,7 @@ export default function LeaveApplications({ currentUserProfile, lang = 'zh', not
     attachment_uploaded: false,
   })
 
-  const isManager = MANAGER_ROLES.includes(currentUserProfile?.role)
+  const isManager = canViewLeaveRecords(currentUserProfile)
 
   useEffect(() => {
     if (successMsg) notify?.({ type: 'success', title: lang === 'zh' ? '操作成功' : 'Success', message: successMsg })
@@ -220,9 +220,8 @@ export default function LeaveApplications({ currentUserProfile, lang = 'zh', not
   const notifyManagers = async (application) => {
     const { data: recipients, error } = await supabase
       .from('users')
-      .select('id')
+      .select('id, role, can_view_leave_records')
       .eq('is_active', true)
-      .in('role', MANAGER_ROLES)
 
     if (error) {
       console.error('Fetch leave notification recipients failed:', error.message)
@@ -232,7 +231,7 @@ export default function LeaveApplications({ currentUserProfile, lang = 'zh', not
     const applicantName = currentUserProfile?.name || (lang === 'zh' ? '成员' : 'Member')
     const leaveTypeText = getLeaveLabel(application, 'zh')
     const dateText = formatDate(application.leave_date, 'zh')
-    const rows = (recipients || []).map(user => ({
+    const rows = (recipients || []).filter(canViewLeaveRecords).map(user => ({
       user_id: user.id,
       type: 'leave_application_submitted',
       title: lang === 'zh' ? '新的请假申请' : 'Leave Application',

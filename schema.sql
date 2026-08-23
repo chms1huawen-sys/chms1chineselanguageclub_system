@@ -35,6 +35,7 @@ create table public.users (
   can_create_tasks boolean not null default false,
   can_manage_announcements boolean not null default false,
   can_manage_calendar boolean not null default false,
+  can_view_leave_records boolean not null default false,
   can_manage_handover boolean not null default false,
   is_active boolean not null default true,
   created_at timestamp with time zone default timezone('utc'::text, now()) not null
@@ -214,6 +215,48 @@ as $$
 $$;
 
 grant execute on function public.can_view_committee(uuid) to authenticated;
+
+create or replace function public.current_user_has_permission(p_permission text)
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select coalesce((
+    select
+      u.is_active
+      and case p_permission
+        when 'can_manage_accounts' then
+          u.can_manage_accounts or u.role in ('convener_teacher', 'advisor_teacher', 'advisor', 'chairperson', 'vice_chairperson')
+        when 'can_manage_executive' then
+          u.can_manage_executive or u.role in ('convener_teacher', 'advisor_teacher', 'advisor', 'chairperson', 'vice_chairperson')
+        when 'can_create_tasks' then
+          u.can_create_tasks or u.role in (
+            'convener_teacher', 'advisor_teacher', 'advisor', 'chairperson', 'vice_chairperson',
+            'secretary', 'vice_secretary', 'treasurer', 'vice_treasurer',
+            'general_affairs', 'vice_general_affairs', 'activity_lead', 'vice_activity_lead',
+            'media_lead', 'vice_media_lead', 'social_media_editor'
+          )
+        when 'can_manage_announcements' then
+          u.can_manage_announcements or u.role in ('convener_teacher', 'advisor_teacher', 'advisor', 'chairperson', 'vice_chairperson')
+        when 'can_manage_calendar' then
+          u.can_manage_calendar or u.role in (
+            'convener_teacher', 'advisor_teacher', 'advisor', 'chairperson', 'vice_chairperson',
+            'secretary', 'vice_secretary', 'treasurer', 'vice_treasurer'
+          )
+        when 'can_view_leave_records' then
+          u.can_view_leave_records or u.role in ('convener_teacher', 'advisor_teacher', 'advisor', 'chairperson', 'secretary', 'vice_secretary')
+        when 'can_manage_handover' then
+          u.can_manage_handover or u.role in ('convener_teacher', 'advisor_teacher', 'advisor', 'chairperson', 'vice_chairperson')
+        else false
+      end
+    from public.users u
+    where u.id = auth.uid()
+  ), false);
+$$;
+
+grant execute on function public.current_user_has_permission(text) to authenticated;
 
 -- 12. Create basic RLS Policies (allows authenticated users full read, restricted writes)
 -- For simplicity & full usability:
@@ -456,6 +499,51 @@ create policy "Activity log is viewable by authenticated users." on public.activ
 
 create policy "Authenticated users can create activity log." on public.activity_log
   for insert to authenticated with check (auth.uid() is not null);
+
+-- Permission override policies for custom roles and manual access flags.
+create policy "Permission users can manage teams." on public.teams
+  for all to authenticated using (
+    public.current_user_has_permission('can_manage_executive')
+    or public.current_user_has_permission('can_manage_handover')
+  )
+  with check (
+    public.current_user_has_permission('can_manage_executive')
+    or public.current_user_has_permission('can_manage_handover')
+  );
+
+create policy "Permission users can manage team members." on public.team_members
+  for all to authenticated using (public.current_user_has_permission('can_manage_executive'))
+  with check (public.current_user_has_permission('can_manage_executive'));
+
+create policy "Permission users can create tasks." on public.tasks
+  for insert to authenticated with check (
+    auth.uid() = created_by
+    and public.current_user_has_permission('can_create_tasks')
+  );
+
+create policy "Permission users can update tasks." on public.tasks
+  for update to authenticated using (public.current_user_has_permission('can_create_tasks'))
+  with check (public.current_user_has_permission('can_create_tasks'));
+
+create policy "Permission users can delete tasks." on public.tasks
+  for delete to authenticated using (public.current_user_has_permission('can_create_tasks'));
+
+create policy "Permission users can manage events." on public.events
+  for all to authenticated using (public.current_user_has_permission('can_manage_calendar'))
+  with check (public.current_user_has_permission('can_manage_calendar'));
+
+create policy "Permission users can create announcements." on public.announcements
+  for insert to authenticated with check (
+    created_by = auth.uid()
+    and public.current_user_has_permission('can_manage_announcements')
+  );
+
+create policy "Permission users can update announcements." on public.announcements
+  for update to authenticated using (public.current_user_has_permission('can_manage_announcements'))
+  with check (public.current_user_has_permission('can_manage_announcements'));
+
+create policy "Permission users can delete announcements." on public.announcements
+  for delete to authenticated using (public.current_user_has_permission('can_manage_announcements'));
 
 
 -- 13. Trigger function to handle new registered user in auth.users
