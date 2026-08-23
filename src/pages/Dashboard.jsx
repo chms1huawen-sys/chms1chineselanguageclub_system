@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { supabase } from '../supabaseClient'
 import { createNotificationsAndPush, syncAnnouncementNotifications } from '../utils/pushNotifications'
 import UserAvatar from '../components/UserAvatar'
+import { canViewLeaveRecords, hasPermission } from '../utils/permissions'
 import {
   AlertCircle,
   Bell,
@@ -24,10 +25,6 @@ import {
   X,
 } from 'lucide-react'
 
-const MANAGER_ROLES = ['convener_teacher', 'advisor_teacher', 'chairperson', 'secretary', 'vice_secretary']
-const ANNOUNCEMENT_ROLES = ['convener_teacher', 'advisor_teacher', 'chairperson', 'vice_chairperson']
-const MEMBER_MANAGER_ROLES = ['convener_teacher', 'advisor_teacher', 'chairperson', 'vice_chairperson']
-const TASK_QUICK_ACCESS_ROLES = ['convener_teacher', 'advisor_teacher', 'chairperson', 'vice_chairperson', 'secretary', 'vice_secretary', 'treasurer', 'vice_treasurer', 'general_affairs', 'vice_general_affairs', 'activity_lead', 'vice_activity_lead', 'media_lead', 'vice_media_lead', 'social_media_editor']
 const BOARD_ROLES = [
   'convener_teacher',
   'advisor_teacher',
@@ -166,10 +163,10 @@ export default function Dashboard({ currentUserProfile, lang = 'zh', onShowTutor
   const [receivedBirthdayWishes, setReceivedBirthdayWishes] = useState([])
   const [errorMsg, setErrorMsg] = useState('')
 
-  const isLeaveManager = MANAGER_ROLES.includes(currentUserProfile?.role)
-  const canPublishAnnouncements = ANNOUNCEMENT_ROLES.includes(currentUserProfile?.role)
-  const canManageMembers = MEMBER_MANAGER_ROLES.includes(currentUserProfile?.role)
-  const canCreateTasks = TASK_QUICK_ACCESS_ROLES.includes(currentUserProfile?.role)
+  const isLeaveManager = canViewLeaveRecords(currentUserProfile)
+  const canPublishAnnouncements = hasPermission(currentUserProfile, 'can_manage_announcements')
+  const canManageMembers = hasPermission(currentUserProfile, 'can_manage_accounts')
+  const canCreateTasks = hasPermission(currentUserProfile, 'can_create_tasks')
 
   useEffect(() => {
     if (errorMsg) notify?.({ type: 'error', title: lang === 'zh' ? '操作失败' : 'Failed', message: errorMsg })

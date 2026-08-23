@@ -1,5 +1,6 @@
 ﻿import React, { useState, useEffect } from 'react'
 import { supabase } from '../supabaseClient'
+import { hasPermission } from '../utils/permissions'
 import {
   Calendar as CalendarIcon,
   ChevronLeft,
@@ -20,8 +21,6 @@ const EVENT_TYPE_LABELS = {
   deadline: { zh: '截止日期', en: 'Task Deadline', color: '#ef4444', bg: '#fef2f2', border: '#fca5a5' }
 }
 
-const BOARD_MANAGER_ROLES = ['convener_teacher', 'advisor_teacher', 'chairperson', 'vice_chairperson', 'advisor']
-const TASK_MANAGER_ROLES = [...BOARD_MANAGER_ROLES, 'secretary', 'vice_secretary', 'treasurer', 'vice_treasurer', 'general_affairs', 'vice_general_affairs', 'activity_lead', 'vice_activity_lead', 'media_lead', 'vice_media_lead', 'social_media_editor']
 const ALL_MEMBERS_SCOPE = '__all_members__'
 
 const inputStyle = {
@@ -58,7 +57,7 @@ export default function CalendarPage({ currentUserProfile, lang, notify }) {
     notes: ''
   })
 
-  const isPowerUser = TASK_MANAGER_ROLES.includes(currentUserProfile?.role)
+  const isPowerUser = hasPermission(currentUserProfile, 'can_manage_calendar')
   const activeBoardTeam = teams.find(t => t.type === 'board') || teams[0] || null
 
   useEffect(() => {

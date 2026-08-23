@@ -1,5 +1,6 @@
 ﻿import React, { useState, useEffect } from 'react'
 import { supabase } from '../supabaseClient'
+import { hasPermission } from '../utils/permissions'
 import {
   FolderGit,
   Plus,
@@ -17,8 +18,6 @@ import {
 import UserAvatar from '../components/UserAvatar'
 import AvatarPreviewModal from '../components/AvatarPreviewModal'
 
-const BOARD_MANAGER_ROLES = ['convener_teacher', 'advisor_teacher', 'chairperson', 'vice_chairperson', 'advisor']
-const TASK_MANAGER_ROLES = [...BOARD_MANAGER_ROLES, 'secretary', 'vice_secretary', 'treasurer', 'vice_treasurer', 'general_affairs', 'vice_general_affairs', 'activity_lead', 'vice_activity_lead', 'media_lead', 'vice_media_lead', 'social_media_editor']
 const CUSTOM_POSITION_VALUE = '__custom__'
 const COMMITTEE_POSITION_OPTIONS = [
   { value: '召集老师', zh: '召集老师', en: 'Convener Teacher' },
@@ -97,7 +96,7 @@ export default function Committees({ currentUserProfile, lang, notify }) {
   const [formSubmitting, setFormSubmitting] = useState(false)
   const [users, setUsers] = useState([])
 
-  const isPowerUser = BOARD_MANAGER_ROLES.includes(currentUserProfile?.role)
+  const isPowerUser = hasPermission(currentUserProfile, 'can_manage_executive')
   const isSelectedCommitteeManager = selectedComm && commMembers.some(member =>
     member.user_id === currentUserProfile?.id &&
     COMMITTEE_MANAGER_POSITIONS.includes(member.position)

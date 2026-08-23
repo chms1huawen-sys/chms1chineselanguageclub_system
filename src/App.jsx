@@ -15,6 +15,7 @@ import ExecutiveManagement from './pages/ExecutiveManagement'
 import Settings from './pages/Settings'
 import TutorialModal from './components/TutorialModal'
 import UserAvatar from './components/UserAvatar'
+import { canViewExecutiveManagement as canViewExecutivePage, hasPermission } from './utils/permissions'
 import {
   LayoutDashboard, Users, LogOut, Menu, X, Shield,
   Calendar, CheckSquare, FolderGit, Loader, CircleAlert,
@@ -45,27 +46,6 @@ const APP_ROLE_LABELS = {
   committee: { zh: '自定义', en: 'Custom' },
   event_member: { zh: '活动组组员', en: 'Assistant Activity Organiser' }
 }
-const BOARD_MANAGER_ROLES = ['convener_teacher', 'advisor_teacher', 'chairperson', 'vice_chairperson', 'advisor']
-const EXECUTIVE_MANAGEMENT_ROLES = [
-  'convener_teacher',
-  'advisor_teacher',
-  'advisor',
-  'chairperson',
-  'vice_chairperson',
-  'secretary',
-  'vice_secretary',
-  'treasurer',
-  'vice_treasurer',
-  'general_affairs',
-  'vice_general_affairs',
-  'activity_lead',
-  'vice_activity_lead',
-  'activity_member',
-  'media_lead',
-  'vice_media_lead',
-  'social_media_editor',
-  'custom',
-]
 const getProfileRoleText = (profile, lang) => {
   if (!profile) return ''
   if (profile.role === 'custom' && profile.custom_role_label) return profile.custom_role_label
@@ -246,8 +226,8 @@ function AppShell({ user, profile, onLogout, lang, setLang, onProfileUpdate }) {
   const location = useLocation()
   const navigate = useNavigate()
 
-  const isBoardManager = BOARD_MANAGER_ROLES.includes(profile?.role)
-  const canViewExecutiveManagement = EXECUTIVE_MANAGEMENT_ROLES.includes(profile?.role)
+  const canManageHandover = hasPermission(profile, 'can_manage_handover')
+  const canViewExecutiveManagement = canViewExecutivePage(profile)
   const sidebarTextShadow = '0 1px 2px rgba(34, 91, 145, 0.95), 0 0 2px rgba(34, 91, 145, 0.75)'
 
   // Check for first-time login tutorial
@@ -291,9 +271,9 @@ function AppShell({ user, profile, onLogout, lang, setLang, onProfileUpdate }) {
     { name: '任务看板', path: '/tasks', icon: <CheckSquare size={18} />, allowed: true },
     { name: '执委层管理', path: '/executive-management', icon: <Shield size={18} />, allowed: canViewExecutiveManagement },
     { name: '筹委管理', path: '/committees', icon: <FolderGit size={18} />, allowed: true },
-    { name: '账号管理', path: '/members', icon: <Users size={18} />, allowed: isBoardManager },
+    { name: '账号管理', path: '/members', icon: <Users size={18} />, allowed: true },
     { name: '历年名单', path: '/historical-members', icon: <History size={18} />, allowed: true },
-    { name: '学期切换', path: '/handover', icon: <ShieldAlert size={18} />, allowed: isBoardManager },
+    { name: '学期切换', path: '/handover', icon: <ShieldAlert size={18} />, allowed: canManageHandover },
     { name: '活动行事历', path: '/calendar', icon: <Calendar size={18} />, allowed: true },
     { name: '请假申请', path: '/leave', icon: <ClipboardList size={18} />, allowed: true },
     { name: '个人设置', path: '/settings', icon: <SettingsIcon size={18} />, allowed: true },
@@ -302,9 +282,9 @@ function AppShell({ user, profile, onLogout, lang, setLang, onProfileUpdate }) {
     { name: 'Tasks', path: '/tasks', icon: <CheckSquare size={18} />, allowed: true },
     { name: 'Executive Management', path: '/executive-management', icon: <Shield size={18} />, allowed: canViewExecutiveManagement },
     { name: 'Committees', path: '/committees', icon: <FolderGit size={18} />, allowed: true },
-    { name: 'Accounts', path: '/members', icon: <Users size={18} />, allowed: isBoardManager },
+    { name: 'Accounts', path: '/members', icon: <Users size={18} />, allowed: true },
     { name: 'Historical Lists', path: '/historical-members', icon: <History size={18} />, allowed: true },
-    { name: 'Term Handover', path: '/handover', icon: <ShieldAlert size={18} />, allowed: isBoardManager },
+    { name: 'Term Handover', path: '/handover', icon: <ShieldAlert size={18} />, allowed: canManageHandover },
     { name: 'Calendar', path: '/calendar', icon: <Calendar size={18} />, allowed: true },
     { name: 'Leave Application', path: '/leave', icon: <ClipboardList size={18} />, allowed: true },
     { name: 'Settings', path: '/settings', icon: <SettingsIcon size={18} />, allowed: true },
@@ -483,15 +463,11 @@ function AppShell({ user, profile, onLogout, lang, setLang, onProfileUpdate }) {
           <Route path="/settings" element={<Settings currentUserProfile={profile} lang={lang} onProfileUpdate={onProfileUpdate} notify={notify} />} />
           <Route path="/historical-members" element={<HistoricalMembers lang={lang} />} />
           <Route path="/handover" element={
-            isBoardManager
+            canManageHandover
               ? <Handover currentUserProfile={profile} lang={lang} notify={notify} />
               : <Navigate to="/" replace />
           } />
-          <Route path="/members" element={
-            isBoardManager
-              ? <Members currentUserProfile={profile} lang={lang} notify={notify} />
-              : <Navigate to="/" replace />
-          } />
+          <Route path="/members" element={<Members currentUserProfile={profile} lang={lang} notify={notify} />} />
           {/* Legacy placeholder redirects */}
           <Route path="/tasks-placeholder" element={<Navigate to="/tasks" replace />} />
           <Route path="/committees-placeholder" element={<Navigate to="/committees" replace />} />

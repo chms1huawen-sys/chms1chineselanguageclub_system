@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import { supabase } from '../supabaseClient'
+import { hasPermission } from '../utils/permissions'
 import {
   AlertTriangle,
   Calendar,
@@ -10,8 +11,6 @@ import {
   UserMinus,
   Users,
 } from 'lucide-react'
-
-const BOARD_MANAGER_ROLES = ['convener_teacher', 'advisor_teacher', 'chairperson', 'vice_chairperson', 'advisor']
 
 const ROLE_LABELS = {
   convener_teacher: { zh: '召集老师', en: 'Convener' },
@@ -103,7 +102,7 @@ export default function Handover({ currentUserProfile, lang, notify }) {
   const [successMsg, setSuccessMsg] = useState('')
   const [handoverStep, setHandoverStep] = useState('confirm')
 
-  const isPowerUser = BOARD_MANAGER_ROLES.includes(currentUserProfile?.role)
+  const isPowerUser = hasPermission(currentUserProfile, 'can_manage_handover')
   const sessionLabel = `${newYear} ${newHalf}`
   const sessionCode = `${newYear}-${newHalf === '上半年' ? 'H1' : 'H2'}`
 

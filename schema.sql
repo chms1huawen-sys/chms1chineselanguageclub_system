@@ -25,11 +25,17 @@ create table public.users (
   name text not null,
   email text not null unique,
   custom_role_label text,
-  role text not null default 'ordinary_member' check (role in ('convener_teacher', 'advisor_teacher', 'chairperson', 'vice_chairperson', 'secretary', 'vice_secretary', 'treasurer', 'vice_treasurer', 'general_affairs', 'vice_general_affairs', 'activity_lead', 'vice_activity_lead', 'activity_member', 'media_lead', 'vice_media_lead', 'social_media_editor', 'ordinary_member', 'custom')),
+  role text not null default 'ordinary_member' check (role in ('convener_teacher', 'advisor_teacher', 'advisor', 'chairperson', 'vice_chairperson', 'secretary', 'vice_secretary', 'treasurer', 'vice_treasurer', 'general_affairs', 'vice_general_affairs', 'activity_lead', 'vice_activity_lead', 'activity_member', 'media_lead', 'vice_media_lead', 'social_media_editor', 'ordinary_member', 'custom', 'committee', 'event_member')),
   birthday date,
   avatar_url text,
   fcm_token text,
   notification_enabled boolean not null default true,
+  can_manage_accounts boolean not null default false,
+  can_manage_executive boolean not null default false,
+  can_create_tasks boolean not null default false,
+  can_manage_announcements boolean not null default false,
+  can_manage_calendar boolean not null default false,
+  can_manage_handover boolean not null default false,
   is_active boolean not null default true,
   created_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
@@ -219,7 +225,9 @@ create policy "Advisors and Chairpersons can insert users." on public.users
   for insert to authenticated with check (
     exists (
       select 1 from public.users
-      where id = auth.uid() and role in ('convener_teacher', 'advisor_teacher', 'chairperson', 'vice_chairperson')
+      where id = auth.uid()
+        and is_active = true
+        and (can_manage_accounts = true or role in ('convener_teacher', 'advisor_teacher', 'advisor', 'chairperson', 'vice_chairperson'))
     )
   );
 
@@ -227,7 +235,9 @@ create policy "Advisors and Chairpersons can update users." on public.users
   for update to authenticated using (
     exists (
       select 1 from public.users
-      where id = auth.uid() and role in ('convener_teacher', 'advisor_teacher', 'chairperson', 'vice_chairperson')
+      where id = auth.uid()
+        and is_active = true
+        and (can_manage_accounts = true or role in ('convener_teacher', 'advisor_teacher', 'advisor', 'chairperson', 'vice_chairperson'))
     )
   );
 
@@ -235,7 +245,9 @@ create policy "Advisors and Chairpersons can delete users." on public.users
   for delete to authenticated using (
     exists (
       select 1 from public.users
-      where id = auth.uid() and role in ('convener_teacher', 'advisor_teacher', 'chairperson', 'vice_chairperson')
+      where id = auth.uid()
+        and is_active = true
+        and (can_manage_accounts = true or role in ('convener_teacher', 'advisor_teacher', 'advisor', 'chairperson', 'vice_chairperson'))
     )
   );
 

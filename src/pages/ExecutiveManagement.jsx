@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import { supabase } from '../supabaseClient'
 import UserAvatar from '../components/UserAvatar'
+import { canViewExecutiveManagement, hasPermission } from '../utils/permissions'
 import {
   AlertCircle,
   BriefcaseBusiness,
@@ -55,16 +56,6 @@ const ROLE_ORDER = [
   'vice_media_lead',
   'social_media_editor',
   'custom',
-]
-
-const DRIVE_MANAGER_ROLES = [
-  'convener_teacher',
-  'advisor_teacher',
-  'advisor',
-  'chairperson',
-  'vice_chairperson',
-  'secretary',
-  'vice_secretary',
 ]
 
 const ROLE_LABELS = {
@@ -187,8 +178,8 @@ export default function ExecutiveManagement({ currentUserProfile, lang = 'zh', n
   const [errorMsg, setErrorMsg] = useState('')
   const [successMsg, setSuccessMsg] = useState('')
 
-  const isExecutive = EXECUTIVE_ROLES.includes(currentUserProfile?.role)
-  const canManageDrive = DRIVE_MANAGER_ROLES.includes(currentUserProfile?.role)
+  const isExecutive = canViewExecutiveManagement(currentUserProfile)
+  const canManageDrive = hasPermission(currentUserProfile, 'can_manage_executive')
   const roleText = getRoleText(currentUserProfile, lang)
   const roleDescription = ROLE_DESCRIPTIONS[currentUserProfile?.role]?.[lang] || ''
 

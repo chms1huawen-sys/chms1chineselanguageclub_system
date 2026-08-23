@@ -2,6 +2,7 @@
 import { supabase } from '../supabaseClient'
 import { createNotificationsAndPush } from '../utils/pushNotifications'
 import UserAvatar from '../components/UserAvatar'
+import { canViewTaskPerformance, hasPermission } from '../utils/permissions'
 import {
   CheckSquare,
   Plus,
@@ -60,10 +61,7 @@ const getTaskUserRoleLabel = (user, lang) => {
   const label = TASK_ROLE_LABELS[user?.role]
   return label ? label[lang] : (lang === 'zh' ? '干部' : 'Board')
 }
-const BOARD_MANAGER_ROLES = ['convener_teacher', 'advisor_teacher', 'chairperson', 'vice_chairperson', 'advisor']
-const TASK_MANAGER_ROLES = [...BOARD_MANAGER_ROLES, 'secretary', 'vice_secretary', 'treasurer', 'vice_treasurer', 'general_affairs', 'vice_general_affairs', 'activity_lead', 'vice_activity_lead', 'media_lead', 'vice_media_lead', 'social_media_editor']
 const TASK_COMPLETION_NOTIFY_ROLES = ['convener_teacher', 'advisor_teacher', 'chairperson', 'vice_chairperson']
-const PERFORMANCE_VIEW_ROLES = ['convener_teacher', 'advisor_teacher', 'chairperson', 'vice_chairperson']
 
 const inputStyle = {
   background: '#f0f7ff',
@@ -111,8 +109,8 @@ export default function Tasks({ currentUserProfile, lang, notify }) {
   })
   const [formSubmitting, setFormSubmitting] = useState(false)
 
-  const isPowerUser = TASK_MANAGER_ROLES.includes(currentUserProfile?.role)
-  const canViewPerformance = PERFORMANCE_VIEW_ROLES.includes(currentUserProfile?.role)
+  const isPowerUser = hasPermission(currentUserProfile, 'can_create_tasks')
+  const canViewPerformance = canViewTaskPerformance(currentUserProfile)
 
   useEffect(() => {
     if (successMsg) notify?.({ type: 'success', title: lang === 'zh' ? '操作成功' : 'Success', message: successMsg })
@@ -337,7 +335,7 @@ export default function Tasks({ currentUserProfile, lang, notify }) {
     if (!task?.id) return
 
     const roleRecipients = users
-      .filter(user => TASK_COMPLETION_NOTIFY_ROLES.includes(user.role))
+      .filter(user => TASK_COMPLETION_NOTIFY_ROLES.includes(user.role) || hasPermission(user, 'can_manage_accounts'))
       .map(user => user.id)
 
     const recipients = [...new Set([

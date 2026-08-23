@@ -5,6 +5,7 @@ import { UserPlus, Search, Edit2, Shield, UserX, UserCheck, AlertCircle, Loader 
 import PositionSelect from '../components/PositionSelect'
 import UserAvatar from '../components/UserAvatar'
 import AvatarPreviewModal from '../components/AvatarPreviewModal'
+import { PERMISSION_FIELDS, hasPermission } from '../utils/permissions'
 
 const ROLE_OPTIONS = [
   { value: 'convener_teacher', zh: '召集老师', en: 'Convener Teacher', bg: '#ffe4ec', color: '#be185d', border: '#FFB3C6' },
@@ -46,8 +47,44 @@ const getMemberRoleLabel = (member) => {
   }
   return base
 }
-const BOARD_MANAGER_ROLES = ['convener_teacher', 'advisor_teacher', 'chairperson', 'vice_chairperson', 'advisor']
-const TASK_MANAGER_ROLES = [...BOARD_MANAGER_ROLES, 'secretary', 'vice_secretary', 'treasurer', 'vice_treasurer', 'general_affairs', 'vice_general_affairs', 'activity_lead', 'vice_activity_lead', 'media_lead', 'vice_media_lead', 'social_media_editor']
+const DEFAULT_PERMISSIONS = {
+  can_manage_accounts: false,
+  can_manage_executive: false,
+  can_create_tasks: false,
+  can_manage_announcements: false,
+  can_manage_calendar: false,
+  can_manage_handover: false,
+}
+const PERMISSION_LABELS = {
+  can_manage_accounts: { zh: '可管理账号', en: 'Manage Accounts' },
+  can_manage_executive: { zh: '可管理执委层', en: 'Manage Executive' },
+  can_create_tasks: { zh: '可发布任务', en: 'Create Tasks' },
+  can_manage_announcements: { zh: '可管理公告', en: 'Manage Announcements' },
+  can_manage_calendar: { zh: '可管理行事历', en: 'Manage Calendar' },
+  can_manage_handover: { zh: '可执行学期切换', en: 'Term Handover' },
+}
+const PermissionControls = ({ formData, setFormData, lang, disabled = false }) => (
+  <div className="p-3 rounded-2xl space-y-2" style={{ background: '#f0f7ff', border: '1.5px solid #e0f1ff' }}>
+    <p className="text-xs font-black uppercase tracking-wider" style={{ color: '#6b7280' }}>
+      {lang === 'zh' ? '系统权限' : 'System Permissions'}
+    </p>
+    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+      {PERMISSION_FIELDS.map(field => (
+        <label key={field} className="flex items-center gap-2 text-xs font-bold rounded-xl px-2 py-1.5"
+          style={{ background: 'white', color: '#4b5563', border: '1px solid #e0f1ff' }}>
+          <input
+            type="checkbox"
+            disabled={disabled}
+            checked={Boolean(formData[field])}
+            onChange={(event) => setFormData(prev => ({ ...prev, [field]: event.target.checked }))}
+            style={{ accentColor: '#95CBFF' }}
+          />
+          {PERMISSION_LABELS[field][lang]}
+        </label>
+      ))}
+    </div>
+  </div>
+)
 const inputStyle = {
   background: '#f0f7ff',
   border: '1.5px solid #95CBFF',
@@ -79,10 +116,10 @@ export default function Members({ currentUserProfile, lang, notify }) {
   const [showEditModal, setShowEditModal] = useState(false)
   const [selectedMember, setSelectedMember] = useState(null)
   const [avatarPreviewUser, setAvatarPreviewUser] = useState(null)
-  const [formData, setFormData] = useState({ name: '', email: '', role: 'ordinary_member', custom_role_label: '', birthday: '', password: '', is_active: true })
+  const [formData, setFormData] = useState({ name: '', email: '', role: 'ordinary_member', custom_role_label: '', birthday: '', password: '', is_active: true, ...DEFAULT_PERMISSIONS })
   const [formSubmitting, setFormSubmitting] = useState(false)
 
-  const isPowerUser = BOARD_MANAGER_ROLES.includes(currentUserProfile?.role)
+  const canManageAccounts = hasPermission(currentUserProfile, 'can_manage_accounts')
 
   useEffect(() => {
     if (successMsg) notify?.({ type: 'success', title: lang === 'zh' ? '操作成功' : 'Success', message: successMsg })
@@ -99,6 +136,14 @@ export default function Members({ currentUserProfile, lang, notify }) {
     if (formData.custom_role_label?.trim()) return true
     setErrorMsg(_('请输入自定义职称名称', 'Please enter a custom role name.'))
     return false
+  }
+
+  const getPermissionPayload = (source = formData) => Object.fromEntries(
+    PERMISSION_FIELDS.map(field => [field, Boolean(source[field])])
+  )
+
+  const resetAddForm = () => {
+    setFormData({ name: '', email: '', role: 'ordinary_member', custom_role_label: '', birthday: '', password: '', is_active: true, ...DEFAULT_PERMISSIONS })
   }
 
   const fetchMembers = async () => {
@@ -143,7 +188,7 @@ export default function Members({ currentUserProfile, lang, notify }) {
   }
 
   const handleToggleStatus = async (member) => {
-    if (!isPowerUser) return
+    if (!canManageAccounts) return
     setErrorMsg('')
     setSuccessMsg('')
     const nextStatus = !member.is_active
@@ -178,16 +223,16 @@ export default function Members({ currentUserProfile, lang, notify }) {
         options: { data: { name: formData.name, role: formData.role, custom_role_label: formData.role === 'custom' ? formData.custom_role_label.trim() : null } }
       })
       if (error) throw error
-      if (formData.birthday && data?.user?.id) {
-        const { error: birthdayError } = await supabase
+      if (data?.user?.id) {
+        const { error: profileError } = await supabase
           .from('users')
-          .update({ birthday: formData.birthday })
+          .update({ birthday: formData.birthday || null, ...getPermissionPayload() })
           .eq('id', data.user.id)
-        if (birthdayError) throw birthdayError
+        if (profileError) throw profileError
       }
       setSuccessMsg(_(`成功添加账号 ${formData.name}。`, `Account ${formData.name} created.`))
       setShowAddModal(false)
-      setFormData({ name: '', email: '', role: 'ordinary_member', custom_role_label: '', birthday: '', password: '', is_active: true })
+      resetAddForm()
       fetchMembers()
     } catch (err) {
       setErrorMsg(err.message)
@@ -202,7 +247,16 @@ export default function Members({ currentUserProfile, lang, notify }) {
     setErrorMsg('')
     setSuccessMsg('')
     try {
-      const { error } = await supabase.from('users').update({ name: formData.name, role: formData.role, custom_role_label: formData.role === 'custom' ? formData.custom_role_label.trim() : null, birthday: formData.birthday || null }).eq('id', selectedMember.id)
+      const { error } = await supabase
+        .from('users')
+        .update({
+          name: formData.name,
+          role: formData.role,
+          custom_role_label: formData.role === 'custom' ? formData.custom_role_label.trim() : null,
+          birthday: formData.birthday || null,
+          ...getPermissionPayload(),
+        })
+        .eq('id', selectedMember.id)
       if (error) throw error
       setSuccessMsg(_(`成功修改账号 ${formData.name} 的信息。`, `Account ${formData.name} updated.`))
       await addToCurrentBoardRoster(selectedMember.id, formData.role, formData.custom_role_label?.trim())
@@ -217,7 +271,7 @@ export default function Members({ currentUserProfile, lang, notify }) {
 
   const openEditModal = (member) => {
     setSelectedMember(member)
-    setFormData({ name: member.name, email: member.email, role: member.role, custom_role_label: member.custom_role_label || '', birthday: member.birthday || '', is_active: member.is_active })
+    setFormData({ name: member.name, email: member.email, role: member.role, custom_role_label: member.custom_role_label || '', birthday: member.birthday || '', is_active: member.is_active, ...getPermissionPayload({ ...DEFAULT_PERMISSIONS, ...member }) })
     setShowEditModal(true)
   }
 
@@ -229,7 +283,7 @@ export default function Members({ currentUserProfile, lang, notify }) {
   }))
 
   const modalOverlay = { position: 'fixed', inset: 0, zIndex: 50, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(149,203,255,0.15)', backdropFilter: 'blur(4px)', padding: 16 }
-  const modalCard = { background: 'white', border: '1.5px solid #e0f1ff', borderRadius: 24, width: '100%', maxWidth: 440, overflow: 'hidden', boxShadow: '0 8px 40px rgba(149,203,255,0.3)' }
+  const modalCard = { background: 'white', border: '1.5px solid #e0f1ff', borderRadius: 24, width: '100%', maxWidth: 520, maxHeight: 'calc(100vh - 32px)', overflow: 'auto', boxShadow: '0 8px 40px rgba(149,203,255,0.3)' }
 
   return (
     <div className="space-y-6" style={{ fontFamily: "'Nunito', sans-serif" }}>
@@ -246,9 +300,9 @@ export default function Members({ currentUserProfile, lang, notify }) {
             {_('系统账号 — 管理所有成员、召集老师、指导老师与普通会员账号', 'Manage all member accounts, convener, advisor, and ordinary members.')}
           </p>
         </div>
-        {isPowerUser && (
+        {canManageAccounts && (
           <button
-            onClick={() => { setFormData({ name: '', email: '', role: 'ordinary_member', custom_role_label: '', birthday: '', password: '', is_active: true }); setShowAddModal(true) }}
+            onClick={() => { resetAddForm(); setShowAddModal(true) }}
             className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-2xl text-sm font-black transition cursor-pointer"
             style={{ background: '#95CBFF', color: 'white', boxShadow: '0 4px 16px rgba(149,203,255,0.4)' }}>
             <UserPlus size={16} />
@@ -325,7 +379,7 @@ export default function Members({ currentUserProfile, lang, notify }) {
             <table className="w-full text-left text-sm border-collapse">
               <thead>
                 <tr style={{ background: '#95CBFF' }}>
-                  {[_('姓名', 'Name'), _('邮箱', 'Email'), _('职务', 'Role'), _('状态', 'Status'), ...(isPowerUser ? [_('操作', 'Actions')] : [])].map(h => (
+                  {[_('姓名', 'Name'), _('邮箱', 'Email'), _('职务', 'Role'), _('状态', 'Status'), ...(canManageAccounts ? [_('操作', 'Actions')] : [])].map(h => (
                     <th key={h} className="py-4 px-5 font-black" style={{ color: 'white' }}>{h}</th>
                   ))}
                 </tr>
@@ -361,7 +415,7 @@ export default function Members({ currentUserProfile, lang, notify }) {
                           </span>
                         )}
                       </td>
-                      {isPowerUser && (
+                      {canManageAccounts && (
                         <td className="py-4 px-5">
                           <div className="flex justify-end gap-2">
                             <button onClick={() => openEditModal(m)}
@@ -428,7 +482,7 @@ export default function Members({ currentUserProfile, lang, notify }) {
                       )}
                     </div>
                   </div>
-                  {isPowerUser && (
+                  {canManageAccounts && (
                     <div className="flex gap-2 justify-end pt-3 mt-1" style={{ borderTop: '1.5px solid #f0f7ff' }}>
                       <button onClick={() => openEditModal(m)}
                         className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer"
@@ -485,6 +539,7 @@ export default function Members({ currentUserProfile, lang, notify }) {
                 onCustomLabelChange={(label) => setFormData({ ...formData, custom_role_label: label })}
                 lang={lang}
               />
+              <PermissionControls formData={formData} setFormData={setFormData} lang={lang} />
               <div>
                 <label className="block text-xs font-black uppercase tracking-wider mb-1.5" style={{ color: '#6b7280' }}>{_('生日', 'Birthday')}</label>
                 <input type="date" value={formData.birthday}
@@ -503,7 +558,7 @@ export default function Members({ currentUserProfile, lang, notify }) {
                 <AlertCircle size={14} style={{ flexShrink: 0 }} />
                 <p>{_('提交后，系统将自动为该用户分配账号。成员可通过此邮箱与设定的初始密码登录。', 'The system will create an account via Supabase Auth. The member can log in with this email and the initial password.')}</p>
               </div>
-              <div className="flex justify-end gap-3 pt-3">
+      <div className="flex justify-end gap-3 pt-3">
                 <button type="button" onClick={() => setShowAddModal(false)}
                   className="px-4 py-2 rounded-2xl text-sm font-bold transition cursor-pointer"
                   style={{ background: '#f0f7ff', border: '1.5px solid #e0f1ff', color: '#6b7280' }}>取消</button>
@@ -550,6 +605,12 @@ export default function Members({ currentUserProfile, lang, notify }) {
                 onCustomLabelChange={(label) => setFormData({ ...formData, custom_role_label: label })}
                 disabled={selectedMember.id === currentUserProfile.id}
                 lang={lang}
+              />
+              <PermissionControls
+                formData={formData}
+                setFormData={setFormData}
+                lang={lang}
+                disabled={selectedMember.id === currentUserProfile.id}
               />
               <div>
                 <label className="block text-xs font-black uppercase tracking-wider mb-1.5" style={{ color: '#6b7280' }}>{_('生日', 'Birthday')}</label>
