@@ -25,7 +25,7 @@ create table public.users (
   name text not null,
   email text not null unique,
   custom_role_label text,
-  role text not null default 'ordinary_member' check (role in ('convener_teacher', 'advisor_teacher', 'chairperson', 'vice_chairperson', 'secretary', 'vice_secretary', 'treasurer', 'vice_treasurer', 'general_affairs', 'vice_general_affairs', 'activity_lead', 'vice_activity_lead', 'activity_member', 'media_lead', 'vice_media_lead', 'ordinary_member', 'custom')),
+  role text not null default 'ordinary_member' check (role in ('convener_teacher', 'advisor_teacher', 'chairperson', 'vice_chairperson', 'secretary', 'vice_secretary', 'treasurer', 'vice_treasurer', 'general_affairs', 'vice_general_affairs', 'activity_lead', 'vice_activity_lead', 'activity_member', 'media_lead', 'vice_media_lead', 'social_media_editor', 'ordinary_member', 'custom')),
   birthday date,
   avatar_url text,
   fcm_token text,
