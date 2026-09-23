@@ -13,6 +13,7 @@ import CalendarPage from './pages/CalendarPage'
 import LeaveApplications from './pages/LeaveApplications'
 import ExecutiveManagement from './pages/ExecutiveManagement'
 import Settings from './pages/Settings'
+import Inventory from './pages/Inventory'
 import TutorialModal from './components/TutorialModal'
 import UserAvatar from './components/UserAvatar'
 import { canViewExecutiveManagement as canViewExecutivePage, hasPermission } from './utils/permissions'
@@ -20,7 +21,7 @@ import {
   LayoutDashboard, Users, LogOut, Menu, X, Shield,
   Calendar, CheckSquare, FolderGit, Loader, CircleAlert,
   History, ShieldAlert, Globe, HelpCircle, Bell, Settings as SettingsIcon,
-  ClipboardList, CheckCircle
+  ClipboardList, CheckCircle, Package
 } from 'lucide-react'
 
 const APP_ROLE_LABELS = {
@@ -276,6 +277,7 @@ function AppShell({ user, profile, onLogout, lang, setLang, onProfileUpdate }) {
     { name: '学期切换', path: '/handover', icon: <ShieldAlert size={18} />, allowed: canManageHandover },
     { name: '活动行事历', path: '/calendar', icon: <Calendar size={18} />, allowed: true },
     { name: '请假申请', path: '/leave', icon: <ClipboardList size={18} />, allowed: true },
+    { name: '物品与借用', path: '/inventory', icon: <Package size={18} />, allowed: true },
     { name: '个人设置', path: '/settings', icon: <SettingsIcon size={18} />, allowed: true },
   ] : [
     { name: 'Dashboard', path: '/', icon: <LayoutDashboard size={18} />, allowed: true },
@@ -287,6 +289,7 @@ function AppShell({ user, profile, onLogout, lang, setLang, onProfileUpdate }) {
     { name: 'Term Handover', path: '/handover', icon: <ShieldAlert size={18} />, allowed: canManageHandover },
     { name: 'Calendar', path: '/calendar', icon: <Calendar size={18} />, allowed: true },
     { name: 'Leave Application', path: '/leave', icon: <ClipboardList size={18} />, allowed: true },
+    { name: 'Inventory & Borrowing', path: '/inventory', icon: <Package size={18} />, allowed: true },
     { name: 'Settings', path: '/settings', icon: <SettingsIcon size={18} />, allowed: true },
   ]
 
@@ -460,6 +463,7 @@ function AppShell({ user, profile, onLogout, lang, setLang, onProfileUpdate }) {
           <Route path="/committees" element={<Committees currentUserProfile={profile} lang={lang} notify={notify} />} />
           <Route path="/calendar" element={<CalendarPage currentUserProfile={profile} lang={lang} notify={notify} />} />
           <Route path="/leave" element={<LeaveApplications currentUserProfile={profile} lang={lang} notify={notify} />} />
+          <Route path="/inventory" element={<Inventory currentUserProfile={profile} lang={lang} notify={notify} />} />
           <Route path="/settings" element={<Settings currentUserProfile={profile} lang={lang} onProfileUpdate={onProfileUpdate} notify={notify} />} />
           <Route path="/historical-members" element={<HistoricalMembers lang={lang} />} />
           <Route path="/handover" element={

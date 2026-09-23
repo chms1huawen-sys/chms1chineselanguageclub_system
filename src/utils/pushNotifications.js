@@ -1,6 +1,7 @@
 import { supabase } from '../supabaseClient'
 
 const HASH_ROUTE_MAP = {
+  '/inventory': '/#/inventory',
   '/tasks': '/#/tasks',
   '/calendar': '/#/calendar',
   '/leave': '/#/leave',

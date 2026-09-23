@@ -45,6 +45,8 @@ export const PERMISSION_FIELDS = [
   'can_manage_calendar',
   'can_view_leave_records',
   'can_manage_handover',
+  'can_manage_inventory',
+  'can_approve_inventory',
 ]
 
 export const hasPermission = (profile, permission) => {
@@ -52,6 +54,9 @@ export const hasPermission = (profile, permission) => {
   if (profile[permission] === true) return true
 
   const role = profile.role
+  if (permission === 'can_manage_inventory' || permission === 'can_approve_inventory') {
+    return ['convener_teacher', 'advisor_teacher', 'advisor', 'chairperson', 'general_affairs', 'vice_general_affairs'].includes(role)
+  }
   if (permission === 'can_manage_accounts') return ACCOUNT_MANAGER_ROLES.includes(role)
   if (permission === 'can_manage_executive') return ACCOUNT_MANAGER_ROLES.includes(role)
   if (permission === 'can_create_tasks') return TASK_CREATOR_ROLES.includes(role)

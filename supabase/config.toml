@@ -6,3 +6,6 @@ verify_jwt = false
 
 [functions.task-cleanup-completed]
 verify_jwt = false
+
+[functions.inventory-reminder]
+verify_jwt = false
