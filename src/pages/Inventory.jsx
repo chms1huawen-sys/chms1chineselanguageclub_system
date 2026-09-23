@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { Package, Plus, Search, Pencil, X, RefreshCw, ChevronLeft, ChevronRight, ClipboardList, Loader, ImagePlus } from 'lucide-react'
+import { Package, Plus, Search, Pencil, X, RefreshCw, ChevronLeft, ChevronRight, ClipboardList, Loader, ImagePlus, Settings } from 'lucide-react'
 import { supabase } from '../supabaseClient'
 import { hasPermission } from '../utils/permissions'
 import { sendPushForNotifications } from '../utils/pushNotifications'
@@ -40,15 +40,16 @@ function Field({ label, children }) {
   return <label className="inv-field"><span>{label}</span>{children}</label>
 }
 
-export default function Inventory({ currentUserProfile, lang = 'zh', notify }) {
+export default function Inventory({ currentUserProfile, lang = 'zh', notify, management = false }) {
   const zh = lang === 'zh'
   const t = (cn, en) => zh ? cn : en
   const label = pair => pair[zh ? 0 : 1]
-  const canManage = currentUserProfile?.is_active !== false && hasPermission(currentUserProfile, 'can_manage_inventory')
-  const canApprove = currentUserProfile?.is_active !== false && hasPermission(currentUserProfile, 'can_approve_inventory')
+  const canManage = management && currentUserProfile?.is_active !== false && hasPermission(currentUserProfile, 'can_manage_inventory')
+  const canApprove = management && currentUserProfile?.is_active !== false && hasPermission(currentUserProfile, 'can_approve_inventory')
   const canReview = canManage || canApprove
+  const hasManagementAccess = currentUserProfile?.is_active !== false && (hasPermission(currentUserProfile, 'can_manage_inventory') || hasPermission(currentUserProfile, 'can_approve_inventory'))
   const teacher = TEACHERS.includes(currentUserProfile?.role)
-  const [tab, setTab] = useState('items')
+  const [tab, setTab] = useState(management && !canManage ? 'requests' : 'items')
   const [items, setItems] = useState([])
   const [categories, setCategories] = useState([])
   const [requests, setRequests] = useState([])
@@ -56,7 +57,7 @@ export default function Inventory({ currentUserProfile, lang = 'zh', notify }) {
   const [requestCount, setRequestCount] = useState(0)
   const [movementCount, setMovementCount] = useState(0)
   const [page, setPage] = useState(0)
-  const [scope, setScope] = useState('mine')
+  const scope = canReview ? 'all' : 'mine'
   const [status, setStatus] = useState('')
   const [search, setSearch] = useState('')
   const [category, setCategory] = useState('')
@@ -184,18 +185,18 @@ export default function Inventory({ currentUserProfile, lang = 'zh', notify }) {
   const count = tab === 'history' ? movementCount : requestCount
 
   return <div className="inventory-page">
-    <header className="inv-header"><div><h1><Package size={26} />{t('物品与借用', 'Inventory & Borrowing')}</h1><p>{t('学会物品、领用与借还记录', 'Club inventory, supplies and loan records')}</p></div>
-      <button onClick={load} disabled={busy} title={t('刷新', 'Refresh')} aria-label={t('刷新', 'Refresh')} className="inv-icon"><RefreshCw size={19} /></button></header>
+    <header className="inv-header"><div><h1><Package size={26} />{management ? t('物品管理', 'Inventory Management') : t('物品与借用', 'Inventory & Borrowing')}</h1><p>{management ? t('库存、申请处理与出入库记录', 'Stock, request processing and movements') : t('学会物品目录与我的借用记录', 'Club catalogue and my borrowing records')}</p></div>
+      <div className="inv-actions">{management ? <a className="inv-link" href="#/inventory">{t('返回物品与借用', 'Back to borrowing')}</a> : hasManagementAccess && <a className="inv-link" href="#/inventory-management"><Settings size={17} />{t('物品管理', 'Manage inventory')}</a>}<button onClick={load} disabled={busy} title={t('刷新', 'Refresh')} aria-label={t('刷新', 'Refresh')} className="inv-icon"><RefreshCw size={19} /></button></div></header>
     {error && <div role="alert" className="inv-error">{error}</div>}
     <nav className="inv-tabs" aria-label={t('物品管理分页', 'Inventory sections')}>
-      {[['items', t('物品目录', 'Catalogue')], ['requests', t('申请记录', 'Requests')], ...(canReview ? [['history', t('库存记录', 'Stock history')]] : []), ...(canManage ? [['categories', t('分类管理', 'Categories')]] : [])].map(([key, title]) => <button key={key} aria-current={tab === key ? 'page' : undefined} onClick={() => switchTab(key)}>{title}</button>)}
+      {[...(!management || canManage ? [['items', management ? t('库存管理', 'Stock management') : t('物品目录', 'Catalogue')]] : []), ['requests', management ? t('申请处理', 'Request processing') : t('我的申请', 'My requests')], ...(canReview ? [['history', t('出入库记录', 'Stock history')]] : []), ...(canManage ? [['categories', t('分类管理', 'Categories')]] : [])].map(([key, title]) => <button key={key} aria-current={tab === key ? 'page' : undefined} onClick={() => switchTab(key)}>{title}</button>)}
     </nav>
     {loading ? <div className="inv-skeleton" role="status" aria-label={t('加载中', 'Loading')}>{[1, 2, 3].map(n => <div key={n} />)}</div> : <>
       {tab === 'items' && <>
         <div className="inv-toolbar"><div className="inv-search"><Search size={18} /><input aria-label={t('搜索物品', 'Search items')} placeholder={t('名称、编号、位置', 'Name, code, location')} value={search} onChange={e => setSearch(e.target.value)} /></div>
           <select aria-label={t('分类筛选', 'Category filter')} value={category} onChange={e => setCategory(e.target.value)}><option value="">{t('所有分类', 'All categories')}</option>{categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}</select>
           {canManage && <label className="inv-check"><input type="checkbox" checked={showInactive} onChange={e => setShowInactive(e.target.checked)} />{t('包括停用物品', 'Include inactive')}</label>}
-          <button className="inv-primary" onClick={() => startRequest()} disabled={!items.some(i => i.is_active && i.available > 0)}><ClipboardList size={17} />{t('申请物品', 'Request items')}</button>
+          {!management && <button className="inv-primary" onClick={() => startRequest()} disabled={!items.some(i => i.is_active && i.available > 0)}><ClipboardList size={17} />{t('申请物品', 'Request items')}</button>}
           {canManage && <button onClick={() => open('item', { ...EMPTY_ITEM, category_id: categories.find(c => c.is_active)?.id || '', unit: t('件', 'pcs') })}><Plus size={17} />{t('新增物品', 'Add item')}</button>}
         </div>
         {!visibleItems.length && <p className="inv-empty">{t('暂无物品', 'No items found')}</p>}
@@ -206,16 +207,16 @@ export default function Inventory({ currentUserProfile, lang = 'zh', notify }) {
             <p>{t('位置', 'Location')}: {item.location || '—'}</p>
             <div className="inv-counts"><span><strong>{item.available}</strong>{t('可用', 'Available')}</span><span><strong>{item.reserved}</strong>{t('预留', 'Reserved')}</span><span><strong>{item.on_loan}</strong>{t('借出', 'On loan')}</span><span><strong>{item.damaged}</strong>{t('损坏', 'Damaged')}</span><span><strong>{item.lost}</strong>{t('遗失', 'Lost')}</span></div>
             <p>{t('登记总数', 'Recorded total')}: {item.available + item.reserved + item.on_loan + item.damaged + item.lost} {item.unit}</p>{item.notes && <p className="inv-note">{item.notes}</p>}
-            <div className="inv-actions"><button className="inv-primary" disabled={!item.is_active || item.available < 1} onClick={() => startRequest(item)}>{t('申请', 'Request')}</button>
+            <div className="inv-actions">{!management && <button className="inv-primary" disabled={!item.is_active || item.available < 1} onClick={() => startRequest(item)}>{t('申请', 'Request')}</button>}
               {canManage && <><button title={t('编辑物品', 'Edit item')} aria-label={t('编辑物品', 'Edit item')} onClick={() => open('item', { ...item, quantity: undefined })}><Pencil size={17} /></button><button onClick={() => open('adjust', { id: item.id, name: item.name, available: 0, damaged: 0, lost: 0, note: '' })}>{t('入库 / 盘点', 'Stock adjustment')}</button></>}
             </div>
           </div>
         </article>)}</div>
       </>}
       {tab === 'requests' && <>
-        <div className="inv-toolbar">{canReview && <select aria-label={t('申请范围', 'Request scope')} value={scope} onChange={e => { setScope(e.target.value); setPage(0) }}><option value="mine">{t('我的申请', 'My requests')}</option><option value="all">{t('所有申请', 'All requests')}</option></select>}
+        <div className="inv-toolbar">
           <select aria-label={t('状态筛选', 'Status filter')} value={status} onChange={e => { setStatus(e.target.value); setPage(0) }}><option value="">{t('所有状态', 'All statuses')}</option>{Object.entries(statusLabels).map(([value, text]) => <option key={value} value={value}>{label(text)}</option>)}<option value="overdue">{t('逾期未归还', 'Overdue')}</option></select>
-          <button className="inv-primary" onClick={() => startRequest()}><Plus size={17} />{t('新增申请', 'New request')}</button>
+          {!management && <button className="inv-primary" onClick={() => startRequest()}><Plus size={17} />{t('新增申请', 'New request')}</button>}
         </div>
         {requests.length === 0 && <p className="inv-empty">{t('暂无申请', 'No requests')}</p>}
         <div className="inv-rows">{requests.map(request => <button className="inv-request" key={request.id} onClick={() => open('detail', request)}>

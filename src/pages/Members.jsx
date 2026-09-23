@@ -57,6 +57,8 @@ const DEFAULT_PERMISSIONS = {
   can_manage_handover: false,
   can_manage_inventory: false,
   can_approve_inventory: false,
+  can_manage_finance: false,
+  can_approve_finance: false,
 }
 const PERMISSION_LABELS = {
   can_manage_accounts: { zh: '可管理账号', en: 'Manage Accounts' },
@@ -68,6 +70,8 @@ const PERMISSION_LABELS = {
   can_manage_handover: { zh: '可执行学期切换', en: 'Term Handover' },
   can_manage_inventory: { zh: '可管理物品、库存及借还', en: 'Manage Inventory and Handover' },
   can_approve_inventory: { zh: '可审批物品申请', en: 'Approve Item Requests' },
+  can_manage_finance: { zh: '可管理账簿、审核报销及登记付款', en: 'Manage Ledger, Review Claims and Record Payments' },
+  can_approve_finance: { zh: '可进行主席阶段报销审批', en: 'Approve Claims at President Stage' },
 }
 const PermissionControls = ({ formData, setFormData, lang, disabled = false }) => (
   <div className="p-3 rounded-2xl space-y-2" style={{ background: '#f0f7ff', border: '1.5px solid #e0f1ff' }}>

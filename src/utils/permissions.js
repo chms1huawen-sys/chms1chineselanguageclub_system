@@ -47,6 +47,8 @@ export const PERMISSION_FIELDS = [
   'can_manage_handover',
   'can_manage_inventory',
   'can_approve_inventory',
+  'can_manage_finance',
+  'can_approve_finance',
 ]
 
 export const hasPermission = (profile, permission) => {
@@ -54,6 +56,8 @@ export const hasPermission = (profile, permission) => {
   if (profile[permission] === true) return true
 
   const role = profile.role
+  if (permission === 'can_manage_finance') return ['convener_teacher', 'advisor_teacher', 'advisor', 'treasurer', 'vice_treasurer'].includes(role)
+  if (permission === 'can_approve_finance') return ['convener_teacher', 'advisor_teacher', 'advisor', 'chairperson'].includes(role)
   if (permission === 'can_manage_inventory' || permission === 'can_approve_inventory') {
     return ['convener_teacher', 'advisor_teacher', 'advisor', 'chairperson', 'general_affairs', 'vice_general_affairs'].includes(role)
   }
@@ -69,7 +73,7 @@ export const hasPermission = (profile, permission) => {
 
 export const canViewExecutiveManagement = (profile) => {
   if (!profile) return false
-  return EXECUTIVE_VIEW_ROLES.includes(profile.role) || hasPermission(profile, 'can_manage_executive')
+  return EXECUTIVE_VIEW_ROLES.includes(profile.role) || ['can_manage_executive', 'can_manage_inventory', 'can_approve_inventory', 'can_manage_finance', 'can_approve_finance'].some(permission => hasPermission(profile, permission))
 }
 
 export const canViewLeaveRecords = (profile) => {

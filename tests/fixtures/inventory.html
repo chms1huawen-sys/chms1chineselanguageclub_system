@@ -8,5 +8,5 @@
   import '/src/index.css'
   const params = new URLSearchParams(location.search)
   const profile = { id: '11111111-1111-4111-8111-111111111111', name: 'UI test', role: params.get('role') || 'advisor_teacher', is_active: true }
-  createRoot(document.getElementById('root')).render(React.createElement(Inventory, { currentUserProfile: profile, lang: params.get('lang') || 'zh', notify: value => { window.lastInventoryNotice = value } }))
+  createRoot(document.getElementById('root')).render(React.createElement(Inventory, { management: params.get('management') === 'true', currentUserProfile: profile, lang: params.get('lang') || 'zh', notify: value => { window.lastInventoryNotice = value } }))
 </script></body></html>

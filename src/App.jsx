@@ -14,6 +14,7 @@ import LeaveApplications from './pages/LeaveApplications'
 import ExecutiveManagement from './pages/ExecutiveManagement'
 import Settings from './pages/Settings'
 import Inventory from './pages/Inventory'
+import Finance from './pages/Finance'
 import TutorialModal from './components/TutorialModal'
 import UserAvatar from './components/UserAvatar'
 import { canViewExecutiveManagement as canViewExecutivePage, hasPermission } from './utils/permissions'
@@ -267,6 +268,8 @@ function AppShell({ user, profile, onLogout, lang, setLang, onProfileUpdate }) {
     }
   }, [])
 
+  const canAccessInventoryManagement = profile?.is_active !== false && (hasPermission(profile, 'can_manage_inventory') || hasPermission(profile, 'can_approve_inventory'))
+  const canAccessFinanceManagement = profile?.is_active !== false && (hasPermission(profile, 'can_manage_finance') || hasPermission(profile, 'can_approve_finance'))
   const navItems = lang === 'zh' ? [
     { name: '仪表板', path: '/', icon: <LayoutDashboard size={18} />, allowed: true },
     { name: '任务看板', path: '/tasks', icon: <CheckSquare size={18} />, allowed: true },
@@ -278,6 +281,7 @@ function AppShell({ user, profile, onLogout, lang, setLang, onProfileUpdate }) {
     { name: '活动行事历', path: '/calendar', icon: <Calendar size={18} />, allowed: true },
     { name: '请假申请', path: '/leave', icon: <ClipboardList size={18} />, allowed: true },
     { name: '物品与借用', path: '/inventory', icon: <Package size={18} />, allowed: true },
+    { name: '报销申请', path: '/finance', icon: <ClipboardList size={18} />, allowed: true },
     { name: '个人设置', path: '/settings', icon: <SettingsIcon size={18} />, allowed: true },
   ] : [
     { name: 'Dashboard', path: '/', icon: <LayoutDashboard size={18} />, allowed: true },
@@ -290,6 +294,7 @@ function AppShell({ user, profile, onLogout, lang, setLang, onProfileUpdate }) {
     { name: 'Calendar', path: '/calendar', icon: <Calendar size={18} />, allowed: true },
     { name: 'Leave Application', path: '/leave', icon: <ClipboardList size={18} />, allowed: true },
     { name: 'Inventory & Borrowing', path: '/inventory', icon: <Package size={18} />, allowed: true },
+    { name: 'Reimbursement Applications', path: '/finance', icon: <ClipboardList size={18} />, allowed: true },
     { name: 'Settings', path: '/settings', icon: <SettingsIcon size={18} />, allowed: true },
   ]
 
@@ -463,7 +468,10 @@ function AppShell({ user, profile, onLogout, lang, setLang, onProfileUpdate }) {
           <Route path="/committees" element={<Committees currentUserProfile={profile} lang={lang} notify={notify} />} />
           <Route path="/calendar" element={<CalendarPage currentUserProfile={profile} lang={lang} notify={notify} />} />
           <Route path="/leave" element={<LeaveApplications currentUserProfile={profile} lang={lang} notify={notify} />} />
-          <Route path="/inventory" element={<Inventory currentUserProfile={profile} lang={lang} notify={notify} />} />
+          <Route path="/inventory" element={<Inventory key="member-inventory" currentUserProfile={profile} lang={lang} notify={notify} />} />
+          <Route path="/inventory-management" element={canAccessInventoryManagement ? <Inventory key="manage-inventory" management currentUserProfile={profile} lang={lang} notify={notify} /> : <Navigate to="/inventory" replace />} />
+          <Route path="/finance" element={<Finance key="member-finance" currentUserProfile={profile} lang={lang} notify={notify} />} />
+          <Route path="/finance-management" element={canAccessFinanceManagement ? <Finance key="manage-finance" management currentUserProfile={profile} lang={lang} notify={notify} /> : <Navigate to="/finance" replace />} />
           <Route path="/settings" element={<Settings currentUserProfile={profile} lang={lang} onProfileUpdate={onProfileUpdate} notify={notify} />} />
           <Route path="/historical-members" element={<HistoricalMembers lang={lang} />} />
           <Route path="/handover" element={

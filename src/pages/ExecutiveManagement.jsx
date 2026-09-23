@@ -11,6 +11,10 @@ import {
   Loader,
   Save,
   ShieldCheck,
+  Package,
+  Wallet,
+  ClipboardList,
+  ArrowRight,
 } from 'lucide-react'
 
 const EXECUTIVE_DRIVE_SETTING_KEY = 'executive_drive_folder_url'
@@ -340,6 +344,20 @@ export default function ExecutiveManagement({ currentUserProfile, lang = 'zh', n
           {errorMsg}
         </div>
       )}
+
+      {currentUserProfile?.is_active !== false && ['can_manage_finance', 'can_approve_finance', 'can_view_leave_records', 'can_manage_inventory', 'can_approve_inventory'].some(p => hasPermission(currentUserProfile, p)) && <section>
+        <h2 className="text-lg font-black mb-4">{lang === 'zh' ? '岗位管理工作台' : 'Role Management Workspace'}</h2>
+        <nav className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4" aria-label={lang === 'zh' ? '管理入口' : 'Management'}>
+          {[
+            { path: '/finance-management', title: ['财政管理', 'Finance Management'], description: ['收入登记、账簿与报销审批', 'Income, ledger and claim reviews'], icon: Wallet, permissions: ['can_manage_finance', 'can_approve_finance'], color: '#913451', background: '#fff0f5' },
+            { path: '/leave', title: ['请假申请', 'Leave Applications'], description: ['查看会员请假记录与请假信', 'Member leave records and letters'], icon: ClipboardList, permissions: ['can_view_leave_records'], color: '#27614b', background: '#e6f5ee' },
+            { path: '/inventory-management', title: ['物品管理', 'Inventory Management'], description: ['物品库存、借用与归还', 'Stock, borrowing and returns'], icon: Package, permissions: ['can_manage_inventory', 'can_approve_inventory'], color: '#254e70', background: '#e7f3ff' },
+          ].filter(item => item.permissions.some(p => hasPermission(currentUserProfile, p))).map(({ path, title, description, icon: Icon, color, background }) => <a key={path} href={`#${path}`} className="flex items-center gap-4 p-5 min-w-0 hover:shadow-md transition-shadow" style={cardStyle}>
+            <span className="p-3 rounded-2xl shrink-0" style={{ color, background }}><Icon size={24} /></span>
+            <span className="min-w-0 flex-1"><strong className="block text-base" style={{ color: '#1a1a1a' }}>{title[lang === 'zh' ? 0 : 1]}</strong><span className="block text-sm mt-1" style={{ color: '#4b5563' }}>{description[lang === 'zh' ? 0 : 1]}</span></span><ArrowRight size={18} className="shrink-0" style={{ color }} />
+          </a>)}
+        </nav>
+      </section>}
 
       {successMsg && (
         <div className="flex items-start gap-2.5 p-4 rounded-3xl text-sm font-bold"
