@@ -474,21 +474,21 @@ export default function Members({ currentUserProfile, lang, notify }) {
                 <div key={m.id} className="p-4 rounded-2xl flex flex-col justify-between gap-4"
                   style={{ border: '1.5px solid #e0f1ff', background: 'white', boxShadow: '0 2px 12px rgba(149,203,255,0.12)' }}>
                   <div className="space-y-2">
-                    <div className="flex items-start justify-between">
-                      <div>
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-2">
                           <UserAvatar user={m} size={34} rounded={13} onClick={() => setAvatarPreviewUser(m)} />
-                          <div>
-                            <h4 className="font-black text-base" style={{ color: '#1a1a1a' }}>{m.name}</h4>
-                            <p className="font-mono text-xs mt-0.5 font-semibold" style={{ color: '#6b7280' }}>{m.email}</p>
+                          <div className="min-w-0 flex-1">
+                            <h4 className="font-black text-base break-words" style={{ color: '#1a1a1a' }}>{m.name}</h4>
                           </div>
                         </div>
                       </div>
-                      <span className="px-2 py-0.5 text-[10px] font-black rounded-full shrink-0"
+                      <span className="px-2 py-0.5 text-[10px] font-black rounded-full shrink-0 max-w-[32%] break-words"
                         style={{ background: roleLabel.bg, color: roleLabel.color, border: `1.5px solid ${roleLabel.border}` }}>
                         {roleLabel[lang]}
                       </span>
                     </div>
+                    <p title={m.email} className="font-mono text-xs font-semibold break-all" style={{ color: '#6b7280' }}>{m.email}</p>
                     <div className="text-xs pt-1.5" style={{ borderTop: '1.5px solid #f0f7ff' }}>
                       {m.is_active ? (
                         <span className="inline-flex items-center gap-1.5 font-black" style={{ color: '#16a34a' }}>

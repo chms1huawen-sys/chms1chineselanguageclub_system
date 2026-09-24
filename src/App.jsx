@@ -427,7 +427,7 @@ function AppShell({ user, profile, onLogout, lang, setLang, onProfileUpdate }) {
 
           {/* Tutorial button */}
           <button
-            onClick={() => setShowTutorial(true)}
+            onClick={() => { setMobileMenuOpen(false); setShowTutorial(true) }}
             className="w-full flex items-center gap-3.5 px-4 py-2.5 rounded-2xl text-xs font-bold transition cursor-pointer text-left"
             style={{ color: 'white', background: 'transparent', textShadow: sidebarTextShadow }}
             onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.15)'}

@@ -6,6 +6,16 @@
 .finance-page .inv-toolbar > .inv-field { min-width: 110px; }
 .finance-statement { padding: 24px 0; }
 .finance-statement h2 { text-align: center; margin-bottom: 20px; }
+.finance-report-heading { text-align: center; margin-bottom: 8px; }
+.finance-report-heading h2 { margin: 0 0 6px; }
+.finance-report-heading p { margin: 4px 0; }
+.finance-club-input { max-width: 65%; border: 0 !important; border-bottom: 1px solid #69859c !important; border-radius: 0 !important; background: transparent !important; text-align: center; }
+.finance-print-only { display: none; }
+.finance-page .inv-request { background: #f2f8ff; border-left: 5px solid #95cbff; box-shadow: 0 3px 12px #4572980c; }
+.finance-page .inv-request:nth-child(even) { background: #fff5f8; border-left-color: #ffb3c6; }
+.finance-page .inv-request:hover { border-color: #64a5d0; box-shadow: 0 4px 16px #45729820; }
+.finance-page .inv-request > div:first-child { min-width: 0; overflow-wrap: anywhere; }
+.finance-page .inv-request > div:last-child { flex-shrink: 0; }
 .finance-table-scroll { overflow-x: auto; }
 .finance-table { border-collapse: collapse; width: 100%; min-width: 520px; background: white; font-size: 14px; }
 .finance-table th, .finance-table td { border: 1px solid #6c7b86; padding: 10px; vertical-align: top; text-align: left; }
@@ -32,14 +42,32 @@
   .finance-table small { font-size: 11px; }
 }
 @media print {
-  @page { size: A4 portrait; margin: 14mm; }
+  @page { size: A4 portrait; margin: 8mm 6.6mm 4.3mm 7.8mm; }
   body:has(.finance-statement) *:not(:has(.finance-statement)):not(.finance-statement):not(.finance-statement *) { display: none !important; }
   body:has(.finance-statement), body *:has(.finance-statement) { display: block !important; position: static !important; overflow: visible !important; height: auto !important; min-height: 0 !important; max-height: none !important; width: auto !important; max-width: none !important; margin: 0 !important; padding: 0 !important; transform: none !important; animation: none !important; background: white !important; }
-  .finance-statement { position: static; width: 100%; padding: 0; color: black; }
+  .finance-statement { position: static; width: 195.6mm; padding: 0; color: black; font-family: Arial, 'STKaiti', 'KaiTi', serif; }
+  .finance-statement .finance-print-only { display: block; }
+  .finance-report-heading { margin: 0 0 1mm; }
+  .finance-report-heading h2 { font: 14pt/20pt Broadway, 'STKaiti', 'KaiTi', serif; margin: 0; }
+  .finance-page .finance-report-heading p { font-size: 14pt; line-height: 20pt; margin: 0; color: black; }
+  .finance-report-heading .finance-print-only { display: inline; }
   .finance-statement .finance-no-print { display: none !important; }
   .finance-table-scroll { overflow: visible; }
-  .finance-table { min-width: 0; font-size: 10pt; table-layout: auto; }
-  .finance-table th, .finance-table td { padding: 6pt; border-color: #555; }
+  .finance-table { width: 195.6mm; min-width: 0; font-size: 16pt; table-layout: fixed; }
+  .finance-table th, .finance-table td { padding: 0 5.4pt; border: 0.5pt solid black; height: 20pt; line-height: 20pt; vertical-align: middle; font-weight: normal; }
+  .finance-table th:first-child, .finance-table td:first-child { text-align: center; font-weight: bold; }
+  .finance-table td:nth-child(2) { min-width: 0; }
+  .finance-table thead, .finance-table tfoot { background: white; }
+  .finance-table thead th:nth-child(n) { font-size: 14pt; text-align: center; }
+  .finance-table tfoot th { font-size: 12pt; }
+  .finance-signatures { margin: 32mm 5mm 0; break-inside: avoid; font-size: 14pt; line-height: 18pt; }
+  .finance-signature-grid { display: grid; grid-template-columns: 78mm 70mm 36mm; }
+  .finance-signature-grid > div { width: 36mm; }
+  .finance-signature-grid > div:first-child { width: 48mm; }
+  .finance-signature-line { border-bottom: 0.5pt solid black; }
+  .finance-page .finance-signatures p { margin: 0; color: black; font-size: 14pt; line-height: 18pt; }
+  .finance-signature-name { display: flex; justify-content: space-between; }
+  .finance-page .finance-signatures .finance-generation-date { margin-top: 12mm; }
   .finance-table thead { display: table-header-group; }
   .finance-table tfoot { display: table-row-group; }
   .finance-table tr { break-inside: avoid; }

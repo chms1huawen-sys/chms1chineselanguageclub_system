@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
-import { Package, Plus, Search, Pencil, X, RefreshCw, ChevronLeft, ChevronRight, ClipboardList, Loader, ImagePlus, Settings } from 'lucide-react'
+import { cloneElement, useCallback, useEffect, useId, useRef, useState } from 'react'
+import { Package, Plus, Minus, ShoppingCart, Tag, Search, Pencil, X, RefreshCw, ChevronLeft, ChevronRight, Loader, ImagePlus, Settings } from 'lucide-react'
 import { supabase } from '../supabaseClient'
 import { hasPermission } from '../utils/permissions'
 import { sendPushForNotifications } from '../utils/pushNotifications'
@@ -37,7 +37,8 @@ const outstanding = line => line.quantity - line.returned - line.damaged - line.
 const isOverdue = (request, today = malaysiaToday()) => request.status === 'issued' && request.due_date < today && request.inventory_request_lines?.some(line => line.mode === 'loan' && outstanding(line) > 0)
 
 function Field({ label, children }) {
-  return <label className="inv-field"><span>{label}</span>{children}</label>
+  const id = useId()
+  return <label className="inv-field"><span id={id}>{label}</span>{cloneElement(children, children.props['aria-label'] ? {} : { 'aria-labelledby': id })}</label>
 }
 
 export default function Inventory({ currentUserProfile, lang = 'zh', notify, management = false }) {
@@ -70,6 +71,8 @@ export default function Inventory({ currentUserProfile, lang = 'zh', notify, man
   const [modal, setModal] = useState(null)
   const [form, setForm] = useState({})
   const [photo, setPhoto] = useState(null)
+  const [cart, setCart] = useState([])
+  const [draft, setDraft] = useState(null)
   const dialogRef = useRef(null)
 
   const explain = useCallback(err => {
@@ -139,7 +142,7 @@ export default function Inventory({ currentUserProfile, lang = 'zh', notify, man
   }, [modal])
 
   const open = (type, data = {}) => { setForm({ ...data, operation_id: crypto.randomUUID() }); setPhoto(null); setError(''); setModal(type) }
-  const close = () => { if (!busyRef.current) setModal(null) }
+  const close = () => { if (!busyRef.current) { if (modal === 'submit') setDraft(form); setModal(null) } }
   const change = (key, value) => setForm(previous => ({ ...previous, [key]: value }))
   const run = async (action, payload) => {
     if (busyRef.current) return
@@ -147,6 +150,10 @@ export default function Inventory({ currentUserProfile, lang = 'zh', notify, man
     let uploadedPath
     let saved = false
     try {
+      if (action === 'submit' && (!payload.lines.length || payload.lines.some(line => {
+        const item = items.find(i => i.id === line.item_id)
+        return !item?.is_active || !Number.isInteger(line.quantity) || line.quantity < 1 || line.quantity > item.available
+      }))) throw new Error('INVENTORY_STOCK_UNAVAILABLE')
       if (action === 'item' && photo) {
         if (!['image/jpeg', 'image/png', 'image/webp'].includes(photo.type) || photo.size > 5 * 1024 * 1024) throw new Error(t('照片只支持 JPG、PNG、WEBP，最大 5MB。', 'Photos must be JPG, PNG or WEBP, up to 5MB.'))
         uploadedPath = `${currentUserProfile.id}/${crypto.randomUUID()}.${({ 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp' })[photo.type]}`
@@ -157,6 +164,7 @@ export default function Inventory({ currentUserProfile, lang = 'zh', notify, man
       const { data, error: mutationError } = await supabase.rpc('inventory_mutate', { p_action: action, p_data: payload })
       if (mutationError) throw mutationError
       saved = true
+      if (action === 'submit') { setCart([]); setDraft(null) }
       setModal(null)
       notify?.({ title: t('操作成功', 'Saved successfully') })
       await load()
@@ -175,7 +183,19 @@ export default function Inventory({ currentUserProfile, lang = 'zh', notify, man
     } finally { busyRef.current = false; setBusy(false) }
   }
 
-  const startRequest = item => open('submit', { id: crypto.randomUUID(), purpose: '', pickup_date: malaysiaToday(), due_date: '', lines: [{ item_id: item?.id || '', quantity: 1 }] })
+  const setQuantity = (itemId, quantity, editing = false) => {
+    if (!editing) quantity = Number(quantity)
+    if (busyRef.current || (!editing && (!Number.isInteger(quantity) || quantity < 0))) return
+    const item = items.find(i => i.id === itemId)
+    if (!editing && quantity > 0 && (!item?.is_active || quantity > item.available)) return
+    const update = lines => quantity === 0 && !editing ? lines.filter(l => l.item_id !== itemId) : lines.some(l => l.item_id === itemId) ? lines.map(l => l.item_id === itemId ? { ...l, quantity } : l) : [...lines, { item_id: itemId, quantity }]
+    if (quantity > 0 && !cart.some(l => l.item_id === itemId) && cart.length >= 30) return
+    setCart(update)
+    if (modal === 'submit') setForm(f => ({ ...f, lines: update(f.lines) }))
+  }
+  const startRequest = () => open('submit', { id: crypto.randomUUID(), purpose: '', pickup_date: malaysiaToday(), due_date: '', ...draft, lines: cart.map(l => ({ ...l })) })
+  const cartQuantity = cart.reduce((sum, line) => sum + Math.max(0, Number(line.quantity) || 0), 0)
+  const invalidCart = !cart.length || cart.some(line => { const item = items.find(i => i.id === line.item_id); return !item?.is_active || !Number.isInteger(line.quantity) || line.quantity < 1 || line.quantity > item.available })
   const selectedRequest = modal === 'detail' ? requests.find(r => r.id === form.id) || form : form.request
   const visibleItems = items.filter(i => (showInactive || i.is_active) && (!category || i.category_id === category) && `${i.name} ${i.asset_code || ''} ${i.location}`.toLowerCase().includes(search.toLowerCase()))
   const modeName = mode => mode === 'loan' ? t('借还制', 'Returnable') : t('领用制', 'Consumable')
@@ -196,27 +216,30 @@ export default function Inventory({ currentUserProfile, lang = 'zh', notify, man
         <div className="inv-toolbar"><div className="inv-search"><Search size={18} /><input aria-label={t('搜索物品', 'Search items')} placeholder={t('名称、编号、位置', 'Name, code, location')} value={search} onChange={e => setSearch(e.target.value)} /></div>
           <select aria-label={t('分类筛选', 'Category filter')} value={category} onChange={e => setCategory(e.target.value)}><option value="">{t('所有分类', 'All categories')}</option>{categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}</select>
           {canManage && <label className="inv-check"><input type="checkbox" checked={showInactive} onChange={e => setShowInactive(e.target.checked)} />{t('包括停用物品', 'Include inactive')}</label>}
-          {!management && <button className="inv-primary" onClick={() => startRequest()} disabled={!items.some(i => i.is_active && i.available > 0)}><ClipboardList size={17} />{t('申请物品', 'Request items')}</button>}
+          {!management && <button className="inv-primary" onClick={startRequest} disabled={!cart.length}><ShoppingCart size={17} />{t('借用清单', 'Borrowing list')} ({cart.length})</button>}
           {canManage && <button onClick={() => open('item', { ...EMPTY_ITEM, category_id: categories.find(c => c.is_active)?.id || '', unit: t('件', 'pcs') })}><Plus size={17} />{t('新增物品', 'Add item')}</button>}
         </div>
         {!visibleItems.length && <p className="inv-empty">{t('暂无物品', 'No items found')}</p>}
-        <div className="inv-catalogue">{visibleItems.map(item => <article className="inv-item" key={item.id}>
-          <div className="inv-item-photo">{item.photo_url ? <img src={item.photo_url} alt={item.name} loading="lazy" /> : <Package size={38} />}</div>
+        {[...new Set(visibleItems.map(item => item.category_id))].map(categoryId => <section className="inv-category-section" key={categoryId || 'uncategorised'}>
+          <h2 className="inv-category-heading"><Tag size={22} />{categories.find(c => c.id === categoryId)?.name || t('未分类', 'Uncategorised')}<span>{visibleItems.filter(item => item.category_id === categoryId).length}</span></h2>
+        <div className="inv-catalogue">{visibleItems.filter(item => item.category_id === categoryId).map(item => <article className="inv-item" key={item.id}>
+          <div className="inv-photo-frame"><div className="inv-item-photo">{item.photo_url ? <img src={item.photo_url} alt={item.name} loading="lazy" /> : <div className="inv-photo-placeholder"><Package size={38} /><span>{t('暂无照片', 'No photo')}</span></div>}</div></div>
+          <div className="inv-category-label"><Tag size={13} /><span>{categories.find(c => c.id === item.category_id)?.name || t('未分类', 'Uncategorised')}</span></div>
           <div className="inv-item-body"><div className="inv-item-title"><h2>{item.name}</h2>{!item.is_active && <span className="inv-badge">{t('已停用', 'Inactive')}</span>}</div>
-            <p>{categories.find(c => c.id === item.category_id)?.name} · {modeName(item.mode)}{item.asset_code && ` · ${item.asset_code}`}</p>
+            <p>{modeName(item.mode)}{item.asset_code && ` · ${item.asset_code}`}</p>
             <p>{t('位置', 'Location')}: {item.location || '—'}</p>
             <div className="inv-counts"><span><strong>{item.available}</strong>{t('可用', 'Available')}</span><span><strong>{item.reserved}</strong>{t('预留', 'Reserved')}</span><span><strong>{item.on_loan}</strong>{t('借出', 'On loan')}</span><span><strong>{item.damaged}</strong>{t('损坏', 'Damaged')}</span><span><strong>{item.lost}</strong>{t('遗失', 'Lost')}</span></div>
             <p>{t('登记总数', 'Recorded total')}: {item.available + item.reserved + item.on_loan + item.damaged + item.lost} {item.unit}</p>{item.notes && <p className="inv-note">{item.notes}</p>}
-            <div className="inv-actions">{!management && <button className="inv-primary" disabled={!item.is_active || item.available < 1} onClick={() => startRequest(item)}>{t('申请', 'Request')}</button>}
+            <div className="inv-actions inv-item-controls">{!management && (cart.some(l => l.item_id === item.id) ? <div className="inv-stepper" aria-label={`${item.name} ${t('数量', 'Quantity')}`}><button title={t('减少数量', 'Decrease quantity')} aria-label={`${t('减少', 'Decrease')} ${item.name}`} onClick={() => setQuantity(item.id, cart.find(l => l.item_id === item.id).quantity - 1)}><Minus size={16} /></button><strong aria-live="polite">{cart.find(l => l.item_id === item.id).quantity}</strong><button title={t('增加数量', 'Increase quantity')} aria-label={`${t('增加', 'Increase')} ${item.name}`} disabled={!item.is_active || cart.find(l => l.item_id === item.id).quantity >= item.available} onClick={() => setQuantity(item.id, cart.find(l => l.item_id === item.id).quantity + 1)}><Plus size={16} /></button></div> : <button className="inv-primary" disabled={!item.is_active || item.available < 1 || cart.length >= 30} onClick={() => setQuantity(item.id, 1)}><ShoppingCart size={17} />{t('加入清单', 'Add to list')}</button>)}
               {canManage && <><button title={t('编辑物品', 'Edit item')} aria-label={t('编辑物品', 'Edit item')} onClick={() => open('item', { ...item, quantity: undefined })}><Pencil size={17} /></button><button onClick={() => open('adjust', { id: item.id, name: item.name, available: 0, damaged: 0, lost: 0, note: '' })}>{t('入库 / 盘点', 'Stock adjustment')}</button></>}
             </div>
           </div>
-        </article>)}</div>
+          </article>)}</div></section>)}
       </>}
       {tab === 'requests' && <>
         <div className="inv-toolbar">
           <select aria-label={t('状态筛选', 'Status filter')} value={status} onChange={e => { setStatus(e.target.value); setPage(0) }}><option value="">{t('所有状态', 'All statuses')}</option>{Object.entries(statusLabels).map(([value, text]) => <option key={value} value={value}>{label(text)}</option>)}<option value="overdue">{t('逾期未归还', 'Overdue')}</option></select>
-          {!management && <button className="inv-primary" onClick={() => startRequest()}><Plus size={17} />{t('新增申请', 'New request')}</button>}
+          {!management && <button className="inv-primary" onClick={() => switchTab('items')}><ShoppingCart size={17} />{t('选择物品', 'Browse items')}</button>}
         </div>
         {requests.length === 0 && <p className="inv-empty">{t('暂无申请', 'No requests')}</p>}
         <div className="inv-rows">{requests.map(request => <button className="inv-request" key={request.id} onClick={() => open('detail', request)}>
@@ -236,6 +259,7 @@ export default function Inventory({ currentUserProfile, lang = 'zh', notify, man
       {['requests', 'history'].includes(tab) && <div className="inv-pagination"><button aria-label={t('上一页', 'Previous page')} disabled={page === 0} onClick={() => setPage(p => p - 1)}><ChevronLeft size={18} /></button><span>{page + 1} / {Math.max(1, Math.ceil(count / PAGE_SIZE))}</span><button aria-label={t('下一页', 'Next page')} disabled={(page + 1) * PAGE_SIZE >= count} onClick={() => setPage(p => p + 1)}><ChevronRight size={18} /></button></div>}
     </>}
 
+    {!management && cart.length > 0 && <aside className="inv-cart-bar" aria-label={t('借用清单摘要', 'Borrowing list summary')}><div><strong><ShoppingCart size={19} />{t('借用清单', 'Borrowing list')}</strong><p aria-live="polite">{t(`${cart.length} 种物品 · 数量 ${cartQuantity}`, `${cart.length} item types · ${cartQuantity} units`)}</p>{cart.length >= 30 && <small>{t('每次最多 30 种物品', 'Up to 30 item types per request')}</small>}</div><button className="inv-primary" onClick={startRequest}>{t('查看清单并申请', 'Review and request')}<ChevronRight size={17} /></button></aside>}
     <dialog className="inv-dialog" ref={dialogRef} onCancel={e => { e.preventDefault(); close() }}>
       {modal && <><header><h2>{modal === 'detail' ? t('申请详情', 'Request details') : modal === 'category' ? t('物品分类', 'Item category') : modal === 'item' ? t('物品档案', 'Item details') : label(actionLabels[modal])}</h2><button className="inv-icon" type="button" aria-label={t('关闭', 'Close')} onClick={close} disabled={busy}><X size={20} /></button></header>
         {error && <div className="inv-error" role="alert">{error}</div>}
@@ -267,16 +291,21 @@ export default function Inventory({ currentUserProfile, lang = 'zh', notify, man
             <div className="inv-form-grid">{[['available', t('可用变动', 'Available change')], ['damaged', t('损坏变动', 'Damaged change')], ['lost', t('遗失变动', 'Lost change')]].map(([key, title]) => <Field key={key} label={title}><input required type="number" step="1" value={form[key]} onChange={e => change(key, Number(e.target.value))} /></Field>)}</div>
           </>}
           {modal === 'submit' && <>
-            {form.lines.map((line, index) => <div className="inv-request-line" key={index}><Field label={t('物品', 'Item')}><select required value={line.item_id} onChange={e => change('lines', form.lines.map((l, n) => n === index ? { ...l, item_id: e.target.value } : l))}><option value="">{t('请选择', 'Select')}</option>{items.filter(i => i.is_active && (i.id === line.item_id || !form.lines.some(l => l.item_id === i.id))).map(i => <option key={i.id} value={i.id}>{i.name}{i.asset_code ? ` (${i.asset_code})` : ''} · {t('可用', 'Available')} {i.available}</option>)}</select></Field>
-              <Field label={t('数量', 'Quantity')}><input required type="number" min="1" step="1" max={items.find(i => i.id === line.item_id)?.available || 1} value={line.quantity} onChange={e => change('lines', form.lines.map((l, n) => n === index ? { ...l, quantity: Number(e.target.value) } : l))} /></Field><button type="button" aria-label={t('移除物品', 'Remove item')} disabled={form.lines.length === 1} onClick={() => change('lines', form.lines.filter((_, n) => n !== index))}><X size={17} /></button></div>)}
-            <button type="button" disabled={form.lines.length >= 30} onClick={() => change('lines', [...form.lines, { item_id: '', quantity: 1 }])}><Plus size={17} />{t('添加物品', 'Add item')}</button>
+            {!form.lines.length && <p className="inv-empty">{t('清单为空', 'Your list is empty')}</p>}
+            {form.lines.map(line => { const item = items.find(i => i.id === line.item_id); return <div className="inv-cart-line" key={line.item_id}>
+              <div className="inv-cart-thumb">{item?.photo_url ? <img src={item.photo_url} alt="" /> : <Package size={24} />}</div>
+              <div className="inv-cart-name"><strong>{item?.name || t('物品已不可用', 'Item unavailable')}</strong><small>{item?.asset_code} {categories.find(c => c.id === item?.category_id)?.name}</small><small>{t('可用', 'Available')}: {item?.available || 0} {item?.unit}</small>{(!item?.is_active || line.quantity > item.available) && <span className="inv-cart-warning">{t('库存已变动，请调整数量或移除', 'Stock changed. Adjust quantity or remove this item.')}</span>}</div>
+              <Field label={t('数量', 'Quantity')}><input required disabled={busy} aria-label={`${item?.name || ''} ${t('数量', 'Quantity')}`} type="number" min="1" max={item?.available || 0} step="1" value={line.quantity} onChange={e => setQuantity(line.item_id, e.target.value === '' ? '' : Number(e.target.value), true)} /></Field>
+              <button type="button" disabled={busy} title={t('移除物品', 'Remove item')} aria-label={`${t('移除', 'Remove')} ${item?.name || ''}`} onClick={() => setQuantity(line.item_id, 0)}><X size={17} /></button>
+            </div> })}
+            <button type="button" disabled={busy} onClick={() => { close(); switchTab('items') }}><Plus size={17} />{t('继续选择物品', 'Continue browsing')}</button>
             <Field label={t('用途', 'Purpose')}><textarea required maxLength={2000} value={form.purpose} onChange={e => change('purpose', e.target.value)} /></Field>
             <div className="inv-form-grid"><Field label={t('领取日期', 'Collection date')}><input required type="date" min={malaysiaToday()} value={form.pickup_date} onChange={e => change('pickup_date', e.target.value)} /></Field><Field label={t('预计归还日期（借还物品必填）', 'Return date (required for loans)')}><input type="date" min={form.pickup_date} required={form.lines.some(l => items.find(i => i.id === l.item_id)?.mode === 'loan')} value={form.due_date} onChange={e => change('due_date', e.target.value)} /></Field></div>
           </>}
           {['approve', 'reject', 'cancel', 'issue'].includes(modal) && <><p><strong>{form.request.applicant_name}</strong> · {form.request.purpose}</p>{form.request.inventory_request_lines.map(l => <p key={l.id}>{l.item_name} × {l.quantity}</p>)}</>}
           {modal === 'return' && form.lines.map((line, index) => <div className="inv-line" key={line.id}><strong>{line.name}</strong><p>{t('最多可登记', 'Maximum to record')}: {line.remaining}</p><div className="inv-form-grid">{[['good', t('完好归还 / 退库', 'Returned in good condition')], ...(line.mode === 'loan' ? [['damaged', t('损坏', 'Damaged')], ['lost', t('遗失', 'Lost')]] : [])].map(([key, title]) => <Field key={key} label={title}><input type="number" required min="0" max={line.remaining} step="1" value={line[key]} onChange={e => change('lines', form.lines.map((l, n) => n === index ? { ...l, [key]: Number(e.target.value) } : l))} /></Field>)}</div></div>)}
           {['adjust', 'approve', 'reject', 'cancel', 'issue', 'return'].includes(modal) && <Field label={t('处理备注', 'Processing note')}><textarea required={['adjust', 'reject'].includes(modal) || (modal === 'return' && form.lines.some(l => l.damaged > 0 || l.lost > 0))} maxLength={2000} value={form.note} onChange={e => change('note', e.target.value)} /></Field>}
-          <footer><button type="button" disabled={busy} onClick={close}>{t('取消', 'Cancel')}</button><button className="inv-primary" type="submit" disabled={busy}>{busy && <Loader size={17} className="inv-spin" />}{busy ? t('处理中…', 'Processing…') : t('确认', 'Confirm')}</button></footer>
+          <footer><button type="button" disabled={busy} onClick={close}>{t('取消', 'Cancel')}</button><button className="inv-primary" type="submit" disabled={busy || (modal === 'submit' && invalidCart)}>{busy && <Loader size={17} className="inv-spin" />}{busy ? t('处理中…', 'Processing…') : t('确认', 'Confirm')}</button></footer>
         </form>}
       </>}
     </dialog>

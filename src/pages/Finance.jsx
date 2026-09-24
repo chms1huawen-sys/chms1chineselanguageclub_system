@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { flushSync } from 'react-dom'
 import { Wallet, Plus, Settings, X, RefreshCw, Loader, ChevronLeft, ChevronRight, ExternalLink, Printer, Pencil } from 'lucide-react'
 import { supabase } from '../supabaseClient'
 import { hasPermission } from '../utils/permissions'
@@ -47,6 +48,20 @@ export default function Finance({ currentUserProfile: profile, lang = 'zh', noti
   const reportEnd = period === 'half' ? (half === '1' ? `${month.slice(0, 4)}-07-01` : `${Number(month.slice(0, 4)) + 1}-01-01`) : period === 'year' || month.endsWith('-12') ? `${Number(month.slice(0, 4)) + 1}-01-01` : `${month.slice(0, 4)}-${String(Number(month.slice(5)) + 1).padStart(2, '0')}-01`
   const [formats, setFormats] = useState({})
   const format = formats[lang] || { title: t('一中华文学会 · 收支账目', 'CLC_sys · Financial Statement'), category: t('类别', 'Type'), item: t('项目', 'Description'), total: t('合计', 'Total') }
+  const reportTitle = ['一中华文学会 · 收支账目', 'CLC_sys · Financial Statement'].includes(format.title)
+    ? t(`${month.slice(0, 4)}年社团财政报告`, `${month.slice(0, 4)} Club Financial Report`)
+    : format.title.replaceAll('{year}', month.slice(0, 4))
+  const [clubName, setClubName] = useState('一中华文学会')
+  const [printDate, setPrintDate] = useState(today())
+  const endInclusive = new Date(`${reportEnd}T00:00:00Z`)
+  endInclusive.setUTCDate(endInclusive.getUTCDate() - 1)
+  const periodDate = value => zh ? `${Number(value.slice(5, 7))}月${Number(value.slice(8, 10))}日` : value
+  const reportRange = zh ? `(${month.slice(0, 4)}年${periodDate(reportStart)}至${periodDate(endInclusive.toISOString().slice(0, 10))})` : `(${reportStart} to ${endInclusive.toISOString().slice(0, 10)})`
+  useEffect(() => {
+    const refreshDate = () => flushSync(() => setPrintDate(today()))
+    window.addEventListener('beforeprint', refreshDate)
+    return () => window.removeEventListener('beforeprint', refreshDate)
+  }, [])
   const [status, setStatus] = useState('')
   const [page, setPage] = useState(0)
   const [count, setCount] = useState(0)
@@ -172,7 +187,7 @@ export default function Finance({ currentUserProfile: profile, lang = 'zh', noti
   const periodControls = <>
     <div className="finance-period" role="group" aria-label={t('报表范围', 'Report period')}>{[['year', t('年度', 'Yearly')], ['half', t('半年度', 'Half-yearly')], ['month', t('月度', 'Monthly')]].map(([key, name]) => <button key={key} aria-pressed={period === key} onClick={() => { setPeriod(key) }}>{name}</button>)}</div>
     {period === 'half' && <Field title={t('半年', 'Half-year')}><select aria-label={t('半年', 'Half-year')} value={half} onChange={e => setHalf(e.target.value)}><option value="1">{t('上半年（1–6月）', 'First half (Jan–Jun)')}</option><option value="2">{t('下半年（7–12月）', 'Second half (Jul–Dec)')}</option></select></Field>}
-    <Field title={t('年份', 'Year')}><select aria-label={t('年份', 'Year')} value={month.slice(0, 4)} onChange={e => setMonth(`${e.target.value}-${month.slice(5)}`)}>{years.map(y => <option key={y} value={y}>{y}</option>)}</select></Field>
+      <Field title={t('年份', 'Year')}><select aria-label={t('年份', 'Year')} value={month.slice(0, 4)} onChange={e => setMonth(`${e.target.value}-${month.slice(5)}`)}>{years.map(y => <option key={y} value={y}>{y}</option>)}</select></Field>
     {period === 'month' && <Field title={t('月份', 'Month')}><select aria-label={t('月份', 'Month')} value={month.slice(5)} onChange={e => setMonth(`${month.slice(0, 4)}-${e.target.value}`)}>{Array.from({ length: 12 }, (_, i) => <option key={i} value={String(i + 1).padStart(2, '0')}>{zh ? `${i + 1}月` : new Intl.DateTimeFormat('en', { month: 'long' }).format(new Date(2020, i, 1))}</option>)}</select></Field>}
   </>
 
@@ -191,14 +206,17 @@ export default function Finance({ currentUserProfile: profile, lang = 'zh', noti
         <button disabled={loading || !!error} title={t('打印账簿', 'Print ledger')} onClick={() => window.print()}><Printer size={18} />{t('打印', 'Print')}</button>
       </div>
       {loading ? <div className="inv-skeleton" aria-label={t('加载中', 'Loading')} role="status"><div /></div> : <section className="finance-statement">
-        <h2>{format.title} · {period === 'month' ? month : month.slice(0, 4)}{period === 'half' && ` · ${half === '1' ? t('上半年', 'First half') : t('下半年', 'Second half')}`}</h2>
-        <div className="finance-table-scroll"><table className="finance-table"><thead><tr><th>{format.category}</th><th>{format.item}</th><th>{t('收入', 'Income')} RM</th><th>{t('支出', 'Expenses')} RM</th></tr></thead><tbody>
+        <header className="finance-report-heading"><h2>{reportTitle}</h2>
+          <p>{t('社团/学会', 'Club/Society')} : <input className="finance-no-print finance-club-input" aria-label={t('社团名称', 'Club name')} value={clubName} onChange={e => setClubName(e.target.value)} maxLength={60} /><span className="finance-print-only">{clubName}</span></p>
+          <p>{reportRange}</p></header>
+        <div className="finance-table-scroll"><table className="finance-table"><colgroup><col style={{width:'11.548%'}}/><col style={{width:'56.402%'}}/><col style={{width:'16.666%'}}/><col style={{width:'15.384%'}}/></colgroup><thead><tr><th>{['类别','Type'].includes(format.category) ? '' : format.category}</th><th>{['项目','Description'].includes(format.item) ? '' : format.item}</th><th>RM</th><th>RM</th></tr></thead><tbody>
           <tr><td>{t('收入', 'Income')}</td><th>b/d</th><td>{opening >= 0 ? money(opening / 100) : ''}</td><td>{opening < 0 ? money(-opening / 100) : ''}</td></tr>
-          {[...income, ...expense].map((e, i) => <tr key={e.id}><td>{i === income.length ? t('支出', 'Expenses') : ''}</td><td><span className="finance-entry-title">{e.description}</span><small>{e.entry_date} · {e.actor_name}</small>
+          {[...income, ...Array.from({length: Math.max(0, 6 - income.length)}, (_, i) => ({id: `blank-income-${i}`, blank: true})), ...expense, ...Array.from({length: Math.max(0, 10 - expense.length)}, (_, i) => ({id: `blank-expense-${i}`, blank: true}))].map((e, i) => <tr key={e.id}><td>{i === Math.max(6, income.length) ? t('支出', 'Expenses') : ''}</td><td><span className="finance-entry-title">{e.description}</span>{!e.blank && <small className="finance-no-print">{e.entry_date} · {e.actor_name}</small>}
             {e.claim_id && <button className="finance-no-print" onClick={async () => { const { data, error: err } = await supabase.from('finance_claims').select('*, finance_receipts(*), finance_reviews(*)').eq('id', e.claim_id).single(); if (err) setError(explain(err)); else open('detail', data) }}>{t('报销详情', 'Claim details')}</button>}
           </td><td>{Number(e.amount) > 0 ? money(e.amount) : ''}</td><td>{Number(e.amount) < 0 ? money(-Number(e.amount)) : ''}</td></tr>)}
-          <tr><td>{t('结存', 'Balance')}</td><th>c/d</th><td>{closing < 0 ? money(-closing / 100) : ''}</td><td>{closing >= 0 ? money(closing / 100) : ''}</td></tr>
-        </tbody><tfoot><tr><th colSpan="2">{format.total}</th><td>{money(leftTotal / 100)}</td><td>{money(rightTotal / 100)}</td></tr></tfoot></table></div>
+          <tr><td></td><th>c/d</th><td>{closing < 0 ? money(-closing / 100) : ''}</td><td>{closing >= 0 ? money(closing / 100) : ''}</td></tr>
+        </tbody><tfoot><tr><th>{format.total === '合计' ? '总收入' : format.total}</th><td></td><td>{money(leftTotal / 100)}</td><td>{money(rightTotal / 100)}</td></tr></tfoot></table></div>
+        <footer className="finance-print-only finance-signatures"><div className="finance-signature-grid">{[t('召集老师/指导老师', 'Convener/Advisor'), t('主席', 'President'), t('财政', 'Treasurer')].map(role => <div key={role}><div className="finance-signature-line"/><p>{role}</p><p className="finance-signature-name"><span>(</span><span>)</span></p></div>)}</div><p className="finance-generation-date">{t('日期', 'Date')} : {printDate.split('-').reverse().join('.')}</p></footer>
       </section>}
     </> : admin && tab === 'income' ? <>
       <div className="inv-toolbar">{periodControls}
