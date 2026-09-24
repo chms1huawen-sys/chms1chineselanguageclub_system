@@ -224,7 +224,7 @@ export default function HistoricalMembers({ lang }) {
                     return (
                       <div
                         key={member.user_id || idx}
-                        className="grid grid-cols-[48px_1fr] md:grid-cols-[64px_1.1fr_1.6fr_1fr] md:items-center gap-2 md:gap-4 px-4 py-3 text-sm"
+                        className="grid grid-cols-[48px_minmax(0,1fr)] md:grid-cols-[64px_minmax(0,1.1fr)_minmax(0,1.6fr)_minmax(0,1fr)] md:items-center gap-2 md:gap-4 px-4 py-3 text-sm"
                       >
                         <div className="flex items-center">
                           <span className="text-xs font-black text-gray-400">#{idx + 1}</span>
@@ -233,7 +233,7 @@ export default function HistoricalMembers({ lang }) {
                           <UserAvatar user={user} size={30} rounded={12} onClick={() => setAvatarPreviewUser(user)} />
                           <p className="font-black text-gray-800 truncate">{user.name}</p>
                         </div>
-                        <p className="text-xs font-mono font-semibold text-gray-400 truncate col-start-2 md:col-auto">{user.email}</p>
+                        <p title={user.email} className="text-xs font-mono font-semibold text-gray-500 break-all min-w-0 col-start-2 md:col-auto">{user.email}</p>
                         <div className="flex flex-wrap items-center gap-2 col-start-2 md:col-auto">
                           <span className="w-fit text-[10px] font-black px-2.5 py-1 rounded-full bg-blue-50 text-blue-600 border border-blue-200">
                             {member.position}

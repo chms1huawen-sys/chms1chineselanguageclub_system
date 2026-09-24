@@ -460,6 +460,7 @@ function AppShell({ user, profile, onLogout, lang, setLang, onProfileUpdate }) {
         <Routes>
           <Route path="/" element={<Dashboard currentUserProfile={profile} lang={lang} onShowTutorial={() => setShowTutorial(true)} notify={notify} />} />
           <Route path="/tasks" element={<Tasks currentUserProfile={profile} lang={lang} notify={notify} />} />
+          <Route path="/task-performance" element={<Tasks key="performance" comparisonOnly currentUserProfile={profile} lang={lang} notify={notify} />} />
           <Route path="/executive-management" element={
             canViewExecutiveManagement
               ? <ExecutiveManagement currentUserProfile={profile} lang={lang} notify={notify} />

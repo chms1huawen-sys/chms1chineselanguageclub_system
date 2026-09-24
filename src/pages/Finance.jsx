@@ -47,11 +47,17 @@ export default function Finance({ currentUserProfile: profile, lang = 'zh', noti
   const reportStart = period === 'year' ? `${month.slice(0, 4)}-01-01` : period === 'half' ? `${month.slice(0, 4)}-${half === '1' ? '01' : '07'}-01` : `${month}-01`
   const reportEnd = period === 'half' ? (half === '1' ? `${month.slice(0, 4)}-07-01` : `${Number(month.slice(0, 4)) + 1}-01-01`) : period === 'year' || month.endsWith('-12') ? `${Number(month.slice(0, 4)) + 1}-01-01` : `${month.slice(0, 4)}-${String(Number(month.slice(5)) + 1).padStart(2, '0')}-01`
   const [formats, setFormats] = useState({})
-  const format = formats[lang] || { title: t('一中华文学会 · 收支账目', 'CLC_sys · Financial Statement'), category: t('类别', 'Type'), item: t('项目', 'Description'), total: t('合计', 'Total') }
-  const reportTitle = ['一中华文学会 · 收支账目', 'CLC_sys · Financial Statement'].includes(format.title)
-    ? t(`${month.slice(0, 4)}年社团财政报告`, `${month.slice(0, 4)} Club Financial Report`)
-    : format.title.replaceAll('{year}', month.slice(0, 4))
-  const [clubName, setClubName] = useState('一中华文学会')
+  const storedFormat = formats[lang] || { title: t('一中华文学会 · 收支账目', 'CLC_sys · Financial Statement'), category: t('类别', 'Type'), item: t('项目', 'Description'), total: t('合计', 'Total') }
+  const format = storedFormat.club_label != null ? storedFormat : {
+    ...storedFormat,
+    title: ['一中华文学会 · 收支账目', 'CLC_sys · Financial Statement'].includes(storedFormat.title) ? t('{year}年社团财政报告', '{year} Club Financial Report') : storedFormat.title,
+    category: ['类别','Type'].includes(storedFormat.category) ? '' : storedFormat.category,
+    item: ['项目','Description'].includes(storedFormat.item) ? '' : storedFormat.item,
+    total: storedFormat.total === '合计' ? '总收入' : storedFormat.total,
+  }
+  const reportTitle = format.title.replaceAll('{year}', month.slice(0, 4))
+  const clubName = format.club_name || t('一中华文学会', 'CLC_sys')
+  const clubLabel = format.club_label || t('社团/学会', 'Club/Society')
   const [printDate, setPrintDate] = useState(today())
   const endInclusive = new Date(`${reportEnd}T00:00:00Z`)
   endInclusive.setUTCDate(endInclusive.getUTCDate() - 1)
@@ -160,7 +166,7 @@ export default function Finance({ currentUserProfile: profile, lang = 'zh', noti
         payload.receipts = [...form.receipts, ...uploaded.current]
       }
       const { data, error: err } = modal === 'format'
-        ? await supabase.rpc('finance_save_format', { p_lang: lang, p_title: form.title, p_category: form.category, p_item: form.item, p_total: form.total })
+        ? await supabase.rpc('finance_save_report_headings', { p_lang: lang, p_title: form.title.startsWith(month.slice(0, 4)) ? `{year}${form.title.slice(4)}` : form.title, p_category: form.category, p_item: form.item, p_total: form.total, p_club_label: form.club_label, p_club_name: form.club_name })
         : modal === 'income' ? await supabase.rpc('finance_record_income', { p_data: payload })
           : await supabase.rpc('finance_mutate', { p_action: modal, p_data: payload })
       if (err) throw err
@@ -202,20 +208,20 @@ export default function Finance({ currentUserProfile: profile, lang = 'zh', noti
     {admin && tab === 'ledger' ? <>
       <div className="inv-toolbar finance-no-print">{periodControls}
         {treasury && <button onClick={() => open('opening')}>{t('初始 b/d', 'Initial b/d')}</button>}
-        {canRecordIncome && <button onClick={() => open('format', format)}><Pencil size={17} />{t('编辑报表文字', 'Edit report labels')}</button>}
+        {canRecordIncome && <button onClick={() => open('format', { ...format, title: reportTitle, club_label: clubLabel, club_name: clubName })}><Pencil size={17} />{t('编辑报表文字', 'Edit report labels')}</button>}
         <button disabled={loading || !!error} title={t('打印账簿', 'Print ledger')} onClick={() => window.print()}><Printer size={18} />{t('打印', 'Print')}</button>
       </div>
       {loading ? <div className="inv-skeleton" aria-label={t('加载中', 'Loading')} role="status"><div /></div> : <section className="finance-statement">
         <header className="finance-report-heading"><h2>{reportTitle}</h2>
-          <p>{t('社团/学会', 'Club/Society')} : <input className="finance-no-print finance-club-input" aria-label={t('社团名称', 'Club name')} value={clubName} onChange={e => setClubName(e.target.value)} maxLength={60} /><span className="finance-print-only">{clubName}</span></p>
+          <p>{clubLabel} : {clubName}</p>
           <p>{reportRange}</p></header>
-        <div className="finance-table-scroll"><table className="finance-table"><colgroup><col style={{width:'11.548%'}}/><col style={{width:'56.402%'}}/><col style={{width:'16.666%'}}/><col style={{width:'15.384%'}}/></colgroup><thead><tr><th>{['类别','Type'].includes(format.category) ? '' : format.category}</th><th>{['项目','Description'].includes(format.item) ? '' : format.item}</th><th>RM</th><th>RM</th></tr></thead><tbody>
+        <div className="finance-table-scroll"><table className="finance-table"><colgroup><col style={{width:'11.548%'}}/><col style={{width:'56.402%'}}/><col style={{width:'16.666%'}}/><col style={{width:'15.384%'}}/></colgroup><thead><tr><th>{format.category}</th><th>{format.item}</th><th>RM</th><th>RM</th></tr></thead><tbody>
           <tr><td>{t('收入', 'Income')}</td><th>b/d</th><td>{opening >= 0 ? money(opening / 100) : ''}</td><td>{opening < 0 ? money(-opening / 100) : ''}</td></tr>
           {[...income, ...Array.from({length: Math.max(0, 6 - income.length)}, (_, i) => ({id: `blank-income-${i}`, blank: true})), ...expense, ...Array.from({length: Math.max(0, 10 - expense.length)}, (_, i) => ({id: `blank-expense-${i}`, blank: true}))].map((e, i) => <tr key={e.id}><td>{i === Math.max(6, income.length) ? t('支出', 'Expenses') : ''}</td><td><span className="finance-entry-title">{e.description}</span>{!e.blank && <small className="finance-no-print">{e.entry_date} · {e.actor_name}</small>}
             {e.claim_id && <button className="finance-no-print" onClick={async () => { const { data, error: err } = await supabase.from('finance_claims').select('*, finance_receipts(*), finance_reviews(*)').eq('id', e.claim_id).single(); if (err) setError(explain(err)); else open('detail', data) }}>{t('报销详情', 'Claim details')}</button>}
           </td><td>{Number(e.amount) > 0 ? money(e.amount) : ''}</td><td>{Number(e.amount) < 0 ? money(-Number(e.amount)) : ''}</td></tr>)}
           <tr><td></td><th>c/d</th><td>{closing < 0 ? money(-closing / 100) : ''}</td><td>{closing >= 0 ? money(closing / 100) : ''}</td></tr>
-        </tbody><tfoot><tr><th>{format.total === '合计' ? '总收入' : format.total}</th><td></td><td>{money(leftTotal / 100)}</td><td>{money(rightTotal / 100)}</td></tr></tfoot></table></div>
+        </tbody><tfoot><tr><th>{format.total}</th><td></td><td>{money(leftTotal / 100)}</td><td>{money(rightTotal / 100)}</td></tr></tfoot></table></div>
         <footer className="finance-print-only finance-signatures"><div className="finance-signature-grid">{[t('召集老师/指导老师', 'Convener/Advisor'), t('主席', 'President'), t('财政', 'Treasurer')].map(role => <div key={role}><div className="finance-signature-line"/><p>{role}</p><p className="finance-signature-name"><span>(</span><span>)</span></p></div>)}</div><p className="finance-generation-date">{t('日期', 'Date')} : {printDate.split('-').reverse().join('.')}</p></footer>
       </section>}
     </> : admin && tab === 'income' ? <>
@@ -248,7 +254,7 @@ export default function Finance({ currentUserProfile: profile, lang = 'zh', noti
           {!admin && detail.applicant_id === profile.id && ['treasury', 'president', 'teacher', 'returned'].includes(detail.status) && <button onClick={() => decision('cancel', detail)}>{t('取消申请', 'Cancel claim')}</button>}
         </div>
       </div> : <form onSubmit={run} className="inv-form">
-        {modal === 'format' && [['title', t('标题', 'Title'), 120], ['category', t('类别', 'Type'), 30], ['item', t('项目', 'Description'), 30], ['total', t('合计', 'Total'), 30]].map(([key, name, max]) => <Field key={key} title={name}><input required maxLength={max} value={form[key]} onChange={e => change(key, e.target.value)} /></Field>)}
+        {modal === 'format' && [['title', t('标题', 'Title'), 120], ['club_label', t('社团/学会栏标题', 'Club field label'), 60], ['club_name', t('社团名称', 'Club name'), 60], ['category', t('类别', 'Type'), 30], ['item', t('项目', 'Description'), 30], ['total', t('合计', 'Total'), 30]].map(([key, name, max]) => <Field key={key} title={name}><input required={!['category','item'].includes(key)} maxLength={max} value={form[key]} onChange={e => change(key, e.target.value)} /></Field>)}
         {['submit', 'resubmit'].includes(modal) && <><Field title={t('报销事项', 'Claim title')}><input required maxLength={160} value={form.title} onChange={e => change('title', e.target.value)} /></Field><Field title={t('说明', 'Description')}><textarea maxLength={3000} value={form.description} onChange={e => change('description', e.target.value)} /></Field><Field title={t('支出日期', 'Expense date')}><input type="date" required max={today()} value={form.expense_date} onChange={e => change('expense_date', e.target.value)} /></Field>
           <Field title={t('收据（最多 5 份，每份 20MB）', 'Receipts (up to 5, 20MB each)')}><input type="file" multiple accept="image/jpeg,image/png,image/webp,application/pdf" disabled={busy} onChange={e => { uploaded.current = []; setFiles(Array.from(e.target.files || [])) }} /></Field>
           {form.receipts.map((r, i) => <div className="inv-actions" key={r.path}><span>{r.name}</span><button type="button" aria-label={t('移除收据', 'Remove receipt')} onClick={() => change('receipts', form.receipts.filter((_, n) => n !== i))}><X size={16} /></button></div>)}

@@ -1,0 +1,10 @@
+<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head><body style="margin:0;padding:16px;background:#f0f7ff"><div id="root"></div><script type="module">
+import React from 'react'; import {createRoot} from 'react-dom/client'; import Page from '/src/pages/TaskPerformancePage.jsx'; import List from '/src/components/MobileDashboardList.jsx'; import {taskPerformance} from '/src/utils/taskPerformance.js'; import '/src/index.css';
+const team={rosterKey:'board:members',name:'2026 下半年会员名单'};
+import Cards from '/src/components/CollapsiblePerformanceCards.jsx';
+const rows=['甲同学','乙同学'].map((name,i)=>{const tasks=[{id:name,title:'海报',status:'completed',due_date:'2026-01-01T00:00:00Z',completed_at:i?'2026-01-02T00:00:00Z':'2026-01-01T00:00:00Z'}];return {user:{id:name,name},assignedTasks:tasks,...taskPerformance(tasks)}});
+createRoot(document.getElementById('root')).render(React.createElement(React.Fragment,null,
+React.createElement(Cards,{count:5,lang:'zh'},Array.from({length:5},(_,i)=>React.createElement('article',{key:i,style:{padding:16,color:'#245c83',background:'white'}},`成员 ${i+1}`))),
+React.createElement(List,{count:5,lang:'zh',label:'公告列表',className:'space-y-3 max-h-80 overflow-y-auto'},Array.from({length:5},(_,i)=>React.createElement('article',{key:i,style:{height:130,background:'white'}},`公告 ${i+1}`))),
+React.createElement(Page,{rows,teams:[team],activeTeam:team,onTeamChange:()=>{},teamName:t=>t.name,lang:'zh'})));
+</script></body></html>

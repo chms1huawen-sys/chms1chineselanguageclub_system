@@ -19,7 +19,7 @@ try {
       requests.push(url)
       let data = []
       if(url.pathname.endsWith('/finance_report_format')) data=[format]
-      if(url.pathname.endsWith('/finance_save_format')) { const b=route.request().postDataJSON(); format={lang:b.p_lang,title:b.p_title,category:b.p_category,item:b.p_item,total:b.p_total}; data=null }
+      if(url.pathname.endsWith('/finance_save_report_headings')) { const b=route.request().postDataJSON(); format={lang:b.p_lang,title:b.p_title,category:b.p_category,item:b.p_item,total:b.p_total,club_label:b.p_club_label,club_name:b.p_club_name}; data=null }
       if(url.pathname.endsWith('/finance_record_income')) { const body=route.request().postDataJSON(); assert.equal(body.p_data.amount,'15.50'); recordedIncome=true; data={notification_ids:[]} }
       if(url.pathname.endsWith('/finance_report_years')) data = [Number(new Date().getFullYear()),2025]
       if(url.pathname.endsWith('/finance_claims')) data = [claim]
@@ -89,10 +89,14 @@ try {
     assert.ok((await page.locator('.finance-report-heading').textContent()).includes(zh?'1月1日至6月30日':'01-01 to'))
     await page.getByLabel(zh?'半年':'Half-year',{exact:true}).selectOption('2')
     await page.getByRole('button',{name:zh?'编辑报表文字':'Edit report labels',exact:true}).click()
+    assert.equal(await dialog.getByLabel(zh?'标题':'Title',{exact:true}).inputValue(),zh?`${new Date().getFullYear()}年社团财政报告`:`${new Date().getFullYear()} Club Financial Report`)
+    await dialog.getByLabel(zh?'社团/学会栏标题':'Club field label',{exact:true}).fill('Club label')
+    await dialog.getByLabel(zh?'社团名称':'Club name',{exact:true}).fill('CLC_sys test')
     await dialog.getByLabel(zh?'标题':'Title',{exact:true}).fill('Updated statement')
     await dialog.getByRole('button',{name:zh?'确认':'Confirm',exact:true}).click()
     await dialog.waitFor({state:'hidden'})
     await page.getByRole('heading',{name:/Updated statement/}).waitFor()
+    assert.ok((await page.locator('.finance-report-heading').textContent()).includes('Club label : CLC_sys test'))
     assert.deepEqual(await page.locator('tfoot td').allTextContents().then(values=>values.filter(Boolean)),['563.30','563.30'])
     assert.equal(await page.getByLabel(zh?'月份':'Month',{exact:true}).count(),0)
     await page.getByRole('button',{name:zh?'月度':'Monthly',exact:true}).click()

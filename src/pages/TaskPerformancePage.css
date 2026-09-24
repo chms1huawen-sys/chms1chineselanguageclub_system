@@ -1,0 +1,24 @@
+.performance-page { color: #24435b; font-family: 'Nunito', sans-serif; min-width: 0; }
+.performance-back { display:inline-flex; gap:8px; align-items:center; min-height:44px; color:#256391; font-weight:700; }
+.performance-page header { display:flex; flex-wrap:wrap; justify-content:space-between; align-items:center; gap:16px; margin:16px 0; }
+.performance-page h1 { display:flex; gap:10px; align-items:center; font-size:24px; font-weight:800; }
+.performance-page select { max-width:100%; padding:12px; border:1px solid #95cbff; border-radius:12px; background:white; }
+.performance-caption { margin-bottom:20px; font-size:13px; line-height:1.7; }
+.performance-scroll { overflow:auto; max-height:65vh; border:1px solid #b8d8ed; border-radius:8px; background:white; }
+.performance-scroll table { width:100%; min-width:1000px; border-collapse:separate; border-spacing:0; font-size:13px; }
+.performance-scroll th,.performance-scroll td { padding:14px 12px; border-bottom:1px solid #e0edf6; text-align:center; }
+.performance-scroll thead th { position:sticky; top:0; background:#e1f1ff; z-index:2; }
+.performance-scroll th:first-child { position:sticky; left:0; background:white; z-index:1; width:165px; min-width:165px; max-width:165px; border-right:1px solid #d8e8f2; }
+.performance-scroll thead th:first-child { background:#e1f1ff; z-index:3; }
+.performance-scroll tbody tr:nth-child(even) td { background:#f7fbfe; }
+.performance-scroll button { display:inline-flex; gap:6px; align-items:center; min-height:36px; font-weight:700; }
+.performance-member { width:100%; text-align:left; overflow-wrap:anywhere; }
+.performance-scroll progress { display:block; width:75px; height:6px; margin:7px auto 0; accent-color:#438caf; }
+.performance-late { color:#b82950; font-weight:800; }
+.performance-loading { padding:30px; background:#e1f1ff; border-radius:8px; }
+.performance-detail { margin-top:24px; border-top:2px solid #95cbff; padding-top:16px; }
+.performance-detail h2 { font-size:18px; font-weight:800; }
+.performance-detail ul { max-height:320px; overflow:auto; }
+.performance-detail li { display:flex; flex-wrap:wrap; gap:12px; padding:12px 0; border-bottom:1px solid #d8e8f2; font-size:13px; }
+.performance-detail li strong { flex:1 1 100%; }
+@media(max-width:767px) { .performance-page h1 { font-size:21px; }.performance-page select { width:100%; }.performance-scroll th:first-child { width:120px; min-width:120px; max-width:120px; } }

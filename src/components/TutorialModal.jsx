@@ -1,4 +1,5 @@
 ﻿import React, { useState } from 'react'
+import { createPortal } from 'react-dom'
 import {
   X, ChevronRight, ChevronLeft, Smartphone, Monitor,
   CheckSquare, FolderGit, Shield, Bell, Camera
@@ -353,14 +354,14 @@ export default function TutorialModal({ onClose, lang = 'zh' }) {
   const current = steps[step]
 
   const handleClose = () => {
-    localStorage.setItem(`cls_tutorial_completed_${lang}`, '1')
+    try { localStorage.setItem(`cls_tutorial_completed_${lang}`, '1') } catch { /* Private browsing can disable storage. */ }
     onClose()
   }
 
-  return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4"
+  return createPortal(
+    <div className="fixed inset-0 z-[10000] flex items-center justify-center p-4"
       style={{ background: 'rgba(0,0,0,0.4)', backdropFilter: 'blur(8px)' }}>
-      <div className="relative bg-white rounded-3xl w-full max-w-lg shadow-2xl overflow-hidden flex flex-col max-h-[90vh]"
+      <div role="dialog" aria-modal="true" aria-label={lang === 'zh' ? '使用引导' : 'User guide'} className="relative bg-white rounded-3xl w-full max-w-lg shadow-2xl overflow-hidden flex flex-col max-h-[90dvh]"
         style={{ border: '1.5px solid #e0f1ff', boxShadow: '0 20px 60px rgba(149,203,255,0.25)' }}>
 
         {/* Top accent strip */}
@@ -372,7 +373,7 @@ export default function TutorialModal({ onClose, lang = 'zh' }) {
             <span className="text-[10px] font-black text-gray-400 uppercase tracking-wider">
               {lang === 'zh' ? `步骤 ${step + 1} / ${total}` : `Step ${step + 1} of ${total}`}
             </span>
-            <button onClick={handleClose} className="p-1.5 rounded-xl text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition cursor-pointer">
+            <button aria-label={lang === 'zh' ? '关闭引导' : 'Close guide'} onClick={handleClose} className="p-3 rounded-xl text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition cursor-pointer">
               <X size={14} />
             </button>
           </div>
@@ -385,7 +386,7 @@ export default function TutorialModal({ onClose, lang = 'zh' }) {
         </div>
 
         {/* Content */}
-        <div className="px-6 py-5 overflow-y-auto flex-1">
+        <div key={step} className="px-6 py-5 overflow-y-auto overscroll-contain min-h-0 flex-1">
           <div className="flex flex-col items-center text-center gap-3 mb-5">
             <div className="w-16 h-16 rounded-2xl flex items-center justify-center"
               style={{ background: '#f0f7ff', border: '1.5px solid #e0f1ff' }}>
@@ -435,6 +436,6 @@ export default function TutorialModal({ onClose, lang = 'zh' }) {
           )}
         </div>
       </div>
-    </div>
+    </div>, document.body
   )
 }

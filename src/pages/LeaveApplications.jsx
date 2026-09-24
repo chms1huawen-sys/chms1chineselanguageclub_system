@@ -598,7 +598,7 @@ export default function LeaveApplications({ currentUserProfile, lang = 'zh', not
                 {lang === 'zh' ? '暂无请假记录' : 'No leave records yet.'}
               </div>
             ) : (
-              <div className="divide-y" style={{ borderColor: '#f0f7ff' }}>
+                <div tabIndex={0} role="region" aria-label={lang === 'zh' ? '请假记录列表' : 'Leave records'} className="divide-y max-h-80 overflow-y-auto overscroll-contain" style={{ borderColor: '#f0f7ff' }}>
                 {filteredApplications.map(application => {
                   const badge = getLeaveBadge(application.leave_type)
                   return (

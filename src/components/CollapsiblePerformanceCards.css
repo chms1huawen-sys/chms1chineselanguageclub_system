@@ -1,0 +1,12 @@
+.performance-cards-grid:not(.is-expanded) > :nth-child(n+2) { display:none; }
+.performance-cards-toggle { display:flex; align-items:center; justify-content:center; gap:8px; width:100%; min-height:44px; margin-top:14px; border:1px solid #95cbff; border-radius:12px; background:#eff7ff; color:#245c83; font-size:13px; font-weight:700; }
+.performance-cards-section[data-count="0"] .performance-cards-toggle,
+.performance-cards-section[data-count="1"] .performance-cards-toggle { display:none; }
+@media(min-width:768px) {
+  .performance-cards-grid:not(.is-expanded) > :nth-child(2) { display:block; }
+  .performance-cards-section[data-count="2"] .performance-cards-toggle { display:none; }
+}
+@media(min-width:1280px) {
+  .performance-cards-grid:not(.is-expanded) > :nth-child(3) { display:block; }
+  .performance-cards-section[data-count="3"] .performance-cards-toggle { display:none; }
+}

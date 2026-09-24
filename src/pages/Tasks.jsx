@@ -1,6 +1,11 @@
 ﻿import React, { useState, useEffect } from 'react'
 import { supabase } from '../supabaseClient'
 import { createNotificationsAndPush } from '../utils/pushNotifications'
+import { taskPerformance } from '../utils/taskPerformance'
+import TaskPerformancePage from './TaskPerformancePage'
+import CollapsiblePerformanceCards from '../components/CollapsiblePerformanceCards'
+import { useRef } from 'react'
+import { isExecutiveAccount, taskRosterOptions, taskRosterName } from '../utils/taskRosters'
 import UserAvatar from '../components/UserAvatar'
 import { canViewTaskPerformance, hasPermission } from '../utils/permissions'
 import {
@@ -73,12 +78,15 @@ const inputStyle = {
   padding: '10px 14px'
 }
 
-export default function Tasks({ currentUserProfile, lang, notify }) {
+export default function Tasks({ currentUserProfile, lang, notify, comparisonOnly = false }) {
   const _ = (zh, en) => lang === 'zh' ? zh : en
+  const teamDisplayName = team => taskRosterName(team, lang)
   const [tasks, setTasks] = useState([])
   const [teams, setTeams] = useState([])
   const [activeTeam, setActiveTeam] = useState(null)
   const [users, setUsers] = useState([])
+  const [committeeMembers, setCommitteeMembers] = useState([])
+  const taskLoadVersion = useRef(0)
   const [loading, setLoading] = useState(true)
   const [errorMsg, setErrorMsg] = useState('')
   const [successMsg, setSuccessMsg] = useState('')
@@ -121,12 +129,13 @@ export default function Tasks({ currentUserProfile, lang, notify }) {
   }, [errorMsg])
 
   useEffect(() => {
+    if (comparisonOnly && !canViewPerformance) return
     fetchInitialData()
   }, [])
 
   useEffect(() => {
     if (!activeTeam) return
-
+    setTasks([])
     fetchTasks(activeTeam.id)
 
     // Subscribe to task changes for realtime Kanban sync
@@ -142,6 +151,7 @@ export default function Tasks({ currentUserProfile, lang, notify }) {
       .subscribe()
 
     return () => {
+      taskLoadVersion.current += 1
       supabase.removeChannel(tasksChannel)
     }
   }, [activeTeam])
@@ -180,14 +190,16 @@ export default function Tasks({ currentUserProfile, lang, notify }) {
           ...(membershipResult.data || []).map(item => item.team_id),
           ...(assignedTasksResult.data || []).map(item => item.team_id),
         ])
-        visibleTeams = visibleTeams.filter(team => visibleTeamIds.has(team.id))
+        visibleTeams = visibleTeams.filter(team => team.type === 'board' || visibleTeamIds.has(team.id))
       }
 
+      visibleTeams = taskRosterOptions(visibleTeams, currentUserProfile)
       setTeams(visibleTeams)
 
       if (visibleTeams.length > 0) {
         // Set the active team to the first board type, or just the first available team
-        const defaultTeam = visibleTeams.find(t => t.type === 'board') || visibleTeams[0]
+        const requestedRoster = new URLSearchParams(window.location.hash.split('?')[1] || '').get('roster')
+        const defaultTeam = visibleTeams.find(t => t.rosterKey === requestedRoster) || visibleTeams.find(t => t.type === 'board') || visibleTeams[0]
         setActiveTeam(defaultTeam)
       } else {
         // If there are absolutely no teams, we can offer to create a default board session
@@ -203,6 +215,12 @@ export default function Tasks({ currentUserProfile, lang, notify }) {
 
       if (usersError) throw usersError
       setUsers(usersData || [])
+      const eventIds = visibleTeams.filter(team => team.type === 'event').map(team => team.id)
+      if (eventIds.length) {
+        const result = await supabase.from('team_members').select('team_id,user_id').in('team_id', eventIds)
+        if (result.error) throw result.error
+        setCommitteeMembers(result.data || [])
+      } else setCommitteeMembers([])
 
     } catch (err) {
       setErrorMsg(err.message || _('获取初始化数据失败', 'Failed to load initial data.'))
@@ -234,7 +252,7 @@ export default function Tasks({ currentUserProfile, lang, notify }) {
       const { data, error } = await supabase
         .from('teams')
         .insert({
-          name: `一中华文学会 ${sessionLabel} 名单`,
+          name: `一中华文学会 ${sessionLabel} 会员名单`,
           type: 'board',
           session: sessionCode,
           is_archived: false,
@@ -259,7 +277,7 @@ export default function Tasks({ currentUserProfile, lang, notify }) {
         if (memberError) throw memberError
       }
 
-      setSuccessMsg(_(`已根据账号管理建立 ${sessionLabel} 执委层名单，共 ${rosterRows.length} 人。`, `${sessionLabel} executive level roster created (${rosterRows.length} members).`))
+      setSuccessMsg(_(`已根据账号管理建立 ${sessionLabel} 学会会员名单，共 ${rosterRows.length} 人。`, `${sessionLabel} club membership roster created (${rosterRows.length} members).`))
       fetchInitialData()
     } catch (err) {
       setErrorMsg(err.message)
@@ -269,13 +287,16 @@ export default function Tasks({ currentUserProfile, lang, notify }) {
   }
 
   const fetchTasks = async (teamId) => {
+    const requestVersion = ++taskLoadVersion.current
     setErrorMsg('')
     try {
       let query = supabase
         .from('tasks')
         .select('*')
         .eq('team_id', teamId)
-        .order('created_at', { ascending: false })
+          .order('created_at', { ascending: false })
+
+      if (activeTeam?.type === 'board') query = query.eq('task_scope', activeTeam.task_scope)
 
       if (!isPowerUser && currentUserProfile?.id) {
         query = query.contains('assigned_to', [currentUserProfile.id])
@@ -284,9 +305,9 @@ export default function Tasks({ currentUserProfile, lang, notify }) {
       const { data, error } = await query
 
       if (error) throw error
-      setTasks(data || [])
+      if (requestVersion === taskLoadVersion.current) setTasks(data || [])
     } catch (err) {
-      setErrorMsg(err.message || _('获取任务列表失败', 'Failed to load tasks.'))
+      if (requestVersion === taskLoadVersion.current) setErrorMsg(err.code === '42703' ? _('请先运行任务名单分组 SQL，再刷新页面。', 'Run the task roster scopes SQL, then refresh.') : err.message || _('获取任务列表失败', 'Failed to load tasks.'))
     }
   }
 
@@ -430,6 +451,7 @@ export default function Tasks({ currentUserProfile, lang, notify }) {
     status: formData.status,
     completed_at: formData.status === 'completed' ? new Date().toISOString() : null,
     team_id: activeTeam.id,
+    ...(activeTeam.type === 'board' ? { task_scope: activeTeam.task_scope } : {}),
     created_by: currentUserProfile.id
   })
 
@@ -444,7 +466,7 @@ export default function Tasks({ currentUserProfile, lang, notify }) {
 
       if (isEditing && selectedTask) {
         payload.completed_at = payload.status === 'completed'
-          ? (selectedTask.status === 'completed' ? selectedTask.completed_at || new Date().toISOString() : new Date().toISOString())
+          ? (selectedTask.status === 'completed' ? selectedTask.completed_at || null : new Date().toISOString())
           : null
         const { error } = await supabase
           .from('tasks')
@@ -543,6 +565,7 @@ export default function Tasks({ currentUserProfile, lang, notify }) {
   }
 
   const handleUpdateStatus = async (task, newStatus) => {
+    if (task.status === newStatus) return
     setErrorMsg('')
     try {
       const statusPayload = {
@@ -671,60 +694,28 @@ export default function Tasks({ currentUserProfile, lang, notify }) {
     return new Date(task.due_date) < new Date()
   }
 
-  const isCompletedLate = (task) => {
-    if (!task.due_date || task.status !== 'completed' || !task.completed_at) return false
-    return new Date(task.completed_at) > new Date(task.due_date)
-  }
-
   const memberPerformance = users.map(user => {
     const assignedTasks = tasks.filter(task => task.assigned_to?.includes(user.id))
-    const completed = assignedTasks.filter(task => task.status === 'completed').length
-    const pending = assignedTasks.filter(task => task.status === 'pending').length
-    const inProgress = assignedTasks.filter(task => task.status === 'in_progress').length
-    const needHelp = assignedTasks.filter(task => task.status === 'need_help').length
-    const activeOverdue = assignedTasks.filter(isOverdue).length
-    const completedLate = assignedTasks.filter(isCompletedLate).length
-    const overdue = activeOverdue + completedLate
-    const total = assignedTasks.length
-    const completionRate = total ? Math.round((completed / total) * 100) : 0
-
-    let label = _('暂无任务', 'No tasks')
-    let labelColor = '#6b7280'
-    let labelBg = '#f3f4f6'
-    if (total > 0) {
-      if (overdue > 0 || pending >= 3 || completionRate < 40) {
-        label = _('需跟进', 'Needs Follow-up')
-        labelColor = '#dc2626'
-        labelBg = '#fef2f2'
-      } else if (completionRate >= 75 && overdue === 0) {
-        label = _('积极', 'Active')
-        labelColor = '#059669'
-        labelBg = '#ecfdf5'
-      } else {
-        label = _('稳定', 'Steady')
-        labelColor = '#2563eb'
-        labelBg = '#eff6ff'
-      }
+    const metrics = taskPerformance(assignedTasks)
+    const labels = {
+      none: _('暂无任务', 'No tasks'), overdue: _('逾期需跟进', 'Overdue'),
+      help: _('需要协助', 'Needs help'), late: _('有迟交记录', 'Late history'),
+      unknown: _('完成时间待核实', 'Timing unknown'), done: _('全部按时完成', 'All on time'),
+      open: _('尚有任务待完成', 'Tasks remaining'),
     }
-
     return {
       user,
-      total,
-      completed,
-      pending,
-      inProgress,
-      needHelp,
-      overdue,
-      activeOverdue,
-      completedLate,
-      completionRate,
-      label,
-      labelColor,
-      labelBg,
+      assignedTasks,
+      ...metrics,
+      label: labels[metrics.assessment],
+      labelColor: metrics.activeOverdue ? '#b91c1c' : '#245c83',
+      labelBg: metrics.activeOverdue ? '#fff1f2' : '#edf6ff',
     }
   })
     .filter(item => item.total > 0)
     .sort((a, b) => b.overdue - a.overdue || b.total - a.total || a.user.name.localeCompare(b.user.name))
+
+  if (comparisonOnly) return canViewPerformance ? <TaskPerformancePage rows={memberPerformance} teams={teams} activeTeam={activeTeam} onTeamChange={setActiveTeam} teamName={teamDisplayName} lang={lang} error={errorMsg} loading={loading} /> : <p>{_('没有查看权限', 'Access denied')}</p>
 
   return (
     <div className="space-y-6" style={{ fontFamily: "'Nunito', sans-serif" }}>
@@ -747,8 +738,8 @@ export default function Tasks({ currentUserProfile, lang, notify }) {
           {teams.length > 0 ? (
             <div className="relative inline-block">
               <select
-                value={activeTeam?.id || ''}
-                onChange={(e) => setActiveTeam(teams.find(t => t.id === e.target.value))}
+                value={activeTeam?.rosterKey || ''}
+                onChange={(e) => setActiveTeam(teams.find(t => t.rosterKey === e.target.value))}
                 className="appearance-none pr-10 pl-4 py-2.5 text-sm font-black rounded-2xl cursor-pointer transition outline-none"
                 style={{
                   background: 'white',
@@ -758,8 +749,8 @@ export default function Tasks({ currentUserProfile, lang, notify }) {
                 }}
               >
                 {teams.map(t => (
-                  <option key={t.id} value={t.id}>
-                    {t.type === 'board' ? _('📅 执委层: ', '📅 Executive Level: ') : _('🏆 筹委: ', '🏆 Committee: ')} {t.name} ({t.session})
+                  <option key={t.rosterKey} value={t.rosterKey}>
+                    {t.type === 'event' && _('筹委: ', 'Committee: ')}{teamDisplayName(t)} {t.type !== 'board' && `(${t.session})`}
                   </option>
                 ))}
               </select>
@@ -773,7 +764,7 @@ export default function Tasks({ currentUserProfile, lang, notify }) {
                 onClick={handleCreateDefaultSession}
                 className="px-4 py-2 text-xs font-black rounded-2xl bg-amber-100 text-amber-700 border border-amber-300 hover:bg-amber-200 transition cursor-pointer"
               >
-                {_('⚠️ 根据账号身份建立执委层名单', '⚠️ Create executive level roster from accounts')}
+                {_('⚠️ 根据账号建立学会会员名单', '⚠️ Create club membership roster from accounts')}
               </button>
             )
           )}
@@ -844,21 +835,23 @@ export default function Tasks({ currentUserProfile, lang, notify }) {
                 <TrendingUp size={18} style={{ color: '#95CBFF' }} />
                 {_('成员任务表现', 'Member Task Performance')}
               </h2>
+              <a href={`#/task-performance?roster=${encodeURIComponent(activeTeam.rosterKey)}`} className="inline-flex items-center gap-2 text-sm font-bold text-blue-700 min-h-11">{_('查看成员对比表', 'Open comparison table')}<ArrowRight size={16}/></a>
               <p className="text-xs font-semibold text-gray-500 mt-1">
                 {_('只供召集老师、指导老师、主席和副主席查看，用于掌握任务完成积极度。', 'Visible only to convener, advisor, president and vice president.')}
               </p>
             </div>
             <span className="text-[10px] font-black px-3 py-1 rounded-full bg-[#f0f7ff] text-[#4b8ed8] border border-[#e0f1ff] self-start sm:self-auto">
-              {_('当前团队', 'Current Team')}: {activeTeam.name}
+              {_('当前团队', 'Current Team')}: {teamDisplayName(activeTeam)}
             </span>
           </div>
 
+          <p className="text-xs text-gray-600 leading-relaxed mb-4">{_('仅统计当前团队仍保留的任务；完成率 = 完成 / 总数，准时率 = 按时完成 / 可核实完成时间的任务。未到期任务不会被判为消极；多人任务的完成状态共同计算，不代表个人贡献评分。', 'Existing tasks in this team only. Completion = completed / total; on-time rate = on-time / completions with verifiable dates. Future tasks are not penalised. Shared task status is not an individual contribution score.')}</p>
           {memberPerformance.length === 0 ? (
             <div className="text-center py-8 rounded-2xl text-xs font-bold text-gray-400 border-2 border-dashed border-gray-100">
               {_('目前还没有成员被分配任务。', 'No members have assigned tasks yet.')}
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
+            <CollapsiblePerformanceCards key={activeTeam.rosterKey} count={memberPerformance.length} lang={lang}>
               {memberPerformance.map(item => (
                 <div key={item.user.id} className="p-4 rounded-2xl border border-[#e0f1ff] bg-[#fcfcfc] space-y-3">
                   <div className="flex items-start justify-between gap-3">
@@ -917,9 +910,21 @@ export default function Tasks({ currentUserProfile, lang, notify }) {
                       {_('未完成逾期', 'Overdue open')}: {item.activeOverdue} · {_('完成迟交', 'Completed late')}: {item.completedLate}
                     </p>
                   )}
+                  <div className="text-xs text-gray-600 space-y-1 border-t border-gray-100 pt-2">
+                    <p>{_('准时完成', 'On-time completions')}: {item.onTime} / {item.timedCompleted} ({item.onTimeRate === null ? '—' : `${item.onTimeRate}%`})</p>
+                    <p>{_('需要协助', 'Needs help')}: {item.needHelp} · {_('缺少完成或截止时间', 'Missing completion/deadline')}: {item.unknownTiming}</p>
+                  </div>
+                  <details className="text-xs text-gray-600">
+                    <summary className="cursor-pointer font-bold">{_('查看计算明细', 'View task evidence')}</summary>
+                    <div className="max-h-48 overflow-y-auto divide-y mt-2">{item.assignedTasks.map(task => <button key={task.id} onClick={() => openDetailModal(task)} className="block w-full text-left py-2 break-words">
+                      <strong>{task.title}</strong><br/>
+                      {_('截止', 'Due')}: {task.due_date ? new Date(task.due_date).toLocaleString(lang === 'zh' ? 'zh-CN' : 'en-GB') : '—'}<br/>
+                      {_('完成', 'Completed')}: {task.completed_at ? new Date(task.completed_at).toLocaleString(lang === 'zh' ? 'zh-CN' : 'en-GB') : '—'}
+                    </button>)}</div>
+                  </details>
                 </div>
               ))}
-            </div>
+            </CollapsiblePerformanceCards>
           )}
         </section>
       )}
@@ -934,7 +939,7 @@ export default function Tasks({ currentUserProfile, lang, notify }) {
         <div className="text-center py-20 rounded-3xl font-semibold"
           style={{ background: '#f0f7ff', border: '1.5px solid #e0f1ff', color: '#6b7280' }}>
           {isPowerUser
-            ? _('⚠️ 系统暂无执委层名单。请联系顾问老师或主席点击上方按钮，系统会根据账号管理里的身份自动建立当前执委层名单。', '⚠️ No executive level roster found. Ask the convener teacher or president to create one using the button above.')
+            ? _('⚠️ 系统暂无学会会员名单。请联系老师或主席根据账号管理建立当前学会会员名单。', '⚠️ No club membership roster found. Ask a teacher or president to create one from the member accounts.')
             : _('目前没有与你相关的任务团队。被加入筹委或被分配任务后，这里会自动显示。', 'No task teams related to you yet. Teams will appear here after you are added or assigned tasks.')}
         </div>
       ) : (
@@ -1187,7 +1192,7 @@ export default function Tasks({ currentUserProfile, lang, notify }) {
                 </label>
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 p-3.5 rounded-2xl max-h-[160px] overflow-y-auto"
                   style={{ background: '#f0f7ff', border: '1.5px solid #95CBFF' }}>
-                  {users.map(u => {
+                  {users.filter(u => activeTeam?.type === 'event' ? committeeMembers.some(m => m.team_id === activeTeam.id && m.user_id === u.id) : activeTeam?.task_scope !== 'executive' || isExecutiveAccount(u)).map(u => {
                     const isChecked = formData.assigned_to.includes(u.id)
                     return (
                       <button

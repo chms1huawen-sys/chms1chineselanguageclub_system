@@ -27,6 +27,8 @@ test('finance approval stages, receipts privacy, decimal ledger and duplicate pa
     await db.exec(reportSql); await db.exec(reportSql)
     const formatSql = await readFile(new URL('../supabase_migration_2026_09_24_finance_format.sql', import.meta.url), 'utf8')
     await db.exec(formatSql); await db.exec(formatSql)
+    const headingsSql = await readFile(new URL('../supabase_migration_2026_09_24_finance_report_headings.sql', import.meta.url), 'utf8')
+    await db.exec(headingsSql); await db.exec(headingsSql)
     const [member,other,treasurer,president,teacher,custom] = Array.from({length:6},randomUUID)
     for (const [id,role] of [[member,'ordinary_member'],[other,'ordinary_member'],[treasurer,'treasurer'],[president,'chairperson'],[teacher,'advisor_teacher'],[custom,'custom']]) await db.query('insert into users(id,name,role) values($1,$2,$2)',[id,role])
     const as = async id => { await db.exec('reset role'); await db.query("select set_config('request.jwt.claim.sub',$1,false)",[id]); await db.exec('set role authenticated') }
@@ -117,7 +119,14 @@ test('finance approval stages, receipts privacy, decimal ledger and duplicate pa
     const before = JSON.stringify((await db.query('select * from finance_ledger order by id')).rows)
     await db.query("select finance_save_format('zh','年度收支','分类','明细','总计')")
     assert.equal((await db.query("select title from finance_report_format where lang='zh'")).rows[0].title,'年度收支')
-    assert.equal((await db.query("select title from finance_report_format where lang='en'")).rows[0].title,'CLC_sys · Financial Statement')
+    assert.equal((await db.query("select title from finance_report_format where lang='en'")).rows[0].title,'{year} Club Financial Report')
+    await db.query("select finance_save_report_headings('zh','{year}年财政报告','','','合计','社团名称','华文学会')")
+    const saved = (await db.query("select * from finance_report_format where lang='zh'")).rows[0]
+    assert.equal(saved.club_name,'华文学会')
+    assert.equal(saved.club_label,'社团名称')
+    assert.equal(saved.category,'')
     assert.equal(JSON.stringify((await db.query('select * from finance_ledger order by id')).rows),before)
+    await as(member)
+    await assert.rejects(db.query("select finance_save_report_headings('zh','Blocked','','','合计','学会','test')"),/FINANCE_FORBIDDEN/)
   } finally { await db.close() }
 })

@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react'
+import MobileDashboardList from '../components/MobileDashboardList'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../supabaseClient'
 import { createNotificationsAndPush, syncAnnouncementNotifications } from '../utils/pushNotifications'
@@ -674,7 +675,7 @@ export default function Dashboard({ currentUserProfile, lang = 'zh', onShowTutor
           </div>
           {activeTab === 'announcements' ? (
             announcements.length === 0 ? <EmptyText text={lang === 'zh' ? '暂无系统公告' : 'No announcements'} /> : (
-              <div className="space-y-3">
+              <MobileDashboardList count={announcements.length} lang={lang} label={lang === 'zh' ? '公告列表' : 'Announcements'} className="space-y-3 max-h-80 overflow-y-auto overscroll-contain pr-2">
                 {announcements.map(item => (
                   <div key={item.id} className="p-3 rounded-2xl min-w-0" style={{ background: item.is_pinned ? '#fff7fb' : '#f0f7ff', border: `1.5px solid ${item.is_pinned ? '#FFB3C6' : '#e0f1ff'}` }}>
                     <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
@@ -699,7 +700,7 @@ export default function Dashboard({ currentUserProfile, lang = 'zh', onShowTutor
                     <p className="text-[10px] font-bold mt-2" style={{ color: '#9ca3af' }}>{item.author?.name || '-'} · {new Date(item.created_at).toLocaleString()}</p>
                   </div>
                 ))}
-              </div>
+              </MobileDashboardList>
             )
           ) : (
             activityFeed.length === 0 ? <EmptyText text={lang === 'zh' ? '暂无系统动态' : 'No activity'} /> : (
@@ -728,7 +729,7 @@ export default function Dashboard({ currentUserProfile, lang = 'zh', onShowTutor
             {leaveApplications.length === 0 ? (
               <EmptyText text={lang === 'zh' ? '暂无请假历史' : 'No leave applications'} />
             ) : (
-              <div className="space-y-3">
+              <MobileDashboardList count={leaveApplications.length} lang={lang} label={lang === 'zh' ? '请假记录列表' : 'Leave records'} className="space-y-3 max-h-64 overflow-y-auto overscroll-contain pr-2">
                 {leaveApplications.map(leave => {
                   const status = STATUS_LABELS[leave.status || 'pending'] || STATUS_LABELS.pending
                   return (
@@ -748,7 +749,7 @@ export default function Dashboard({ currentUserProfile, lang = 'zh', onShowTutor
                     </div>
                   )
                 })}
-              </div>
+              </MobileDashboardList>
             )}
           </div>
         )}

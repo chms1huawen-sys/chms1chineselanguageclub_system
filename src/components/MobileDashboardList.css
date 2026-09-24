@@ -1,0 +1,7 @@
+.dashboard-mobile-list-toggle { display: none; }
+@media (max-width: 767px) {
+  .dashboard-mobile-list:not(.is-expanded) { max-height: none; overflow-y: visible; }
+  .dashboard-mobile-list:not(.is-expanded) > :nth-child(n+3) { display: none; }
+  .dashboard-mobile-list.is-expanded { max-height: 320px; overflow-y: auto; overscroll-behavior: contain; }
+  .dashboard-mobile-list-toggle { display: flex; align-items: center; justify-content: center; gap: 6px; width: 100%; min-height: 44px; margin-top: 12px; border: 1px solid #95cbff; border-radius: 12px; background: #eef7ff; color: #245c83; font-weight: 700; font-size: 13px; }
+}
