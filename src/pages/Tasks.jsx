@@ -2,6 +2,7 @@
 import { supabase } from '../supabaseClient'
 import { createNotificationsAndPush } from '../utils/pushNotifications'
 import { taskPerformance } from '../utils/taskPerformance'
+import { compareMembers } from '../utils/memberOrder'
 import TaskPerformancePage from './TaskPerformancePage'
 import CollapsiblePerformanceCards from '../components/CollapsiblePerformanceCards'
 import { useRef } from 'react'
@@ -713,7 +714,7 @@ export default function Tasks({ currentUserProfile, lang, notify, comparisonOnly
     }
   })
     .filter(item => item.total > 0)
-    .sort((a, b) => b.overdue - a.overdue || b.total - a.total || a.user.name.localeCompare(b.user.name))
+    .sort((a, b) => compareMembers(a.user, b.user))
 
   if (comparisonOnly) return canViewPerformance ? <TaskPerformancePage rows={memberPerformance} teams={teams} activeTeam={activeTeam} onTeamChange={setActiveTeam} teamName={teamDisplayName} lang={lang} error={errorMsg} loading={loading} /> : <p>{_('没有查看权限', 'Access denied')}</p>
 

@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import { supabase } from '../supabaseClient'
 import { hasPermission } from '../utils/permissions'
+import TermReport from '../components/TermReport'
 import {
   AlertTriangle,
   Calendar,
@@ -285,6 +286,7 @@ export default function Handover({ currentUserProfile, lang, notify }) {
         </p>
       </div>
 
+      <TermReport lang={lang} roleLabel={getRoleLabel} />
       {loading ? (
         <div className="flex flex-col items-center justify-center py-20 gap-3 text-gray-500">
           <Loader size={32} style={{ color: '#95CBFF', animation: 'spin 1s linear infinite' }} />

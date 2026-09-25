@@ -6,6 +6,7 @@ import PositionSelect from '../components/PositionSelect'
 import UserAvatar from '../components/UserAvatar'
 import AvatarPreviewModal from '../components/AvatarPreviewModal'
 import { PERMISSION_FIELDS, hasPermission } from '../utils/permissions'
+import { compareMembers } from '../utils/memberOrder'
 
 const ROLE_OPTIONS = [
   { value: 'convener_teacher', zh: '召集老师', en: 'Convener Teacher', bg: '#ffe4ec', color: '#be185d', border: '#FFB3C6' },
@@ -29,17 +30,7 @@ const ROLE_OPTIONS = [
 ]
 
 const ROLE_LABELS = Object.fromEntries(ROLE_OPTIONS.map(role => [role.value, role]))
-const ROLE_ORDER = ROLE_OPTIONS.map(role => role.value)
-const getRoleRank = (role) => {
-  const index = ROLE_ORDER.indexOf(role)
-  return index === -1 ? ROLE_ORDER.length : index
-}
-const sortMembersByRole = (list = []) => [...list].sort((a, b) => {
-  const roleDiff = getRoleRank(a.role) - getRoleRank(b.role)
-  if (roleDiff !== 0) return roleDiff
-  if (a.is_active !== b.is_active) return a.is_active ? -1 : 1
-  return (a.name || '').localeCompare(b.name || '', 'zh-Hans')
-})
+const sortMembersByRole = (list = []) => [...list].sort(compareMembers)
 const getMemberRoleLabel = (member) => {
   const base = ROLE_LABELS[member.role] || { zh: member.role, en: member.role, bg: '#f5f5f5', color: '#6b7280', border: '#d1d5db' }
   if (member.role === 'custom' && member.custom_role_label) {

@@ -1,14 +1,16 @@
 import { useState } from 'react'
 import { ArrowLeft, ArrowUpDown, Table2 } from 'lucide-react'
 import UserAvatar from '../components/UserAvatar'
+import { compareMembers } from '../utils/memberOrder'
 import './TaskPerformancePage.css'
 
 export default function TaskPerformancePage({ rows, teams, activeTeam, onTeamChange, teamName, lang, error, loading }) {
   const t = (zh, en) => lang === 'zh' ? zh : en
-  const [sort, setSort] = useState({ key: 'activeOverdue', descending: true })
+  const [sort, setSort] = useState({ key: 'role', descending: false })
   const [selected, setSelected] = useState(null)
   const columns = [['total',t('总任务','Tasks')], ['completionRate',t('完成率','Completion')], ['onTimeRate',t('准时率','On time')], ['activeOverdue',t('逾期未完成','Overdue open')], ['completedLate',t('已完成但迟交','Completed late')], ['needHelp',t('需协助','Needs help')], ['unknownTiming',t('时间资料缺失','Missing dates')]]
   const sorted = [...rows].sort((a,b) => {
+    if (sort.key === 'role') return compareMembers(a.user,b.user)
     if (a[sort.key] == null) return b[sort.key] == null ? 0 : 1
     if (b[sort.key] == null) return -1
     return (sort.descending ? -1 : 1) * (a[sort.key]-b[sort.key]) || a.user.name.localeCompare(b.user.name)

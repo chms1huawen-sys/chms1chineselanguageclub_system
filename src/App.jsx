@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { HashRouter as Router, Routes, Route, Link, Navigate, useLocation, useNavigate } from 'react-router-dom'
 import { supabase } from './supabaseClient'
+import './mobileNavigation.css'
 import { listenForegroundMessages } from './firebase'
 import Login from './pages/Login'
 import Dashboard from './pages/Dashboard'
@@ -316,7 +317,7 @@ function AppShell({ user, profile, onLogout, lang, setLang, onProfileUpdate }) {
   }
 
   return (
-    <div className="min-h-screen flex flex-col md:flex-row overflow-x-hidden" style={{ background: '#f0f7ff', fontFamily: "'Nunito', sans-serif" }}>
+    <div className={`min-h-screen flex flex-col md:flex-row overflow-x-hidden ${mobileMenuOpen ? 'club-mobile-menu-open' : ''}`} style={{ background: '#f0f7ff', fontFamily: "'Nunito', sans-serif" }}>
       <ToastStack toasts={toasts} onDismiss={dismissToast} />
 
       {/* Tutorial Modal */}
@@ -350,7 +351,7 @@ function AppShell({ user, profile, onLogout, lang, setLang, onProfileUpdate }) {
 
       {/* Sidebar */}
       <aside className={`
-        fixed inset-y-0 left-0 z-40 w-64 p-5 flex flex-col justify-between transition-transform duration-300 ease-in-out shrink-0
+        club-sidebar fixed inset-y-0 left-0 z-40 w-64 p-5 flex flex-col justify-between transition-transform duration-300 ease-in-out shrink-0
         md:relative md:translate-x-0
         ${mobileMenuOpen ? 'translate-x-0' : '-translate-x-full md:flex'}
       `} style={{ background: '#95CBFF', borderRight: '1.5px solid #6db8ff', overflow: 'hidden' }}>
@@ -361,6 +362,7 @@ function AppShell({ user, profile, onLogout, lang, setLang, onProfileUpdate }) {
         <div style={{ position: 'absolute', bottom: 80, right: 20, width: 60, height: 60, borderRadius: '50%', background: '#FFB3C6', opacity: 0.25, pointerEvents: 'none' }} />
 
         <div className="space-y-6" style={{ position: 'relative', zIndex: 1 }}>
+          <div className="flex items-center justify-between md:hidden text-white font-bold"><span>{lang === 'zh' ? '导航菜单' : 'Navigation'}</span><button aria-label={lang === 'zh' ? '关闭导航菜单' : 'Close navigation'} className="p-3" onClick={() => setMobileMenuOpen(false)}><X size={20}/></button></div>
           {/* Logo + Language toggle */}
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
@@ -451,7 +453,7 @@ function AppShell({ user, profile, onLogout, lang, setLang, onProfileUpdate }) {
       {/* Mobile overlay */}
       {mobileMenuOpen && (
         <div onClick={() => setMobileMenuOpen(false)}
-          className="fixed inset-0 z-30 md:hidden"
+          className="club-sidebar-overlay fixed inset-0 z-30 md:hidden"
           style={{ background: 'rgba(149,203,255,0.3)', backdropFilter: 'blur(2px)' }} />
       )}
 
