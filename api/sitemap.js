@@ -17,6 +17,6 @@ export default async function handler(req, res) {
     }
     const origin = escapeHtml(siteOrigin(process.env))
     res.setHeader('Content-Type', 'application/xml; charset=utf-8')
-    return res.status(200).send(`<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${['/', '/activities', '/bookroom', '/about'].map(path => `<url><loc>${origin}${path}</loc></url>`).join('')}${rows.map(p => `<url><loc>${origin}/blog/${escapeHtml(p.slug)}</loc><lastmod>${escapeHtml(p.updated_at)}</lastmod></url>`).join('')}</urlset>`)
+    return res.status(200).send(`<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${['/', '/literature', '/activities', '/bookroom', '/news', '/about'].map(path => `<url><loc>${origin}${path}</loc></url>`).join('')}${rows.map(p => `<url><loc>${origin}/blog/${escapeHtml(p.slug)}</loc><lastmod>${escapeHtml(p.updated_at)}</lastmod></url>`).join('')}</urlset>`)
   } catch { return res.status(503).send('Sitemap temporarily unavailable') }
 }

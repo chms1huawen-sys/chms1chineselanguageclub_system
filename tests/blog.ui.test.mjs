@@ -18,7 +18,7 @@ try {
     let data = []
     if (table === 'blog_settings') data = settings
     if (table === 'blog_categories') data = [{ id: categoryId, name: '学会活动' }]
-    if (table === 'blog_posts') data = [{ ...post, content_year: 2026, content_type: 'article' }]
+    if (table === 'blog_posts') data = [{ ...post, content_year: 2026, content_type: 'event' }]
     if (table === 'blog_media') data = media
     if (table === 'blog_analytics_report') data = { views: 12, visitors: 6, sessions: 8, daily: [{ date: '2026-09-25', views: 12, visitors: 6 }], pages: [{ path: '/', views: 12, visitors: 6 }], sources: [{ source: '(direct)', views: 12 }], recent: [{ visited_at: '2026-09-25T04:00:00Z', path: '/', source: '(direct)', device: 'mobile' }] }
     if (table === 'blog_downloads') { driveRequests++; data = { drive_url: 'https://drive.google.com/drive/folders/members-only-originals' } }
@@ -76,7 +76,7 @@ try {
     await page.goto(root + '/tests/fixtures/blog.html?mode=admin')
     await page.getByRole('heading', { name: '总览', exact: true }).waitFor()
     await page.screenshot({ path: `test-results/blog/studio-${width}.png`, fullPage: true })
-    for (const name of ['访问统计', '网站设置', '分类与标签', '独立相册', '回收站']) {
+    for (const name of ['访问统计', '网站设置', '分类与标签', '活动记录', '回收站']) {
       await page.getByRole('button', { name, exact: true }).click()
       await page.getByRole('heading', { name, exact: true }).first().waitFor()
       assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false, name)

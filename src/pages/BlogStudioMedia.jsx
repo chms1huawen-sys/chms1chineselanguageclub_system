@@ -31,7 +31,7 @@ export function StudioImage({ path, alt = '', publicAsset = false }) {
 export default function StudioMedia({ owner, kind, media, setMedia, changeCover, savedCover, disabled, run, setDirty, en }) {
   const t = (zh, english) => en ? english : zh
   const field = kind === 'album' ? 'album_id' : 'post_id'
-  const limit = kind === 'album' ? 300 : 60
+  const limit = 300
   async function upload(files) {
     await run(async () => {
       if (files.length + media.length > limit) throw new Error(t(`最多 ${limit} 张照片。`, `Maximum ${limit} photos.`))

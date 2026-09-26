@@ -518,6 +518,14 @@ export default function App() {
   const [lang, setLangState] = useState(() => localStorage.getItem('cls_lang') || 'zh')
   const memberSurface = hash.startsWith('#/')
   useEffect(() => {
+    if (!memberSurface && window.location.pathname !== '/blog-admin') return
+    const robots = document.createElement('meta')
+    robots.name = 'robots'
+    robots.content = 'noindex, nofollow'
+    document.head.appendChild(robots)
+    return () => robots.remove()
+  }, [memberSurface])
+  useEffect(() => {
     if (user && profile && hash.startsWith('#/login?')) {
       const params = new URLSearchParams(hash.split('?')[1])
       if (params.has('return') && !blogRedirecting.current) {

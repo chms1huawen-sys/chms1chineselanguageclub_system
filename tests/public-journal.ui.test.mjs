@@ -6,7 +6,7 @@ const browser = await chromium.launch({ channel: 'msedge', headless: true })
 const posts = [
   { id: 'p1', slug: 'test-story', title: '公开活动', body: '<script>window.unsafe=true</script>\n\n活动记录', status: 'published', content_type: 'event', content_year: 2026, category_id: 'c1', tags: ['诗歌'], related_ids: ['p3'], featured: true, cover_path: '/login-event-2026.jpeg' },
   { id: 'p2', slug: 'older', title: '早期活动', status: 'published', content_type: 'event', content_year: 2024, category_id: 'c1', tags: ['诗歌'] },
-  { id: 'p3', slug: 'reading', title: '书坊文章', status: 'published', content_type: 'article', content_year: 2025, category_id: 'c2', tags: ['阅读'] },
+  { id: 'p3', slug: 'reading', title: '书坊文章', status: 'published', content_type: 'publication', content_year: 2025, category_id: 'c2', tags: ['阅读'] },
 ]
 let downloads = 0
 let member = false
@@ -48,14 +48,11 @@ try {
     await page.getByLabel('年份', { exact: true }).selectOption('')
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false)
     await page.screenshot({ path: `test-results/public-journal/home-${width}.png`, fullPage: true })
-    await page.getByRole('button', { name: /活动相册/ }).click()
-    await page.getByRole('dialog').waitFor()
-    await page.keyboard.press('Escape')
-    assert.equal(await page.getByRole('button', { name: /活动相册/ }).evaluate(el => el === document.activeElement), true)
+    assert.equal(await page.locator('.blog-album').first().getAttribute('href'), '/blog/test-story')
     await page.goto(root + '/tests/fixtures/public-journal.html?mode=article')
     await page.getByRole('heading', { name: '公开活动', exact: true }).waitFor()
-    await page.getByRole('button', { name: '关联相册照片', exact: true }).waitFor()
-    assert.equal(await page.locator('.blog-gallery button').count(), 2)
+    await page.getByRole('button', { name: '旧版照片', exact: true }).waitFor()
+    assert.equal(await page.locator('.blog-gallery button').count(), 1)
     assert.equal(await page.getByRole('link', { name: '不安全链接' }).count(), 0)
     assert.equal(await page.evaluate(() => window.unsafe), undefined)
     assert.equal(await page.locator('.blog-public-section .blog-post h3').first().textContent(), '书坊文章')
@@ -63,7 +60,7 @@ try {
     await page.keyboard.press('Shift+Tab')
     assert.equal(await page.getByRole('button', { name: '下一张', exact: true }).evaluate(el => el === document.activeElement), true)
     await page.keyboard.press('ArrowRight')
-    assert.match(await page.locator('.blog-lightbox figcaption').textContent(), /关联相册照片/)
+    assert.match(await page.locator('.blog-lightbox figcaption').textContent(), /旧版照片/)
     await page.keyboard.press('Escape')
     assert.equal(await page.getByRole('button', { name: '旧版照片' }).evaluate(el => el === document.activeElement), true)
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false)
@@ -87,5 +84,5 @@ try {
   await page.getByRole('link', { name: '前往 Google Drive 下载' }).waitFor()
   assert.equal(downloads, 1)
   await page.close()
-  console.log('Public journal desktop/mobile: published query, scheduler, filters, safe rendering, related priority, legacy + associated album photos, focus trap/restoration, guest isolation passed.')
+  console.log('Public journal desktop/mobile: published query, scheduler, filters, safe rendering, related priority, article-owned photos, focus trap/restoration, guest isolation passed.')
 } finally { await browser.close() }

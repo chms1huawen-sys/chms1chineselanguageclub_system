@@ -7,6 +7,8 @@
     { "source": "/blog-admin", "destination": "/index.html" },
     { "source": "/", "destination": "/api/blog" },
     { "source": "/activities", "destination": "/api/blog?view=activities" },
+    { "source": "/literature", "destination": "/api/blog?view=literature" },
+    { "source": "/news", "destination": "/api/blog?view=news" },
     { "source": "/bookroom", "destination": "/api/blog?view=bookroom" },
     { "source": "/about", "destination": "/api/blog?view=about" },
     { "source": "/blog/:slug", "destination": "/api/blog?slug=:slug" },

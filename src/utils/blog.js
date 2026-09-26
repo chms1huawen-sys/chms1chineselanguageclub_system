@@ -5,7 +5,7 @@ export const blogLogin = (path = window.location.pathname + window.location.sear
 export function safeBlogReturn(value) {
   try {
     const url = new URL(value, 'https://club.invalid')
-    return url.origin === 'https://club.invalid' && (['/', '/blog-admin', '/activities', '/bookroom', '/about'].includes(url.pathname) || /^\/blog\/[a-z0-9-]+$/.test(url.pathname)) ? url.pathname + url.search : '/'
+    return url.origin === 'https://club.invalid' && (['/', '/blog-admin', '/activities', '/literature', '/news', '/bookroom', '/about'].includes(url.pathname) || /^\/blog\/[a-z0-9-]+$/.test(url.pathname)) ? url.pathname + url.search : '/'
   } catch { return '/' }
 }
 export const validDriveLink = value => !value || /^https:\/\/drive\.google\.com\/(?:drive\/folders\/|file\/d\/)[A-Za-z0-9_-]+(?:[/?#].*)?$/.test(value)

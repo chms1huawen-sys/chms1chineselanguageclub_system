@@ -5,7 +5,7 @@ import './BlogAnalyticsConsent.css'
 const CHOICE = 'clc_blog_statistics'
 function readChoice() { try { return localStorage.getItem(CHOICE) || '' } catch { return 'declined' } }
 function visitPayload(path, referrer = document.referrer) {
-  if (!['/', '/activities', '/bookroom', '/about'].includes(path) && !/^\/blog\/[a-z0-9]+(-[a-z0-9]+)*$/.test(path)) return null
+  if (!['/', '/activities', '/literature', '/news', '/bookroom', '/about'].includes(path) && !/^\/blog\/[a-z0-9]+(-[a-z0-9]+)*$/.test(path)) return null
   let source = '(direct)'
   try { const ref = new URL(referrer); if (ref.hostname !== window.location.hostname) source = ref.hostname.toLowerCase() } catch { /* Direct visit. */ }
   try {
