@@ -41,13 +41,16 @@ export function BlogImage({ path, alt = '', ...props }) {
 }
 
 export function ArticleContent({ post, media = [], onPhoto, en = false, tagLibrary = [] }) {
+  const coverIndex = media.findIndex(photo => photo.path === post.cover_path)
+  const coverCaption = media[coverIndex]?.caption || post.credit || post.title
+  const coverImage = <BlogImage className="blog-article-cover" path={post.cover_path} alt={post.title} />
   return <article className="blog-article">
     <header><p className="blog-eyebrow">{[post.event_date, post.location].filter(Boolean).join(' · ')}</p><h1>{post.title}</h1>{post.summary && <p className="blog-summary">{post.summary}</p>}{post.credit && <p className="blog-credit">{post.credit}</p>}</header>
-    {post.cover_path && <BlogImage className="blog-article-cover" path={post.cover_path} alt={post.title} />}
+    {post.cover_path && <figure className="blog-cover-figure">{coverIndex >= 0 && onPhoto ? <button className="blog-cover-viewer" aria-label={en ? 'View cover photo' : '查看封面大图'} onClick={() => onPhoto(coverIndex)}>{coverImage}</button> : coverImage}<figcaption>{coverCaption}</figcaption></figure>}
     <div className="blog-prose">{text(post.body).split(/\n\s*\n/).filter(Boolean).map((paragraph, index) => <p key={index}>{paragraph}</p>)}</div>
     {post.content_type === 'publication' && <BookDetails details={post.book_details || {}} en={en} />}
     {webLink(post.video_url) && <p className="blog-prose"><a href={webLink(post.video_url)} target="_blank" rel="noopener noreferrer">{en ? 'Watch video' : '观看影片'} <ExternalLink size={16} /></a></p>}
-    {!!media.length && <div className="blog-gallery">{media.map((photo, i) => <figure key={photo.id || `${photo.path}-${i}`}><button type="button" onClick={() => onPhoto?.(i)} aria-label={photo.caption || `照片 / Photo ${i + 1}`}><BlogImage path={photo.path} alt={photo.caption || post.title} loading="lazy" /></button>{photo.caption && <figcaption>{photo.caption}</figcaption>}</figure>)}</div>}
+    {media.some(photo => photo.path !== post.cover_path) && <div className="blog-gallery">{media.map((photo, i) => photo.path === post.cover_path ? null : <figure key={photo.id || `${photo.path}-${i}`}><button type="button" onClick={() => onPhoto?.(i)} aria-label={photo.caption || `照片 / Photo ${i + 1}`}><BlogImage path={photo.path} alt={photo.caption || post.title} loading="lazy" /></button><figcaption>{photo.caption || post.title}</figcaption></figure>)}</div>}
     {post.behind_scenes && <section className="blog-prose"><h2>{en ? 'Behind the scenes' : '幕后花絮'}</h2><p>{text(post.behind_scenes)}</p></section>}
     {!!postTags(post, tagLibrary).length && <div className="blog-tags">{postTags(post, tagLibrary).map(tag => <a key={tag.id} style={{ color: safeColor(tag.color) }} href={`${sectionOf(post.content_type).path}?tag=${encodeURIComponent(tag.name)}#articles`}>{tag.icon} {tag.name}</a>)}</div>}
   </article>
@@ -192,7 +195,7 @@ export default function Blog({ profile, lang, setLang }) {
     const ai = manual.indexOf(a.id), bi = manual.indexOf(b.id)
     return (ai < 0 ? Infinity : ai) - (bi < 0 ? Infinity : bi) || score(b) - score(a)
   }).slice(0, 3) : []
-  const card = item => <a className="blog-post" key={item.id} href={blogPath(item.slug)}>{item.cover_path && <BlogImage path={item.cover_path} alt={item.title} loading="lazy" />}<div><p className="blog-eyebrow">{categories.find(cat => cat.id === item.category_id)?.name || t('学会记录', 'Club journal')}{item.is_sticky ? t(' · 置顶', ' · Pinned') : ''}</p><h3>{item.title}</h3>{item.content_type === 'publication' && <p>{item.book_details?.author}{item.book_details?.price && ` · ${item.book_details.price}`}</p>}<time>{dateOf(item).slice(0, 10) || yearOf(item)}</time><p>{item.summary}</p><span>{t('阅读全文', 'Read story')}<ArrowRight size={16} /></span></div></a>
+  const card = item => <a className="blog-post" key={item.id} href={blogPath(item.slug)}>{item.cover_path && <BlogImage path={item.cover_path} alt={item.title} loading="lazy" />}<div className="blog-post-copy"><p className="blog-eyebrow">{categories.find(cat => cat.id === item.category_id)?.name || t('学会记录', 'Club journal')}{item.is_sticky ? t(' · 置顶', ' · Pinned') : ''}</p><h3>{item.title}</h3>{item.content_type === 'publication' && <p>{item.book_details?.author}{item.book_details?.price && ` · ${item.book_details.price}`}</p>}<p className="blog-post-excerpt">{item.summary}</p><div className="blog-post-meta"><time dateTime={dateOf(item).slice(0, 10) || undefined}>{dateOf(item).slice(0, 10) || yearOf(item)}</time><span>{t('阅读全文', 'Read story')}<ArrowRight size={16} /></span></div></div></a>
   const aboutNotes = text(view === 'about' ? (settings.about || settings.intro) : (content.about_notes ?? settings.about ?? settings.intro)).split(/\n\s*\n/).map(note => note.trim()).filter(Boolean)
   const statistics = clubStatistics(content, posts.length, en)
   const about = <section className="blog-community" id="about">

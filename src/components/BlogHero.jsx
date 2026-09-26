@@ -1,7 +1,24 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { ArrowRight, ChevronLeft, ChevronRight, Pause, Play } from 'lucide-react'
 import { safePublicLink } from '../utils/blogContent'
-import { heroSlides } from '../utils/blogPresentation'
+import { heroSlides, heroImageLayout } from '../utils/blogPresentation'
+
+function HeroPhoto({ Image, slide, priority, siteTitle }) {
+  const frame = useRef(null)
+  const [dimensions, setDimensions] = useState(null)
+  const [box, setBox] = useState(null)
+  useEffect(() => {
+    const observer = new ResizeObserver(([entry]) => setBox({ width: entry.contentRect.width, height: entry.contentRect.height }))
+    observer.observe(frame.current)
+    return () => observer.disconnect()
+  }, [])
+  const layout = dimensions && box ? heroImageLayout(dimensions.width, dimensions.height, box.width, box.height, slide.fit) : null
+  return <a ref={frame} className="blog-showcase-photo" data-layout={layout?.mode || 'contain'} href={safePublicLink(slide.link) || '/activities'} aria-label={slide.title || siteTitle}>
+    <Image path={slide.path} alt={slide.title || siteTitle} fetchPriority={priority ? 'high' : 'auto'}
+      onLoad={event => setDimensions({ width: event.currentTarget.naturalWidth, height: event.currentTarget.naturalHeight })}
+      style={layout ? { width: layout.width, height: layout.height, maxWidth: 'none', maxHeight: 'none' } : undefined} />
+  </a>
+}
 
 export default function BlogHero({ site, Image, en }) {
   const slides = heroSlides(site)
@@ -19,9 +36,7 @@ export default function BlogHero({ site, Image, en }) {
   return <section className="blog-showcase" aria-label={t('学会故事', 'Club stories')} aria-roledescription="carousel" onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)} onFocusCapture={() => setHovered(true)} onBlurCapture={event => { if (!event.currentTarget.contains(event.relatedTarget)) setHovered(false) }}>
     <div className="blog-showcase-slides">
       {slides.map((slide, i) => <div key={`${i}-${slide.path}`} className={`blog-showcase-slide${i === active ? ' is-active' : ''}`} inert={i !== active} aria-hidden={i !== active}>
-        <a className="blog-showcase-photo" href={safePublicLink(slide.link) || '/activities'} aria-label={slide.title || site.title}>
-          <Image path={slide.path} alt={slide.title || site.title} fetchPriority={i === 0 ? 'high' : 'auto'} />
-        </a>
+        <HeroPhoto Image={Image} slide={slide} priority={i === 0} siteTitle={site.title} />
         <div className="blog-showcase-caption"><div><p>{site.subtitle}</p><h1>{slide.title}</h1><p>{slide.subtitle}</p></div><a className="blog-showcase-cta" href={safePublicLink(slide.link) || '/activities'}>{slide.cta || t('探索我们的故事', 'Explore our stories')}<ArrowRight size={18} /></a></div>
       </div>)}
     </div>

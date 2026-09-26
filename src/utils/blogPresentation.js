@@ -10,11 +10,22 @@ export function heroSlides(site) {
     subtitle: content.hero_subtitle || site.intro,
     link: content.hero_link || '/activities',
     cta: content.hero_cta,
+    fit: content.hero_fit || 'auto',
   }
   const custom = (Array.isArray(content.hero_slides) ? content.hero_slides : [])
     .filter(slide => slide && slide.enabled !== false && slide.path)
     .map(slide => ({ ...slide, title: slide.title || introduction.title, subtitle: slide.subtitle || introduction.subtitle, cta: slide.cta || content.hero_cta }))
   return content.hero_default_enabled === false && custom.length ? custom : [introduction, ...custom]
+}
+
+// Limit both cropping and enlargement; portrait and small originals stay complete.
+export function heroImageLayout(width, height, boxWidth, boxHeight, fit = 'auto') {
+  if (![width, height, boxWidth, boxHeight].every(value => Number.isFinite(value) && value > 0)) return null
+  const contain = Math.min(boxWidth / width, boxHeight / height)
+  const cover = Math.max(boxWidth / width, boxHeight / height)
+  const fills = fit !== 'contain' && cover <= 1.1 && cover / contain <= 1.35
+  const scale = Math.min(fills ? cover : contain, 1.1)
+  return { width: width * scale, height: height * scale, mode: fills ? 'cover' : 'contain', scale }
 }
 
 export function clubStatistics(content, count, en = false, currentYear = new Date().getFullYear()) {

@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict'
-import { clubStatistics, heroSlides, matchesPublicSearch } from '../src/utils/blogPresentation.js'
+import { clubStatistics, heroSlides, matchesPublicSearch, heroImageLayout } from '../src/utils/blogPresentation.js'
 import { renderBlogHtml } from '../server/blogSeo.js'
 
 const site = { title: 'Club', intro: 'Short introduction', about: 'Full history', hero_path: '/original.jpeg', content: {
@@ -24,6 +24,16 @@ assert.equal(clubStatistics({ stats_start_year: 2027, stats_end_year: 2026 }, 0)
 assert.equal(matchesPublicSearch({ title: 'Book', book_details: { author: 'Writer', isbn: '123' } }, 'writer 123'), true)
 assert.equal(matchesPublicSearch({ body: 'Special story' }, 'special'), true)
 assert.equal(matchesPublicSearch({ title: 'Other' }, 'special'), false)
+for (const [w,h,bw,bh] of [[1280,960,1100,480], [1800,900,1100,480], [600,1200,1100,480], [192,192,1100,480], [600,1200,358,370]]) {
+  const result = heroImageLayout(w,h,bw,bh)
+  assert.ok(result.scale <= 1.1)
+  assert.equal(result.width / result.height, w / h)
+  if (result.mode === 'contain') assert.ok(result.width <= bw + .01 && result.height <= bh + .01)
+}
+assert.equal(heroImageLayout(1800,900,1100,480).mode, 'cover')
+assert.equal(heroImageLayout(1280,960,1100,480).mode, 'contain')
+assert.equal(heroImageLayout(1800,900,1100,480,'contain').mode, 'contain')
+assert.equal(heroImageLayout(0,0,1100,480), null)
 const html = '<head><title>Old</title></head><div id="root"></div>'
 const home = renderBlogHtml(html, site, [], [], '', 'https://example.com')
 assert.ok(home.includes('Original introduction'))
@@ -35,4 +45,6 @@ const search = renderBlogHtml(html, site, [], [], '', 'https://example.com', 'ho
 assert.ok(search.includes('noindex,follow'))
 assert.ok(search.includes('&lt;script&gt;'))
 assert.ok(!search.includes('class="blog-showcase"'))
+const story = renderBlogHtml(html, site, [{ title:'Story', cover_path:'/cover.jpg' }], [{ path:'/cover.jpg', caption:'独立图片说明' }], 'story', 'https://example.com')
+assert.ok(story.includes('<figcaption>独立图片说明</figcaption>'))
 console.log('Presentation settings, year arithmetic, restored default hero, global search matching and SSR passed.')

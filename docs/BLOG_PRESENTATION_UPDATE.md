@@ -17,7 +17,9 @@ Open Blog administration > 网站设置 (Site settings).
 
 ## Display and search
 
-Photos are shown completely, without upscaling beyond intrinsic dimensions or zoom animation. Low-resolution originals cannot gain detail; uploading a larger original remains the way to improve source quality. Slides crossfade together over 0.65 seconds. Previous/next, direct selectors, pause, keyboard focus pause and reduced-motion support are retained.
+The Hero retains the photograph-background/overlaid-text composition. Automatic fitting limits enlargement to 110% of the original dimensions and fills the frame only when cropping is moderate. Portrait, small or differently proportioned photos fall back to complete-image display. Select 完整显示照片 to always keep the entire image. These options are available for both the introduction and additional slides. Low-resolution originals cannot gain detail; uploading a larger original remains the way to improve source quality. Slides crossfade together over 0.65 seconds, without zoom animation. Previous/next, direct selectors, pause, keyboard focus pause and reduced-motion support are retained.
+
+Article lists use rounded photo-first cards, with category, title, excerpt and date. Mobile uses one column. Article photos keep their aspect ratio, with rounded corners and small captions underneath. Set the cover caption in the article editor's 封面照片说明 field or in the matching photo's 照片说明 field; these edit the same existing photo record. Missing captions fall back to the byline/title. The byline is not overwritten. A cover already displayed above the article is not repeated below, and clicking it still opens the full photo viewer.
 
 Only the navigation contains search. Searches use all published content, including books, and match title, body, summary, author, ISBN and tags. Member-only links and private records are not searched. Search results are marked noindex by the production page handler.
 
