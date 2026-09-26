@@ -1,11 +1,14 @@
 import { publicHomeUrl } from '../utils/pwaLaunch'
 import { useEffect, useRef, useState } from 'react'
-import { ArrowRight, ArrowLeft, Download, Globe, Search, X, ChevronLeft, ChevronRight, LogIn, Settings, BookOpen, Camera, Pause, Play, ExternalLink } from 'lucide-react'
+import { ArrowRight, ArrowLeft, Download, Globe, Search, X, ChevronLeft, ChevronRight, LogIn, Settings, BookOpen, Camera, ExternalLink } from 'lucide-react'
 import { supabase } from '../supabaseClient'
 import { blogPath, blogLogin, canManageBlog, defaultBlogSettings } from '../utils/blog'
 import './Blog.css'
+import './BlogPresentation.css'
+import BlogHero from '../components/BlogHero'
+import { clubStatistics, matchesPublicSearch, submissionNote } from '../utils/blogPresentation'
 import BlogNavigation, { SocialLinks } from '../components/BlogNavigation'
-import { sections, sectionOf, publicCategories, postTags, safeColor, safePublicLink } from '../utils/blogContent'
+import { sections, sectionOf, publicCategories, postTags, safeColor } from '../utils/blogContent'
 
 const localPath = value => typeof value === 'string' && /^\/(?!\/)[^\\\s]*$/.test(value) && !value.includes('..')
 const webLink = value => {
@@ -87,7 +90,8 @@ export default function Blog({ profile, lang, setLang }) {
   const [links, setLinks] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
-  const [search, setSearch] = useState('')
+  const search = (new URLSearchParams(window.location.search).get('q') || '').trim().slice(0, 200)
+  const searching = pathname === '/' && !!search
   const [category, setCategory] = useState(new URLSearchParams(window.location.search).get('category') || '')
   const [year, setYear] = useState('')
   const [tag, setTag] = useState(new URLSearchParams(window.location.search).get('tag') || '')
@@ -96,8 +100,6 @@ export default function Blog({ profile, lang, setLang }) {
   const [lightbox, setLightbox] = useState(null)
   const [download, setDownload] = useState('')
   const [downloadBusy, setDownloadBusy] = useState(false)
-  const [slide, setSlide] = useState(0)
-  const [paused, setPaused] = useState(false)
   const closeRef = useRef(null)
   const dialogRef = useRef(null)
   const albumTriggerRef = useRef(null)
@@ -105,9 +107,6 @@ export default function Blog({ profile, lang, setLang }) {
   const post = posts.find(item => item.slug === slug)
   const content = settings.content && typeof settings.content === 'object' ? settings.content : {}
   const override = (key, fallback) => text(content[key]) || text(content.sections?.[key]) || fallback
-  const configuredSlides = Array.isArray(content.hero_slides) ? content.hero_slides.filter(item => item && item.enabled !== false && (imageSource(item.path) || storagePath(item.path))) : []
-  const slides = configuredSlides.length ? configuredSlides : [{ path: settings.hero_path || '/login-group-2026.jpeg', title: settings.title, subtitle: settings.intro, link: '/activities' }]
-  const currentSlide = slides[slide % slides.length]
 
   useEffect(() => {
     let active = true
@@ -147,11 +146,6 @@ export default function Blog({ profile, lang, setLang }) {
     return () => { active = false }
   }, [slug, activeMember, view])
 
-  useEffect(() => {
-    if (paused || slides.length < 2 || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
-    const interval = window.setInterval(() => setSlide(value => (value + 1) % slides.length), Math.max(3, Math.min(60, Number(content.hero_interval) || 7)) * 1000)
-    return () => window.clearInterval(interval)
-  }, [slides.length, content.hero_interval, paused])
 
   const lightboxOpen = lightbox !== null
   useEffect(() => {
@@ -185,10 +179,10 @@ export default function Blog({ profile, lang, setLang }) {
     } catch { setError('download') }
     finally { setDownloadBusy(false) }
   }
-  const scopedPosts = posts.filter(item => !type || (item.content_type || 'article') === type)
-  const scopedCategories = publicCategories(categories, type)
+  const scopedPosts = posts.filter(item => searching || !type || (item.content_type || 'article') === type)
+  const scopedCategories = publicCategories(categories, searching ? null : type)
   const categoryIds = [category, ...categories.filter(cat => cat.parent_id === category).map(cat => cat.id)]
-  const filtered = scopedPosts.filter(item => (!category || categoryIds.includes(item.category_id)) && (!year || yearOf(item) === year) && (!tag || postTags(item, tagLibrary).map(tag => tag.name).includes(tag)) && `${item.title} ${item.summary || ''} ${postTags(item, tagLibrary).map(tag => tag.name).join(' ')}`.toLowerCase().includes(search.toLowerCase().trim()))
+  const filtered = scopedPosts.filter(item => (!category || categoryIds.includes(item.category_id)) && (!year || yearOf(item) === year) && (!tag || postTags(item, tagLibrary).map(tag => tag.name).includes(tag)) && matchesPublicSearch(item, searching ? search : '', postTags(item, tagLibrary).map(tag => tag.name)))
     .sort((a, b) => Number(!!b.is_sticky) - Number(!!a.is_sticky) || (sort === 'asc' ? 1 : -1) * (yearOf(a).localeCompare(yearOf(b)) || dateOf(a).localeCompare(dateOf(b))) || a.id.localeCompare(b.id))
   const years = [...new Set(scopedPosts.map(yearOf).filter(Boolean))].sort().reverse()
   const tags = [...new Set(scopedPosts.flatMap(item => postTags(item, tagLibrary).map(tag => tag.name)))].sort()
@@ -199,12 +193,12 @@ export default function Blog({ profile, lang, setLang }) {
     return (ai < 0 ? Infinity : ai) - (bi < 0 ? Infinity : bi) || score(b) - score(a)
   }).slice(0, 3) : []
   const card = item => <a className="blog-post" key={item.id} href={blogPath(item.slug)}>{item.cover_path && <BlogImage path={item.cover_path} alt={item.title} loading="lazy" />}<div><p className="blog-eyebrow">{categories.find(cat => cat.id === item.category_id)?.name || t('学会记录', 'Club journal')}{item.is_sticky ? t(' · 置顶', ' · Pinned') : ''}</p><h3>{item.title}</h3>{item.content_type === 'publication' && <p>{item.book_details?.author}{item.book_details?.price && ` · ${item.book_details.price}`}</p>}<time>{dateOf(item).slice(0, 10) || yearOf(item)}</time><p>{item.summary}</p><span>{t('阅读全文', 'Read story')}<ArrowRight size={16} /></span></div></a>
-  const aboutNotes = text(content.about_notes || settings.about || settings.intro).split(/\n\s*\n/).map(note => note.trim()).filter(Boolean)
-  const archiveYears = new Set(posts.map(yearOf).filter(Boolean)).size
+  const aboutNotes = text(view === 'about' ? (settings.about || settings.intro) : (content.about_notes ?? settings.about ?? settings.intro)).split(/\n\s*\n/).map(note => note.trim()).filter(Boolean)
+  const statistics = clubStatistics(content, posts.length, en)
   const about = <section className="blog-community" id="about">
     <div className="blog-community-intro"><h2>{override('about_title', settings.title)}</h2><p>{settings.intro}</p>
       {content.about_image && <BlogImage className="blog-community-photo" path={content.about_image} alt={settings.title} loading="lazy" />}
-      <dl className="blog-community-counts">{[[posts.length, t('公开文章', 'Public stories')], [posts.filter(item => item.content_type === 'event').length, t('活动记录', 'Activities')], [archiveYears, t('记录年份', 'Years recorded')]].map(([value, label]) => <div key={label}><dt>{label}</dt><dd>{value}</dd></div>)}</dl>
+      <dl className="blog-community-counts">{statistics.map(({ key, value, label, range }) => <div key={key}><dt>{label}</dt><dd>{value}</dd>{range && <small>{range}</small>}</div>)}</dl>
     </div>
     <div className="blog-community-board"><div className="blog-community-board-heading"><BookOpen size={19} aria-hidden="true" /><h3>{override('about_board_title', t('关于我们的故事', 'Our story'))}</h3></div>
       <ol>{aboutNotes.map((note, index) => <li key={index}><span className="blog-note-number" aria-hidden="true">{String(index + 1).padStart(2, '0')}</span><p>{note}</p></li>)}</ol>
@@ -214,8 +208,8 @@ export default function Blog({ profile, lang, setLang }) {
   const errorText = error === 'download' ? t('暂时无法取得原图相册，请稍后重试。', 'Original photos are unavailable. Please try again later.') : error === 'album' ? t('这个相册暂时没有公开照片。', 'This album has no public photos yet.') : error === 'extras' ? t('部分相册或相关链接暂时无法载入。', 'Some albums or related links are temporarily unavailable.') : t('学会动态暂时无法载入，会员仍可正常登入系统。', 'Stories are temporarily unavailable. Member login is still available.')
   return <div className="club-blog blog-public">
     <a className="blog-skip" href="#blog-content">{t('跳至内容', 'Skip to content')}</a>
-    <header className="blog-nav"><a className="blog-brand" href={publicHomeUrl()}><img src="/logo-192.png" alt="" /><span>{settings.title}<small>{settings.subtitle}</small></span></a><BlogNavigation categories={categories} pathname={pathname} en={en} /><div className="blog-public-actions"><button title={t('切换语言', 'Switch language')} aria-label={t('切换语言', 'Switch language')} onClick={() => setLang(en ? 'zh' : 'en')}><Globe size={18} /></button>{canManageBlog(profile) && <a href="/blog-admin" title={t('文章后台', 'Manage blog')} aria-label={t('文章后台', 'Manage blog')}><Settings size={18} /></a>}<a className="blog-primary" href={profile ? '/#/' : blogLogin()}>{profile ? <BookOpen size={16} /> : <LogIn size={16} />}{profile ? t('会员系统', 'Members') : t('会员登入', 'Member login')}</a></div></header>
-    {!slug && view === 'home' && <section className="blog-hero" aria-label={t('学会故事', 'Club stories')}><a className="blog-hero-image-link" href={safePublicLink(currentSlide.link) || '/activities'} aria-label={currentSlide.title || settings.title}><BlogImage path={currentSlide.path} alt={currentSlide.title || settings.title} fetchPriority="high" /></a><div className="blog-hero-copy"><p>{settings.subtitle}</p><h1>{currentSlide.title || override('hero_title', settings.title)}</h1><p>{currentSlide.subtitle || override('hero_subtitle', settings.intro)}</p><a href={localPath(currentSlide.link) ? currentSlide.link : webLink(currentSlide.link) || '/activities'}>{t('探索我们的故事', 'Explore our stories')}<ArrowRight size={18} /></a></div>{slides.length > 1 && <div className="blog-slide-controls"><span>{String(slide % slides.length + 1).padStart(2, '0')} / {String(slides.length).padStart(2, '0')}</span><button title={t('上一张', 'Previous slide')} aria-label={t('上一张', 'Previous slide')} onClick={() => setSlide(value => (value + slides.length - 1) % slides.length)}><ChevronLeft size={18} /></button><button title={t('下一张', 'Next slide')} aria-label={t('下一张', 'Next slide')} onClick={() => setSlide(value => (value + 1) % slides.length)}><ChevronRight size={18} /></button><button title={paused ? t('播放', 'Play') : t('暂停', 'Pause')} aria-label={paused ? t('播放', 'Play') : t('暂停', 'Pause')} onClick={() => setPaused(value => !value)}>{paused ? <Play size={16} /> : <Pause size={16} />}</button></div>}</section>}
+    <header className="blog-nav"><a className="blog-brand" href={publicHomeUrl()}><img src="/logo-192.png" alt="" /><span>{settings.title}<small>{settings.subtitle}</small></span></a><BlogNavigation categories={categories} pathname={pathname} en={en} /><form className="blog-global-search" role="search" action="/" method="get"><input type="search" name="q" defaultValue={search} maxLength={200} required aria-label={t('搜索公开文章和书籍', 'Search public stories and books')} placeholder={t('搜索文章、书籍', 'Search stories, books')} /><button type="submit" aria-label={t('搜索', 'Search')}><Search size={18} /></button></form><div className="blog-public-actions"><button title={t('切换语言', 'Switch language')} aria-label={t('切换语言', 'Switch language')} onClick={() => setLang(en ? 'zh' : 'en')}><Globe size={18} /></button>{canManageBlog(profile) && <a href="/blog-admin" title={t('文章后台', 'Manage blog')} aria-label={t('文章后台', 'Manage blog')}><Settings size={18} /></a>}<a className="blog-primary" href={profile ? '/#/' : blogLogin()}>{profile ? <BookOpen size={16} /> : <LogIn size={16} />}{profile ? t('会员系统', 'Members') : t('会员登入', 'Member login')}</a></div></header>
+    {!slug && view === 'home' && !searching && <BlogHero site={settings} Image={BlogImage} en={en} />}
     <main className="blog-main" id="blog-content">
       {error && <p className="blog-error" role="alert">{errorText}</p>}
       {loading ? <div className="blog-skeleton" role="status" aria-label={t('载入中', 'Loading')} /> : slug ? post ? <>
@@ -224,12 +218,12 @@ export default function Blog({ profile, lang, setLang }) {
         {post.content_type === 'event' && !links.some(link => ['drive', 'download'].includes(link.type)) && <section className="blog-download"><h2>{t('活动原图相册', 'Original photo album')}</h2>{activeMember ? download ? <a className="blog-primary" href={download} target="_blank" rel="noopener noreferrer"><Download size={18} />{t('前往 Google Drive 下载', 'Open Google Drive')}</a> : <button className="blog-primary" disabled={downloadBusy} onClick={getDownload}><Download size={18} />{downloadBusy ? t('读取中…', 'Loading…') : t('取得原图相册', 'Get original photos')}</button> : <a href={blogLogin()} className="blog-primary"><LogIn size={18} />{t('会员登入后下载原图', 'Log in to download originals')}</a>}</section>}
         {!!related.length && <section className="blog-public-section"><h2>{t('延伸阅读', 'More stories')}</h2><div className="blog-post-grid">{related.map(card)}</div></section>}
       </> : <section className="blog-empty"><h1>{t('文章不存在或尚未公开', 'Article unavailable')}</h1><a href={publicHomeUrl()}>{t('返回首页', 'Back to home')}</a></section> : view === 'about' ? about : <>
-        <section id="articles"><div className="blog-section-heading"><div><p className="blog-eyebrow">{view === 'bookroom' ? 'THE READING ROOM' : 'OUR STORIES'}</p><h2>{view === 'home' ? override('latest_title', t('最新活动', 'Latest stories')) : (en ? section.en : section.zh)}</h2></div>{view === 'home' && <a href="/activities">{t('查看全部活动', 'All activities')} <ArrowRight size={16} /></a>}</div>
-          {view === 'literature' && <p className="blog-submission-note">{t('投稿提示：视觉杂记不配图；生活随笔可配图。两类短篇建议 10–450 字，由编辑人工审核。', 'Submissions: visual notes are text-only; life essays may include photos. Suggested length: 10–450 characters, reviewed by our editors.')}</p>}<div className="blog-filters"><label className="blog-search"><Search size={18} /><input aria-label={t('搜索文章', 'Search articles')} placeholder={t('搜索文章、标签', 'Search stories and tags')} value={search} onChange={event => { setSearch(event.target.value); setPage(1) }} /></label><select aria-label={t('年份', 'Year')} value={year} onChange={event => { setYear(event.target.value); setPage(1) }}><option value="">{t('所有年份', 'All years')}</option>{years.map(value => <option key={value}>{value}</option>)}</select><select aria-label={t('排序', 'Sort order')} value={sort} onChange={event => { setSort(event.target.value); setPage(1) }}><option value="desc">{t('由新至旧', 'Newest first')}</option><option value="asc">{t('由旧至新', 'Oldest first')}</option></select><select aria-label={t('标签', 'Tag')} value={tag} onChange={event => { setTag(event.target.value); setPage(1) }}><option value="">{t('所有标签', 'All tags')}</option>{[...new Set([...tags, ...(tag ? [tag] : [])])].map(value => <option key={value} value={value}>#{value}</option>)}</select></div>
+        <section id="articles"><div className="blog-section-heading"><div><p className="blog-eyebrow">{view === 'bookroom' ? 'THE READING ROOM' : 'OUR STORIES'}</p><h2>{searching ? `${t('搜索结果', 'Search results')}: ${search}` : view === 'home' ? override('latest_title', t('最新活动', 'Latest stories')) : (en ? section.en : section.zh)}</h2></div>{view === 'home' && !searching && <a href="/activities">{t('查看全部活动', 'All activities')} <ArrowRight size={16} /></a>}</div>
+          {view === 'literature' && <p className="blog-submission-note">{(content[en ? 'submission_note_en' : 'submission_note'] ?? submissionNote(en))}</p>}<div className="blog-filters"><select aria-label={t('年份', 'Year')} value={year} onChange={event => { setYear(event.target.value); setPage(1) }}><option value="">{t('所有年份', 'All years')}</option>{years.map(value => <option key={value}>{value}</option>)}</select><select aria-label={t('排序', 'Sort order')} value={sort} onChange={event => { setSort(event.target.value); setPage(1) }}><option value="desc">{t('由新至旧', 'Newest first')}</option><option value="asc">{t('由旧至新', 'Oldest first')}</option></select><select aria-label={t('标签', 'Tag')} value={tag} onChange={event => { setTag(event.target.value); setPage(1) }}><option value="">{t('所有标签', 'All tags')}</option>{[...new Set([...tags, ...(tag ? [tag] : [])])].map(value => <option key={value} value={value}>#{value}</option>)}</select></div>
           <div className="blog-categories"><button aria-pressed={!category} onClick={() => { setCategory(''); setPage(1) }}>{t('全部', 'All')}</button>{scopedCategories.map(item => <button key={item.id} aria-pressed={category === item.id} onClick={() => { setCategory(item.id); setPage(1) }}>{item.icon} {item.name}</button>)}</div>
           <div className="blog-post-grid">{filtered.slice(0, page * 8).map(card)}</div>{!filtered.length && <p className="blog-empty">{t('暂无符合条件的公开文章。', 'No published stories match your filters.')}</p>}{filtered.length > page * 8 && <button className="blog-more" onClick={() => setPage(value => value + 1)}>{t('更多文章', 'Load more')}</button>}
         </section>
-        {view === 'home' && <><section className="blog-public-section"><div className="blog-section-heading"><div><p className="blog-eyebrow">EDITOR’S PICKS</p><h2>{override('featured_title', t('活动记录精选', 'Featured activities'))}</h2></div><BookOpen size={28} /></div><div className="blog-post-grid">{posts.filter(item => item.featured && item.content_type === 'event').slice(0, 4).map(card)}</div>{!posts.some(item => item.featured && item.content_type === 'event') && <p className="blog-empty">{t('精选故事即将更新。', 'Featured stories are coming soon.')}</p>}</section><section className="blog-public-section blog-album-section" id="albums"><div className="blog-section-heading"><div><p className="blog-eyebrow">MOMENTS WORTH REMEMBERING</p><h2>{override('albums_title', t('活动影像', 'Moments'))}</h2></div><Camera size={28} /></div><div className="blog-album-grid">{moments.map(item => <a key={item.id} className="blog-album" href={blogPath(item.slug)}><BlogImage path={item.moment_path} alt={item.title} loading="lazy" /><span><strong>{item.title}</strong><small>{yearOf(item)}</small></span></a>)}</div>{!moments.length && <p className="blog-empty">{t('活动影像即将更新。', 'Activity photos are coming soon.')}</p>}</section>{about}</>}
+        {view === 'home' && !searching && <><section className="blog-public-section"><div className="blog-section-heading"><div><p className="blog-eyebrow">EDITOR’S PICKS</p><h2>{override('featured_title', t('活动记录精选', 'Featured activities'))}</h2></div><BookOpen size={28} /></div><div className="blog-post-grid">{posts.filter(item => item.featured && item.content_type === 'event').slice(0, 4).map(card)}</div>{!posts.some(item => item.featured && item.content_type === 'event') && <p className="blog-empty">{t('精选故事即将更新。', 'Featured stories are coming soon.')}</p>}</section><section className="blog-public-section blog-album-section" id="albums"><div className="blog-section-heading"><div><p className="blog-eyebrow">MOMENTS WORTH REMEMBERING</p><h2>{override('albums_title', t('活动影像', 'Moments'))}</h2></div><Camera size={28} /></div><div className="blog-album-grid">{moments.map(item => <a key={item.id} className="blog-album" href={blogPath(item.slug)}><BlogImage path={item.moment_path} alt={item.title} loading="lazy" /><span><strong>{item.title}</strong><small>{yearOf(item)}</small></span></a>)}</div>{!moments.length && <p className="blog-empty">{t('活动影像即将更新。', 'Activity photos are coming soon.')}</p>}</section>{about}</>}
       </>}
     </main><footer className="blog-footer"><div><strong>{settings.title}</strong><p>{settings.contact || settings.subtitle}</p></div><div><p>{t('记录现在，传承以后。', 'Stories today. Memories for tomorrow.')}</p><span>© {new Date().getFullYear()} CHMS1 Chinese Language Club</span></div><a href="/#/">{t('会员系统', 'Member system')} <ArrowRight size={16} /></a><a href="/?app=blog">{t('安装 Blog 首页', 'Install Blog home')}</a><SocialLinks links={content.social_links || []} /></footer>
     {lightbox && <div ref={dialogRef} className="blog-lightbox" role="dialog" aria-modal="true" aria-label={t('照片查看', 'Photo viewer')} onClick={event => { if (event.target === event.currentTarget) setLightbox(null) }}><button ref={closeRef} className="blog-lightbox-close" aria-label={t('关闭', 'Close')} onClick={() => setLightbox(null)}><X /></button><button aria-label={t('上一张', 'Previous')} onClick={() => setLightbox(value => ({ ...value, index: (value.index + value.photos.length - 1) % value.photos.length }))}><ChevronLeft /></button><figure><BlogImage path={lightbox.photos[lightbox.index].path} alt={lightbox.photos[lightbox.index].caption || lightbox.title} /><figcaption aria-live="polite">{lightbox.photos[lightbox.index].caption || lightbox.title} ({lightbox.index + 1}/{lightbox.photos.length})</figcaption></figure><button aria-label={t('下一张', 'Next')} onClick={() => setLightbox(value => ({ ...value, index: (value.index + 1) % value.photos.length }))}><ChevronRight /></button></div>}

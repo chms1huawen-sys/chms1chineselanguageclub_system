@@ -19,6 +19,7 @@ const mock = createServer((req, res) => {
     return res.end(JSON.stringify(url.searchParams.get('slug') === 'eq.hidden' ? [] : [post]))
   }
   if (url.pathname.endsWith('blog_media')) return res.end('[]')
+  if (url.pathname.endsWith('blog_tags')) return res.end('[]')
   if (url.pathname.includes('/storage/v1/')) { res.statusCode = 400; return res.end(JSON.stringify({ message: 'Object not found' })) }
   res.statusCode = 500; res.end(JSON.stringify({ message: 'Unexpected endpoint' }))
 })
@@ -44,6 +45,10 @@ try {
   }
   res = response(); await pageHandler({ method: 'GET', query: { slug: 'hidden' } }, res)
   assert.equal(res.code, 404); assert.equal(res.headers['X-Robots-Tag'], 'noindex')
+  res = response(); await pageHandler({ method: 'GET', query: { q: 'indexable' } }, res)
+  assert.equal(res.code, 200); assert.ok(res.body.includes('/blog/published')); assert.equal(res.headers['X-Robots-Tag'], 'noindex, follow')
+  res = response(); await pageHandler({ method: 'GET', query: { q: 'missing' } }, res)
+  assert.equal(res.code, 200); assert.ok(!res.body.includes('href="/blog/published"'))
   res = response(); await sitemapHandler({ method: 'GET' }, res)
   assert.equal(res.code, 200); assert.ok(res.body.includes('https://example.com/blog/published'))
   assert.ok(res.body.includes('https://example.com/literature'))
