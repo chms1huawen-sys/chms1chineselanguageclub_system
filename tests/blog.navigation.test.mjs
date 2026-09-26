@@ -15,10 +15,11 @@ try {
   const context = await browser.newContext({ serviceWorkers: 'block' })
   context.setDefaultTimeout(10000)
   context.setDefaultNavigationTimeout(10000)
-  await context.addInitScript(() => {
+  await context.addInitScript(installed => {
+    if (installed) Object.defineProperty(navigator, 'standalone', { value: true })
     localStorage.setItem('cls_tutorial_completed_zh', 'true')
     localStorage.setItem('cls_tutorial_completed_en', 'true')
-  })
+  }, process.env.TEST_INSTALLED === 'true')
   await context.route('**/*.supabase.co/**', async route => {
     const path = new URL(route.request().url()).pathname
     let data = []
@@ -50,6 +51,16 @@ try {
   await page.goto(root + '/#/login')
   assert.equal(await page.getByPlaceholder('请输入电子邮箱').count(), 0)
   await page.locator('.club-sidebar').waitFor()
+  if (process.env.TEST_INSTALLED === 'true') {
+    await page.goto(root)
+    await page.locator('.club-sidebar').waitFor()
+    assert.equal(new URL(page.url()).hash, '#/')
+    await page.locator('.club-sidebar').getByRole('link', { name: '学会网站首页', exact: true }).click()
+    await page.locator('.blog-nav').waitFor()
+    assert.equal(new URL(page.url()).search, '?view=blog')
+    await page.goto(root + '/#/')
+    await page.locator('.club-sidebar').waitFor()
+  }
   assert.equal(await page.locator('.club-sidebar').getByText('文章后台', { exact: true }).count(), 0)
   await page.evaluate(key => localStorage.removeItem(key), storageKey)
   await page.goto(root + '/#/tasks')

@@ -1,3 +1,4 @@
+import { publicHomeUrl } from './utils/pwaLaunch'
 import React, { useState, useEffect, useRef } from 'react'
 import { HashRouter as Router, Routes, Route, Link, Navigate, useLocation, useNavigate } from 'react-router-dom'
 import { supabase } from './supabaseClient'
@@ -365,7 +366,7 @@ function AppShell({ user, profile, onLogout, lang, setLang, onProfileUpdate }) {
 
           {/* Nav */}
           <nav className="space-y-1">
-            <a href="/" className="flex items-center gap-3 px-4 py-3 rounded-xl font-bold" style={{ color: 'white', textShadow: sidebarTextShadow }}><Globe size={18} />{lang === 'zh' ? '学会网站首页' : 'Club website'}</a>
+            <a href={publicHomeUrl()} className="flex items-center gap-3 px-4 py-3 rounded-xl font-bold" style={{ color: 'white', textShadow: sidebarTextShadow }}><Globe size={18} />{lang === 'zh' ? '学会网站首页' : 'Club website'}</a>
             {navItems.filter(item => item.allowed).map((item) => {
               const isActive = location.pathname === item.path
               return (

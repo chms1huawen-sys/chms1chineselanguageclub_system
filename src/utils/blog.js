@@ -1,7 +1,7 @@
 export const BLOG_MANAGER_ROLES = ['convener_teacher', 'advisor_teacher', 'advisor', 'chairperson', 'media_lead', 'vice_media_lead', 'social_media_editor']
 export const canManageBlog = profile => profile?.is_active === true && (profile.can_manage_blog ?? BLOG_MANAGER_ROLES.includes(profile.role))
 export const blogPath = slug => `/blog/${encodeURIComponent(slug)}`
-export const blogLogin = (path = window.location.pathname + window.location.search) => `/#/login?return=${encodeURIComponent(path)}`
+export const blogLogin = (path = window.location.pathname + window.location.search) => `/#/login?return=${encodeURIComponent(path === '/' ? '/?view=blog' : path)}`
 export function safeBlogReturn(value) {
   try {
     const url = new URL(value, 'https://club.invalid')
