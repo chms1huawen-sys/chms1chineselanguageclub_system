@@ -1,0 +1,15 @@
+{
+  "buildCommand": "npm run build",
+  "outputDirectory": "dist",
+  "functions": { "api/blog.js": { "includeFiles": "dist/index.html" } },
+  "headers": [{ "source": "/blog-admin", "headers": [{ "key": "X-Robots-Tag", "value": "noindex, nofollow" }] }],
+  "rewrites": [
+    { "source": "/blog-admin", "destination": "/index.html" },
+    { "source": "/", "destination": "/api/blog" },
+    { "source": "/activities", "destination": "/api/blog?view=activities" },
+    { "source": "/bookroom", "destination": "/api/blog?view=bookroom" },
+    { "source": "/about", "destination": "/api/blog?view=about" },
+    { "source": "/blog/:slug", "destination": "/api/blog?slug=:slug" },
+    { "source": "/sitemap.xml", "destination": "/api/sitemap" }
+  ]
+}

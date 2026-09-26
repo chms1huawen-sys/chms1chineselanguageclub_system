@@ -1,0 +1,11 @@
+.blog-statistics-consent{font:13px/1.7 'Nunito',sans-serif;background:#edf6fc;color:#28465a;padding:10px 5%;position:relative}
+.blog-statistics-choice{border:0;background:transparent;color:#315d77;text-decoration:underline;cursor:pointer}
+.blog-statistics-panel{position:fixed;bottom:max(16px,env(safe-area-inset-bottom));left:16px;width:min(440px,calc(100% - 32px));max-height:calc(100svh - 32px);overflow-y:auto;z-index:1500;background:#fff;border:0;border-radius:24px;padding:24px;box-shadow:0 10px 36px #183d5526;overscroll-behavior:contain}
+.blog-statistics-panel p{margin:10px 0;line-height:1.8}
+.blog-statistics-panel>div{display:flex;gap:10px;justify-content:flex-end}
+.blog-statistics-panel button{padding:10px 16px;min-height:44px;border:1px solid #c7dfee;border-radius:12px;cursor:pointer;background:#fff;color:#28465a;font-weight:700;transition:background .18s}
+.blog-statistics-panel button:last-child{background:#95cbff}
+.blog-statistics-panel button:disabled{opacity:.5;cursor:not-allowed}
+.blog-statistics-panel strong{font-size:16px;color:#284e69}.blog-statistics-panel p{color:#526b7c}.blog-statistics-panel button:hover:not(:disabled){background:#dceeff}.blog-statistics-consent button:focus-visible{outline:3px solid #2375a7;outline-offset:3px}.blog-statistics-choice{min-height:44px;text-underline-offset:4px}
+@media(max-width:600px){.blog-statistics-panel{padding:20px;border-radius:20px}.blog-statistics-panel>div{flex-wrap:wrap}.blog-statistics-panel button{flex:1}}
+@media(prefers-reduced-motion:reduce){.blog-statistics-panel button{transition:none}}

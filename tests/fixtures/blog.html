@@ -1,0 +1,13 @@
+<!doctype html><html lang="zh"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head><body><div id="root"></div><script type="module">
+import React from 'react';
+import {createRoot} from 'react-dom/client';
+import Blog from '/src/pages/Blog.jsx';
+import BlogManagement from '/src/pages/BlogManagement.jsx';
+import '/src/index.css';
+const params=new URLSearchParams(location.search);
+const mode=params.get('mode');
+if(mode==='admin'){document.body.style.background='#f0f7ff';document.body.style.padding='20px';}
+const profile=params.has('member')||mode==='admin'?{id:'10000000-0000-0000-0000-000000000001',name:'Test editor',role:mode==='admin'?'advisor_teacher':'ordinary_member',is_active:true}:null;
+if(mode==='article')history.replaceState(null,'','/blog/test-story');
+createRoot(document.getElementById('root')).render(React.createElement(mode==='admin'?BlogManagement:Blog,{profile,lang:params.get('lang')||'zh',setLang:()=>{}}));
+</script></body></html>

@@ -1,9 +1,13 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { HashRouter as Router, Routes, Route, Link, Navigate, useLocation, useNavigate } from 'react-router-dom'
 import { supabase } from './supabaseClient'
 import './mobileNavigation.css'
 import { listenForegroundMessages } from './firebase'
 import Login from './pages/Login'
+import Blog from './pages/Blog'
+import BlogAnalyticsConsent from './components/BlogAnalyticsConsent'
+import BlogAdminShell from './pages/BlogAdminShell'
+import { safeBlogReturn } from './utils/blog'
 import Dashboard from './pages/Dashboard'
 import Members from './pages/Members'
 import Tasks from './pages/Tasks'
@@ -241,33 +245,6 @@ function AppShell({ user, profile, onLogout, lang, setLang, onProfileUpdate }) {
     }
   }, [lang])
 
-  useEffect(() => {
-    let unsubscribe = () => {}
-    let active = true
-
-    listenForegroundMessages((payload) => {
-      if (!active || !('Notification' in window) || Notification.permission !== 'granted') return
-
-      const notification = payload.notification || {}
-      const data = payload.data || {}
-      const title = notification.title || data.title || '一中华文学会系统'
-      const body = notification.body || data.body || '你有一则新的系统通知。'
-
-      new Notification(title, {
-        body,
-        icon: '/logo-192.png',
-        badge: '/logo-192.png',
-        data: { url: data.url || '/' },
-      })
-    }).then((cleanup) => {
-      if (typeof cleanup === 'function') unsubscribe = cleanup
-    })
-
-    return () => {
-      active = false
-      unsubscribe()
-    }
-  }, [])
 
   const canAccessInventoryManagement = profile?.is_active !== false && (hasPermission(profile, 'can_manage_inventory') || hasPermission(profile, 'can_approve_inventory'))
   const canAccessFinanceManagement = profile?.is_active !== false && (hasPermission(profile, 'can_manage_finance') || hasPermission(profile, 'can_approve_finance'))
@@ -388,6 +365,7 @@ function AppShell({ user, profile, onLogout, lang, setLang, onProfileUpdate }) {
 
           {/* Nav */}
           <nav className="space-y-1">
+            <a href="/" className="flex items-center gap-3 px-4 py-3 rounded-xl font-bold" style={{ color: 'white', textShadow: sidebarTextShadow }}><Globe size={18} />{lang === 'zh' ? '学会网站首页' : 'Club website'}</a>
             {navItems.filter(item => item.allowed).map((item) => {
               const isActive = location.pathname === item.path
               return (
@@ -495,11 +473,60 @@ function AppShell({ user, profile, onLogout, lang, setLang, onProfileUpdate }) {
 }
 
 export default function App() {
+  const blogRedirecting = useRef(false)
+  const [hash, setHash] = useState(window.location.hash)
+  useEffect(() => {
+    const update = () => setHash(window.location.hash)
+    window.addEventListener('hashchange', update)
+    return () => window.removeEventListener('hashchange', update)
+  }, [])
   const [user, setUser] = useState(null)
   const [profile, setProfile] = useState(null)
+  useEffect(() => {
+    if (!profile?.is_active) return
+    let unsubscribe = () => {}
+    let active = true
+
+    listenForegroundMessages((payload) => {
+      if (!active || !('Notification' in window) || Notification.permission !== 'granted') return
+
+      const notification = payload.notification || {}
+      const data = payload.data || {}
+      const title = notification.title || data.title || '一中华文学会系统'
+      const body = notification.body || data.body || '你有一则新的系统通知。'
+
+      new Notification(title, {
+        body,
+        icon: '/logo-192.png',
+        badge: '/logo-192.png',
+        data: { url: data.url || '/#/' },
+      })
+    }).then((cleanup) => {
+      if (typeof cleanup !== 'function') return
+      if (active) unsubscribe = cleanup
+      else cleanup()
+    }).catch(error => console.warn('Foreground notifications unavailable:', error.message))
+
+    return () => {
+      active = false
+      unsubscribe()
+    }
+  }, [profile?.id, profile?.is_active])
   const [loading, setLoading] = useState(true)
   // Global bilingual state — persisted to localStorage
   const [lang, setLangState] = useState(() => localStorage.getItem('cls_lang') || 'zh')
+  const memberSurface = hash.startsWith('#/')
+  useEffect(() => {
+    if (user && profile && hash.startsWith('#/login?')) {
+      const params = new URLSearchParams(hash.split('?')[1])
+      if (params.has('return') && !blogRedirecting.current) {
+        blogRedirecting.current = true
+        window.location.replace(safeBlogReturn(params.get('return')))
+      }
+    } else {
+      blogRedirecting.current = false
+    }
+  }, [user, profile, hash])
 
   const setLang = (val) => {
     const next = typeof val === 'function' ? val(lang) : val
@@ -568,7 +595,10 @@ export default function App() {
     setLoading(false)
   }
 
-  if (loading) {
+  if (window.location.pathname === '/blog-admin' || hash === '#/blog-management') return <BlogAdminShell profile={profile} loading={loading} lang={lang} setLang={setLang} />
+  if (!memberSurface) return <><Blog profile={profile} lang={lang} setLang={setLang} /><BlogAnalyticsConsent lang={lang} /></>
+
+  if (loading || (user && profile && hash.startsWith('#/login?') && new URLSearchParams(hash.split('?')[1]).has('return'))) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center gap-4"
         style={{ background: 'linear-gradient(135deg, #e0f1ff 0%, #f0f7ff 100%)', fontFamily: "'Nunito', sans-serif" }}>

@@ -2,7 +2,7 @@
     "name": "一中华文学会",
     "short_name": "CLC_sys",
     "description": "一中华文学会系统 (CLC_sys)",
-    "start_url": "/",
+    "start_url": "/#/",
     "display": "standalone",
     "background_color": "#ffffff",
     "theme_color": "#2563eb",

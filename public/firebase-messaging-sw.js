@@ -13,7 +13,7 @@ firebase.initializeApp({
 const messaging = firebase.messaging()
 
 const normalizeTargetUrl = (url = '/') => {
-  if (!url || url === '/') return '/'
+  if (!url || url === '/') return '/#/'
   if (url.startsWith('http')) return url
   if (url.startsWith('/#/')) return url
 

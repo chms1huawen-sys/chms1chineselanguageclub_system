@@ -49,10 +49,14 @@ export const PERMISSION_FIELDS = [
   'can_approve_inventory',
   'can_manage_finance',
   'can_approve_finance',
+  'can_manage_blog',
 ]
 
 export const hasPermission = (profile, permission) => {
   if (!profile) return false
+  if (permission === 'can_manage_blog') {
+    return profile.can_manage_blog ?? ['convener_teacher', 'advisor_teacher', 'advisor', 'chairperson', 'media_lead', 'vice_media_lead', 'social_media_editor'].includes(profile.role)
+  }
   if (profile[permission] === true) return true
 
   const role = profile.role

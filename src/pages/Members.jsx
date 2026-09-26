@@ -50,8 +50,10 @@ const DEFAULT_PERMISSIONS = {
   can_approve_inventory: false,
   can_manage_finance: false,
   can_approve_finance: false,
+  can_manage_blog: null,
 }
 const PERMISSION_LABELS = {
+  can_manage_blog: { zh: '可管理博客', en: 'Manage Blog' },
   can_manage_accounts: { zh: '可管理账号', en: 'Manage Accounts' },
   can_manage_executive: { zh: '可管理执委层', en: 'Manage Executive' },
   can_create_tasks: { zh: '可发布任务', en: 'Create Tasks' },
@@ -71,21 +73,22 @@ const PermissionControls = ({ formData, setFormData, lang, disabled = false }) =
     </p>
     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
       {PERMISSION_FIELDS.map(field => {
-        const hasDefaultPermission = hasPermission({ ...formData, [field]: false }, field)
+        const isBlogPermission = field === 'can_manage_blog'
+        const hasDefaultPermission = hasPermission({ ...formData, [field]: isBlogPermission ? null : false }, field)
         const hasManualPermission = Boolean(formData[field])
-        const checked = hasDefaultPermission || hasManualPermission
+        const checked = isBlogPermission ? hasPermission(formData, field) : hasDefaultPermission || hasManualPermission
         return (
           <label key={field} className="flex items-center gap-2 text-xs font-bold rounded-xl px-2 py-1.5"
             style={{ background: 'white', color: '#4b5563', border: '1px solid #e0f1ff' }}>
             <input
               type="checkbox"
-              disabled={disabled || hasDefaultPermission}
+              disabled={disabled || (!isBlogPermission && hasDefaultPermission)}
               checked={checked}
               onChange={(event) => setFormData(prev => ({ ...prev, [field]: event.target.checked }))}
               style={{ accentColor: '#95CBFF' }}
             />
             <span className="flex-1">{PERMISSION_LABELS[field][lang]}</span>
-            {hasDefaultPermission && (
+            {hasDefaultPermission && (!isBlogPermission || formData[field] == null) && (
               <span className="px-1.5 py-0.5 rounded-full text-[10px] font-black"
                 style={{ background: '#e0f1ff', color: '#2E86C1' }}>
                 {lang === 'zh' ? '默认' : 'Default'}
@@ -151,7 +154,7 @@ export default function Members({ currentUserProfile, lang, notify }) {
   }
 
   const getPermissionPayload = (source = formData) => Object.fromEntries(
-    PERMISSION_FIELDS.map(field => [field, Boolean(source[field])])
+    PERMISSION_FIELDS.map(field => [field, field === 'can_manage_blog' ? source[field] ?? null : Boolean(source[field])])
   )
 
   const resetAddForm = () => {
