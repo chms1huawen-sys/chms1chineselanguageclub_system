@@ -1,11 +1,13 @@
 import { heroSlides, submissionNote } from '../src/utils/blogPresentation.js'
 import { safePublicLink } from '../src/utils/blogContent.js'
+import { publicBlogSettings } from '../src/utils/blogBootstrap.js'
 export const escapeHtml = value => String(value ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]))
 export const siteOrigin = env => new URL(env.BLOG_SITE_URL || 'https://chms1chineselanguageclubsystem.vercel.app').origin
 const safeHref = url => typeof url === 'string' && /^https?:\/\//.test(url) ? url : ''
 
 export function renderBlogHtml(template, site, posts, media, slug, origin, view = 'home', links = [], search = '') {
   const e = escapeHtml
+  const bootstrap = '<script id="blog-site-settings" type="application/json">' + JSON.stringify(publicBlogSettings(site)).replace(/</g, '\\u003c') + '</script>'
   const post = slug ? posts[0] : null
   const names = { home: '首页', literature: '文学角落', activities: '活动记录', bookroom: '书坊', news: '学会资讯', about: '关于我们' }
   const title = search ? `搜索结果: ${search} | ${site.title}` : slug ? (post ? `${post.title} | ${site.title}` : `文章不存在 | ${site.title}`) : `${names[view]} | ${site.title}`
@@ -38,6 +40,6 @@ export function renderBlogHtml(template, site, posts, media, slug, origin, view 
     body = `${hero}<main class="blog-main"><h${level}>${e(search ? `搜索结果: ${search}` : view === 'home' ? (site.content?.latest_title || '最新活动') : names[view])}</h${level}>${view === 'literature' ? `<p class="blog-submission-note">${e(site.content?.submission_note ?? submissionNote(false))}</p>` : ''}<div class="blog-post-grid">${posts.map(p => `<a class="blog-post" href="/blog/${e(p.slug)}">${p.cover_path ? picture(p.cover_path, p.title) : ''}<div class="blog-post-copy"><h3>${e(p.title)}</h3><p class="blog-post-excerpt">${e(p.summary)}</p><div class="blog-post-meta"><time>${e((p.published_at || '').slice(0,10) || p.content_year || '')}</time><span>阅读全文</span></div></div></a>`).join('')}</div>${view === 'home' && !search ? about : ''}</main>`
   }
   return template.replace(/<title>[\s\S]*?<\/title>/, '').replace(/<meta name="description"[^>]*>/, '')
-    .replace('</head>', () => metadata + '</head>')
+    .replace('</head>', () => metadata + bootstrap + '</head>')
     .replace('<div id="root"></div>', () => `<div id="root"><div class="club-blog blog-public">${nav}${body}<footer class="blog-footer">${e(site.contact)} ${socials(site.content?.social_links)}</footer></div></div>`)
 }

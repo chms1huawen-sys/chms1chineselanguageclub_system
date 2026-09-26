@@ -25,6 +25,8 @@ Only the navigation contains search. Searches use all published content, includi
 
 The public document background is light, including overscroll; member-system background styling is untouched. Footer spacing is reduced.
 
+Website branding is read from the same saved settings in both the public site and Blog administration (header, sidebar and browser tab). Production HTML embeds only public settings so React does not briefly replace the saved name with a hardcoded default. Local development waits for the settings response before showing the Hero; a neutral loading marker appears instead of an old name. Saving website settings refreshes administration branding without reloading the page.
+
 ## Deployment
 
 Push the scoped code commit to GitHub. The connected Vercel project must finish deploying before the live site changes. No Edge Function deployment is required for this update.

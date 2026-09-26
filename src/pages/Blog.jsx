@@ -6,6 +6,7 @@ import { blogPath, blogLogin, canManageBlog, defaultBlogSettings } from '../util
 import './Blog.css'
 import './BlogPresentation.css'
 import BlogHero from '../components/BlogHero'
+import { readBlogBootstrap } from '../utils/blogBootstrap'
 import { clubStatistics, matchesPublicSearch, submissionNote } from '../utils/blogPresentation'
 import BlogNavigation, { SocialLinks } from '../components/BlogNavigation'
 import { sections, sectionOf, publicCategories, postTags, safeColor } from '../utils/blogContent'
@@ -84,7 +85,8 @@ export default function Blog({ profile, lang, setLang }) {
   const section = sections.find(item => item.path === pathname) || sections[0]
   const view = section.path === '/' ? 'home' : section.path.slice(1)
   const type = section.type
-  const [settings, setSettings] = useState(defaultBlogSettings)
+  const [settings, setSettings] = useState(() => readBlogBootstrap() || { title: '', subtitle: '', intro: '', about: '', contact: '', hero_path: '', content: {} })
+  const siteReady = !!settings.title
   const [posts, setPosts] = useState([])
   const [categories, setCategories] = useState([])
   const [moments, setMoments] = useState([])
@@ -119,11 +121,12 @@ export default function Blog({ profile, lang, setLang }) {
         if (schedule.error) throw schedule.error
         const site = await supabase.from('blog_settings').select('*').eq('id', 1).single()
         if (site.error) throw site.error
+        if (active) setSettings({ ...defaultBlogSettings, ...site.data })
         const cats = await rows(supabase.from('blog_categories').select('*').order('name'))
         // Published-only at the query boundary, including recommendations and tag searches.
         const articles = await allRows(() => supabase.from('blog_posts').select('*').eq('status', 'published').order('published_at', { ascending: false }).order('id'))
         if (!active) return
-        setSettings({ ...defaultBlogSettings, ...site.data }); setCategories(cats); setPosts(articles)
+        setCategories(cats); setPosts(articles)
         const library = await rows(supabase.from('blog_tags').select('*').order('name'))
         if (active) setTagLibrary(library)
         const current = articles.find(item => item.slug === slug)
@@ -149,6 +152,13 @@ export default function Blog({ profile, lang, setLang }) {
     return () => { active = false }
   }, [slug, activeMember, view])
 
+
+  useEffect(() => {
+    if (slug && loading) return
+    const heading = slug ? (post?.title || (en ? 'Article unavailable' : '文章不存在或尚未公开')) : searching ? (en ? 'Search results' : '搜索结果') : en ? section.en : section.zh
+    document.title = siteReady ? `${heading} | ${settings.title}` : 'CLC_sys'
+  }, [settings.title, siteReady, slug, post?.title, loading, searching, section.en, section.zh, en])
+  useEffect(() => () => { document.title = 'CLC_sys' }, [])
 
   const lightboxOpen = lightbox !== null
   useEffect(() => {
@@ -211,8 +221,8 @@ export default function Blog({ profile, lang, setLang }) {
   const errorText = error === 'download' ? t('暂时无法取得原图相册，请稍后重试。', 'Original photos are unavailable. Please try again later.') : error === 'album' ? t('这个相册暂时没有公开照片。', 'This album has no public photos yet.') : error === 'extras' ? t('部分相册或相关链接暂时无法载入。', 'Some albums or related links are temporarily unavailable.') : t('学会动态暂时无法载入，会员仍可正常登入系统。', 'Stories are temporarily unavailable. Member login is still available.')
   return <div className="club-blog blog-public">
     <a className="blog-skip" href="#blog-content">{t('跳至内容', 'Skip to content')}</a>
-    <header className="blog-nav"><a className="blog-brand" href={publicHomeUrl()}><img src="/logo-192.png" alt="" /><span>{settings.title}<small>{settings.subtitle}</small></span></a><BlogNavigation categories={categories} pathname={pathname} en={en} /><form className="blog-global-search" role="search" action="/" method="get"><input type="search" name="q" defaultValue={search} maxLength={200} required aria-label={t('搜索公开文章和书籍', 'Search public stories and books')} placeholder={t('搜索文章、书籍', 'Search stories, books')} /><button type="submit" aria-label={t('搜索', 'Search')}><Search size={18} /></button></form><div className="blog-public-actions"><button title={t('切换语言', 'Switch language')} aria-label={t('切换语言', 'Switch language')} onClick={() => setLang(en ? 'zh' : 'en')}><Globe size={18} /></button>{canManageBlog(profile) && <a href="/blog-admin" title={t('文章后台', 'Manage blog')} aria-label={t('文章后台', 'Manage blog')}><Settings size={18} /></a>}<a className="blog-primary" href={profile ? '/#/' : blogLogin()}>{profile ? <BookOpen size={16} /> : <LogIn size={16} />}{profile ? t('会员系统', 'Members') : t('会员登入', 'Member login')}</a></div></header>
-    {!slug && view === 'home' && !searching && <BlogHero site={settings} Image={BlogImage} en={en} />}
+    <header className="blog-nav"><a className="blog-brand" href={publicHomeUrl()}><img src="/logo-192.png" alt="" /><span>{siteReady ? settings.title : error ? t('公开网站', 'Website') : <span role="status" aria-label={t('载入网站名称', 'Loading website name')}>…</span>}<small>{settings.subtitle}</small></span></a><BlogNavigation categories={categories} pathname={pathname} en={en} /><form className="blog-global-search" role="search" action="/" method="get"><input type="search" name="q" defaultValue={search} maxLength={200} required aria-label={t('搜索公开文章和书籍', 'Search public stories and books')} placeholder={t('搜索文章、书籍', 'Search stories, books')} /><button type="submit" aria-label={t('搜索', 'Search')}><Search size={18} /></button></form><div className="blog-public-actions"><button title={t('切换语言', 'Switch language')} aria-label={t('切换语言', 'Switch language')} onClick={() => setLang(en ? 'zh' : 'en')}><Globe size={18} /></button>{canManageBlog(profile) && <a href="/blog-admin" title={t('文章后台', 'Manage blog')} aria-label={t('文章后台', 'Manage blog')}><Settings size={18} /></a>}<a className="blog-primary" href={profile ? '/#/' : blogLogin()}>{profile ? <BookOpen size={16} /> : <LogIn size={16} />}{profile ? t('会员系统', 'Members') : t('会员登入', 'Member login')}</a></div></header>
+    {!slug && view === 'home' && !searching && siteReady && <BlogHero site={settings} Image={BlogImage} en={en} />}
     <main className="blog-main" id="blog-content">
       {error && <p className="blog-error" role="alert">{errorText}</p>}
       {loading ? <div className="blog-skeleton" role="status" aria-label={t('载入中', 'Loading')} /> : slug ? post ? <>

@@ -23,7 +23,7 @@ async function allRows(table, order = 'id') {
   }
 }
 
-export default function BlogManagement({ profile, lang = 'zh' }) {
+export default function BlogManagement({ profile, lang = 'zh', onSiteChange }) {
   const en = lang === 'en'
   const t = (zh, english) => en ? english : zh
   const label = value => en ? value : labels[value] || value
@@ -52,6 +52,7 @@ export default function BlogManagement({ profile, lang = 'zh' }) {
     const years = await allRows('blog_years', 'year')
     const site = await checked(supabase.from('blog_settings').select('*').eq('id', 1).single())
     setData({ posts, albums, categories, tags, years, site })
+    onSiteChange?.(site)
   }
   async function run(action, success = t('已保存。', 'Saved.')) {
     if (busyRef.current) return false
@@ -126,7 +127,7 @@ export default function BlogManagement({ profile, lang = 'zh' }) {
   const selectedNav = navigation.find(n => n[0] === tab)
   if (!allowed) return <p>{t('没有文章后台管理权限。', 'Blog management access is restricted.')}</p>
   return <div className="bs-layout">
-    <aside className="bs-sidebar"><div className="bs-sidebar-title">{t('华文学会后台', 'CLC Blog Studio')}</div><nav aria-label={t('后台导航', 'Studio navigation')}>{navigation.map(([id, Icon, zh, english]) => <button key={id} className={tab === id ? 'active' : ''} aria-current={tab === id ? 'page' : undefined} disabled={busy} onClick={() => tab !== id && navigate(id)}><Icon size={18} />{t(zh, english)}</button>)}</nav><a href={publicHomeUrl()} target="_blank" rel="noreferrer"><ExternalLink size={16} />{t('公开网站', 'Public website')}</a></aside>
+    <aside className="bs-sidebar"><div className="bs-sidebar-title">{data.site?.title ? `${data.site.title} · ${t('后台', 'Studio')}` : t('网站后台', 'Blog Studio')}</div><nav aria-label={t('后台导航', 'Studio navigation')}>{navigation.map(([id, Icon, zh, english]) => <button key={id} className={tab === id ? 'active' : ''} aria-current={tab === id ? 'page' : undefined} disabled={busy} onClick={() => tab !== id && navigate(id)}><Icon size={18} />{t(zh, english)}</button>)}</nav><a href={publicHomeUrl()} target="_blank" rel="noreferrer"><ExternalLink size={16} />{t('公开网站', 'Public website')}</a></aside>
     <main className="bs-workspace"><header className="bs-heading"><div><p>CLC_sys / {t('网站管理', 'Website administration')}</p><h1>{t(selectedNav[2], selectedNav[3])}</h1></div><div className="bs-actions">{usesYear && <label className="bs-year">{t('年份', 'Year')}<select aria-label={t('管理年份', 'Management year')} disabled={busy} value={year} onChange={e => { if (discard()) { setYear(e.target.value); setEditor(null); setDirty(false); setPage(1) } }}><option value="">{t('全部年份', 'All years')}</option>{yearOptions.map(y => <option key={y} value={y}>{y}{archived(y) ? t(' · 已归档', ' · Archived') : ''}</option>)}</select></label>}<button title={t('刷新', 'Refresh')} aria-label={t('刷新', 'Refresh')} disabled={busy || dirty} onClick={() => run(load, '')}><RefreshCw size={17} /></button></div></header>
       {error && <div className="bs-alert bs-error" role="alert">{error}</div>}{message && <div className="bs-alert bs-success" role="status">{message}</div>}
       {usesYear && year && archived(year) && <p className="bs-alert"><LockKeyhole size={16} />{t('此年份已归档，内容为只读。', 'This year is archived. Content is read-only.')}</p>}
