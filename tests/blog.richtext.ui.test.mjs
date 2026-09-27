@@ -1,0 +1,102 @@
+import assert from 'node:assert/strict'
+import { mkdir } from 'node:fs/promises'
+const { chromium } = await import(process.env.PLAYWRIGHT_MODULE || 'playwright')
+const browser = await chromium.launch({ channel: 'msedge', headless: true })
+const root = 'http://127.0.0.1:5173'
+let story = { id: 'story', slug: 'test-story', title: '学会活动记录', summary: '记录我们的活动。', body: '文章内容', content_type: 'event', content_year: 2026, status: 'published', version: 1, cover_path: '/login-event-2026.jpeg' }
+const media = [{ id: 'cover', path: story.cover_path, caption: '活动封面', width_percent: 75 }, ...Array.from({ length: 9 }, (_, i) => ({ id: `photo-${i}`, path: `/login-group-2026.jpeg?photo=${i}`, caption: `活动照片 ${i + 1}`, width_percent: 100 }))]
+const site = { id: 1, title: '华文学会', subtitle: '古晋中华第一中学', content: {} }
+let saved, saves = 0
+try {
+  const context = await browser.newContext({ serviceWorkers: 'block' })
+  context.setDefaultTimeout(12000)
+  await context.addInitScript(() => localStorage.setItem('clc_blog_statistics', 'declined'))
+  await context.route('**/*.supabase.co/**', async route => {
+    const table = new URL(route.request().url()).pathname.split('/').at(-1)
+    let data = []
+    if (table === 'blog_settings') data = site
+    if (table === 'blog_posts') data = [story]
+    if (table === 'blog_media') data = media
+    if (table === 'blog_studio_save') { saved = route.request().postDataJSON(); saves++; story = { ...saved.p_post, version: story.version + 1 }; data = story }
+    await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(data) })
+  })
+  await mkdir('test-results/richtext', { recursive: true })
+  for (const width of [1440, 390]) {
+    const page = await context.newPage()
+    const errors = []
+    page.on('pageerror', error => errors.push(error.message))
+    await page.setViewportSize({ width, height: 900 })
+    await page.goto(root + '/literature')
+    await page.locator('.blog-footer').waitFor()
+    assert.equal(await page.locator('.blog-filters,.blog-categories').count(), 0)
+    const footer = await page.locator('.blog-footer').boundingBox()
+    const privacy = await page.locator('.blog-statistics-consent').boundingBox()
+    assert.ok(Math.abs(privacy.y - footer.y - footer.height) < 2, 'no white band between footer and privacy')
+    await page.goto(root + '/?q=活动')
+    await page.locator('.blog-filters').waitFor()
+    assert.equal(await page.locator('.blog-categories').count(), 1)
+    await page.goto(root + '/tests/fixtures/blog.html?mode=article')
+    await page.locator('.blog-photo-collage img').first().waitFor()
+    assert.equal(await page.locator('.blog-photo-collage figure').count(), 5)
+    assert.equal(await page.locator('.blog-photo-more').textContent(), '+4')
+    await page.locator('.blog-photo-more').click()
+    await page.getByRole('dialog').waitFor()
+    await page.getByRole('button', { name: '下一张', exact: true }).click()
+    assert.ok((await page.getByRole('dialog').textContent()).includes('活动照片 6'))
+    await page.keyboard.press('Escape')
+    assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false)
+    await page.screenshot({ path: `test-results/richtext/article-${width}.png`, fullPage: true })
+    await page.goto(root + '/tests/fixtures/blog.html?mode=admin')
+    await page.getByRole('button', { name: '内容管理', exact: true }).click()
+    await page.getByRole('button', { name: '编辑', exact: true }).first().click()
+    await page.locator('.tiptap').waitFor()
+    await page.getByLabel('标题', { exact: true }).fill('')
+    const before = saves
+    await page.getByRole('button', { name: '保存内容', exact: true }).click()
+    await page.locator('.bs-field-error').waitFor()
+    assert.equal(saves, before, 'invalid form is not submitted')
+    assert.equal(await page.getByLabel('标题', { exact: true }).getAttribute('aria-invalid'), 'true')
+    assert.equal(await page.getByLabel('标题', { exact: true }).evaluate(el => el === document.activeElement), true)
+    await page.getByLabel('标题', { exact: true }).fill('学会活动记录')
+    await page.locator('.tiptap').fill('格式测试')
+    await page.locator('.tiptap').press('Control+a')
+    const bold = page.getByRole('button', { name: '粗体', exact: true })
+    if (await bold.getAttribute('aria-pressed') !== 'true') await bold.click()
+    await page.getByRole('button', { name: '居中', exact: true }).click()
+    assert.equal(await page.getByRole('option', { name: '待审核', exact: true }).count(), 0)
+    await page.getByRole('button', { name: '裁切照片', exact: true }).first().click()
+    await page.getByRole('dialog', { name: '裁切照片' }).waitFor()
+    await page.getByRole('dialog').locator('img').evaluate(img => img.complete ? Promise.resolve() : new Promise(resolve => img.onload = resolve))
+    await page.getByLabel('比例', { exact: true }).selectOption('1')
+    await page.getByRole('dialog').screenshot({ path: `test-results/richtext/crop-${width}.png` })
+    await page.getByRole('button', { name: '应用裁切', exact: true }).click()
+    await page.getByRole('button', { name: '保存内容', exact: true }).click()
+    await page.getByRole('status').waitFor()
+    assert.equal(saved.p_post.body, '格式测试')
+    assert.equal(saved.p_post.body_document.content[0].attrs.textAlign, 'center')
+    assert.ok(saved.p_post.body_document.content[0].content[0].marks.some(mark => mark.type === 'bold'))
+    assert.equal(saved.p_media[0].width_percent, 100)
+    assert.ok(saved.p_media[0].crop.width > 0 && saved.p_media[0].crop.width <= 100)
+    assert.ok(Math.abs(saved.p_media[0].crop.width * saved.p_media[0].crop.naturalWidth - saved.p_media[0].crop.height * saved.p_media[0].crop.naturalHeight) / 100 < 3)
+    await page.getByRole('button', { name: '预览', exact: true }).click()
+    assert.equal(await page.locator('.bs-prose strong').first().textContent(), '格式测试')
+    await page.getByRole('button', { name: '继续编辑', exact: true }).click()
+    await page.locator('.tiptap strong').waitFor()
+    await page.locator('.tiptap').click()
+    await page.locator('.tiptap').press('Control+End')
+    await page.getByRole('button', { name: '插入已上传照片', exact: true }).click()
+    await page.getByLabel('选择正文照片').selectOption(media[1].path)
+    await page.locator('.blog-editor-photo').last().click()
+    await page.getByRole('slider', { name: '正文照片宽度' }).fill('60')
+    await page.getByRole('button', { name: '保存内容', exact: true }).click()
+    await page.getByRole('status').waitFor()
+    assert.equal(saved.p_post.body_document.content.findLast(node => node.type === 'photo').attrs.width, 60)
+    await page.locator('.blog-rich-editor').scrollIntoViewIfNeeded()
+    assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false)
+    await page.screenshot({ path: `test-results/richtext/editor-${width}.png`, fullPage: true })
+    await page.locator('.blog-rich-editor').screenshot({ path: `test-results/richtext/toolbar-${width}.png` })
+    assert.deepEqual(errors, [])
+    await page.close()
+  }
+  console.log('Desktop/mobile: search-only filters, continuous footer, five-photo gallery, inline validation, rich text and photo size persistence passed.')
+} finally { await browser.close() }

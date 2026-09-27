@@ -41,6 +41,10 @@ try {
   const before = await snapshot()
   await db.exec(migration)
   assert.deepEqual(await snapshot(), before, 'rerun preserves records and versions')
+  const editorMigration = await sql('supabase_migration_2026_09_27_blog_editor.sql')
+  await db.exec(editorMigration)
+  await db.exec(editorMigration)
+  assert.deepEqual(await snapshot(), before, 'editor migration preserves existing records')
   assert.equal((await q('select count(*)::int as n from blog_albums'))[0].n, 2)
   assert.equal((await q('select count(*)::int as n from blog_media where album_id is not null'))[0].n, 0)
   assert.equal((await q('select post_id from blog_media where path=$1', [`${album.id}/picture.jpg`]))[0].post_id, album.id)
@@ -62,6 +66,17 @@ try {
   await assert.rejects(save({ ...book, title: 'Stale' }, [], book.version), /BLOG_EDIT_CONFLICT/)
   const article = await save({ title: 'Long draft', slug: 'long-draft', body: '文'.repeat(500), content_type: 'article', status: 'draft' })
   assert.equal(article.body.length, 500, 'no 450-character enforcement')
+  const document = { type: 'doc', content: [{ type: 'paragraph', content: [{ type: 'text', text: 'Formatted', marks: [{ type: 'bold' }] }] }] }
+  const formatted = await save({ ...article, body: 'Formatted', body_document: document, status: 'published' }, [], article.version)
+  assert.deepEqual(formatted.body_document, document)
+  assert.ok(formatted.published_at, 'immediate publishing does not require scheduling')
+  const photo = (await q('insert into blog_media(post_id,path) values($1,$2) returning *', [formatted.id, `${formatted.id}/test.jpg`]))[0]
+  const crop = { unit: '%', x: 10, y: 20, width: 70, height: 60, naturalWidth: 1200, naturalHeight: 800 }
+  await q('select * from blog_studio_save($1::jsonb,$2::jsonb,$3::uuid[],$4::jsonb,$5)', [JSON.stringify(formatted), '[]', [], JSON.stringify([{ id: photo.id, width_percent: 55, crop }]), formatted.version])
+  assert.deepEqual((await q('select crop from blog_media where id=$1', [photo.id]))[0].crop, crop)
+  assert.equal((await q('select width_percent from blog_media where id=$1', [photo.id]))[0].width_percent, 55)
+  await assert.rejects(q('update blog_media set width_percent=500 where id=$1', [photo.id]), /blog_photo_width_range/)
+  await q("update blog_posts set status='draft' where id=$1", [article.id])
   const category = (await q("select * from blog_categories where name='学会出版'"))[0]
   await assert.rejects(save({ title: 'Wrong scope', slug: 'wrong-scope', category_id: category.id, content_type: 'event' }), /BLOG_CATEGORY_SECTION_MISMATCH/)
   const parent = (await q("select * from blog_categories where name='文学创作'"))[0]

@@ -11,6 +11,7 @@ export function heroSlides(site) {
     link: content.hero_link || '/activities',
     cta: content.hero_cta,
     fit: content.hero_fit || 'auto',
+    crop: content.hero_path_crop,
   }
   const custom = (Array.isArray(content.hero_slides) ? content.hero_slides : [])
     .filter(slide => slide && slide.enabled !== false && slide.path)

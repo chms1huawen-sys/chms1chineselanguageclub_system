@@ -8,7 +8,7 @@ html:has(.blog-public), body:has(.blog-public) { background: #fbfdff; color-sche
 .blog-global-search { display: flex; align-items: center; width: 220px; max-width: 100%; margin-left: auto; }
 .blog-public .blog-global-search input { min-width: 0; width: 100%; border-radius: 8px 0 0 8px; padding: 10px 12px; font-size: 13px; }
 .blog-public .blog-global-search button { display: grid; place-items: center; min-width: 44px; min-height: 46px; padding: 0; border-radius: 0 8px 8px 0; background: #e3f1fb; border: 1px solid #d4e5f0; }
-.blog-showcase { position: relative; max-width: 1160px; margin: 16px auto 0; padding: 0 24px; }
+.blog-showcase { position: relative; width: 100%; max-width: 1160px; flex-shrink: 0; margin: 16px auto 0; padding: 0 24px; }
 .blog-showcase-slides { display: grid; overflow: hidden; border-radius: 24px; background: #eaf4fb; isolation: isolate; }
 .blog-showcase-slide { grid-area: 1/1; position: relative; min-height: 480px; display: flex; align-items: center; opacity: 0; visibility: hidden; pointer-events: none; transition: opacity .65s ease, visibility .65s; min-width: 0; }
 .blog-showcase-slide.is-active { opacity: 1; visibility: visible; pointer-events: auto; z-index: 1; }
@@ -100,3 +100,21 @@ html:has(.blog-public), body:has(.blog-public) { background: #fbfdff; color-sche
   .blog-public .blog-gallery { grid-template-columns: minmax(0,1fr); gap: 28px; }
 }
 @media(prefers-reduced-motion:reduce) { .blog-showcase-slide, .blog-showcase-dots button::after { transition: none; } .blog-public .blog-post:hover { transform: none; } }
+.club-blog.blog-public { display: flex; flex-direction: column; padding-bottom: 0; }
+.blog-public > .blog-main { flex: 1; width: 100%; }
+.blog-public > .blog-footer { margin-top: auto; margin-bottom: 0; background: #edf6fc; }
+.blog-public .blog-photo-collage { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 10px; margin: 28px 0; }
+.blog-public .blog-photo-collage figure { margin: 0; min-width: 0; }
+.blog-public .blog-photo-collage button, .blog-public .blog-collage-preview { position: relative; display: block; width: 100%; height: 210px; padding: 0; border: 0; border-radius: 18px; overflow: hidden; }
+.blog-public .blog-photo-collage img { width: 100%; height: 100%; object-fit: cover; border-radius: 18px; }
+.blog-public .blog-photo-collage.count-1 { grid-template-columns: 1fr; }
+.blog-public .blog-photo-collage.count-3 figure:first-child,.blog-public .blog-photo-collage.count-5 figure:first-child { grid-column: 1 / -1; }
+.blog-public .blog-photo-collage figcaption { padding: 6px 2px; overflow-wrap: anywhere; }
+.blog-photo-more { position: absolute; inset: 0; display: grid; place-items: center; background: #0009; color: white; font-size: 36px; font-weight: 700; }
+.blog-public .blog-photo-collage button > span:not(.blog-photo-more) { width: 100%; height: 100%; }
+.blog-lightbox figure > span { width: 100%; max-height: 78vh; }
+.blog-inline-photo { margin: 24px auto; max-width: 100%; }.blog-inline-photo img { width: 100%; height: auto; border-radius: 20px; }.blog-inline-photo figcaption { text-align: center; font-size: 14px; color: #667d8a; }
+.blog-prose ul { list-style: disc; padding-left: 26px; }.blog-prose ol { list-style: decimal; padding-left: 26px; }
+.blog-prose blockquote { border-left: 3px solid #9ac8de; padding: 8px 20px; background: #f0f7fb; border-radius: 12px; }
+.blog-prose pre { white-space: pre-wrap; overflow-wrap: anywhere; background: #f0f7fb; padding: 16px; border-radius: 12px; }
+@media(max-width:600px) { .blog-public .blog-photo-collage button,.blog-public .blog-collage-preview { height: 150px; } .blog-public .blog-photo-collage figcaption { font-size: 12px; } }

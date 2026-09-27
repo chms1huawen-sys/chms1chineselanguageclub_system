@@ -14,8 +14,8 @@ function HeroPhoto({ Image, slide, priority, siteTitle }) {
   }, [])
   const layout = dimensions && box ? heroImageLayout(dimensions.width, dimensions.height, box.width, box.height, slide.fit) : null
   return <a ref={frame} className="blog-showcase-photo" data-layout={layout?.mode || 'contain'} href={safePublicLink(slide.link) || '/activities'} aria-label={slide.title || siteTitle}>
-    <Image path={slide.path} alt={slide.title || siteTitle} fetchPriority={priority ? 'high' : 'auto'}
-      onLoad={event => setDimensions({ width: event.currentTarget.naturalWidth, height: event.currentTarget.naturalHeight })}
+    <Image path={slide.path} crop={slide.crop} alt={slide.title || siteTitle} fetchPriority={priority ? 'high' : 'auto'}
+      onLoad={event => setDimensions({ width: event.currentTarget.naturalWidth * (slide.crop?.width || 100) / 100, height: event.currentTarget.naturalHeight * (slide.crop?.height || 100) / 100 })}
       style={layout ? { width: layout.width, height: layout.height, maxWidth: 'none', maxHeight: 'none' } : undefined} />
   </a>
 }

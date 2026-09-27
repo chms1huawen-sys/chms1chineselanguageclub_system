@@ -1,0 +1,11 @@
+.blog-crop-dialog { width: min(900px,calc(100% - 24px)); max-height: 94svh; padding: 20px; border: 1px solid #d3e4ef; border-radius: 24px; color: #21445b; background: white; margin: auto; overflow: auto; }
+.blog-crop-dialog::backdrop { background: #102433b3; }
+.blog-crop-dialog header,.blog-crop-controls,.blog-crop-dialog footer { display: flex; align-items: center; gap: 12px; justify-content: space-between; margin-bottom: 16px; }
+.blog-crop-dialog h2 { display: flex; align-items: center; gap: 8px; font-size: 22px; }
+.blog-crop-dialog button,.blog-crop-dialog select { border: 1px solid #bfd7e7; background: #eef7fe; border-radius: 12px; padding: 10px 14px; display: inline-flex; align-items: center; gap: 6px; cursor: pointer; }
+.blog-crop-dialog button:disabled { opacity: .5; cursor: default; }.blog-crop-dialog button:focus-visible { outline: 3px solid #4f9ecb; }
+.blog-crop-controls label { display: flex; align-items: center; gap: 10px; }
+.blog-crop-stage { text-align: center; background: #21303b; border-radius: 16px; padding: 12px; }
+.blog-crop-stage img { display: block; max-width: 100%; max-height: 58svh; width: auto; height: auto; }
+.blog-crop-dialog footer { justify-content: flex-end; margin: 16px 0 0; }
+.blog-crop-dialog .ReactCrop__crop-selection { border-radius: 8px; }

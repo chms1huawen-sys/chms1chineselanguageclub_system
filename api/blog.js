@@ -45,7 +45,7 @@ export default async function handler(req, res) {
     let media = []
     let links = []
     if (slug && posts.data[0]) {
-      const result = await db.from('blog_media').select('path,caption').eq('post_id', posts.data[0].id).order('position')
+      const result = await db.from('blog_media').select('*').eq('post_id', posts.data[0].id).order('position')
       if (result.error) throw result.error
       media = result.data
       const publicLinks = await db.from('blog_links').select('label,url').eq('post_id', posts.data[0].id).eq('visibility', 'public').order('position')

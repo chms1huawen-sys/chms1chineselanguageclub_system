@@ -33,6 +33,7 @@ try {
     const sizes = await page.locator('.blog-showcase-photo img').evaluateAll(images => images.map(img => ({ width: img.getBoundingClientRect().width, natural: img.naturalWidth })))
     assert.ok(sizes.every(img => img.width <= img.natural * 1.1 + 1), 'all Hero photos obey the enlargement cap')
     const heroBox = await page.locator('.blog-showcase-slides').boundingBox()
+    assert.ok(heroBox.width > (width < 700 ? width * .8 : 1000), 'Hero keeps its full original container width')
     const titleBox = await page.getByRole('heading', { level: 1, name: '古晋一中 · 华文学会' }).boundingBox()
     assert.ok(titleBox.y >= heroBox.y && titleBox.y + titleBox.height <= heroBox.y + heroBox.height, 'headline overlays the photograph')
     const cards = page.locator('#articles .blog-post')
