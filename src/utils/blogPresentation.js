@@ -19,6 +19,9 @@ export function heroSlides(site) {
     cta: content.hero_cta,
     fit: content.hero_fit || 'auto',
     crop: content.hero_path_crop,
+    mobile_crop: content.hero_mobile_crop,
+    position: content.hero_position || 'left',
+    tone: content.hero_tone || 'light',
   }
   const custom = (Array.isArray(content.hero_slides) ? content.hero_slides : [])
     .filter(slide => slide && slide.enabled !== false && slide.path)

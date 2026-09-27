@@ -30,7 +30,7 @@ export default async function handler(req, res) {
     query = slug ? query.eq('slug', slug) : query.order('is_sticky', { ascending: false }).order('content_year', { ascending: false }).order('published_at', { ascending: false }).limit(100)
     const posts = await query
     if (posts.error) throw posts.error
-    if (search) {
+    if (search || (!slug && view === 'home' && Object.hasOwn(req.query, 'q'))) {
       const library = await db.from('blog_tags').select('*')
       if (library.error) throw library.error
       posts.data = []
@@ -54,7 +54,7 @@ export default async function handler(req, res) {
     }
     if (slug && !posts.data.length) res.setHeader('X-Robots-Tag', 'noindex')
     res.setHeader('Content-Type', 'text/html; charset=utf-8')
-    return res.status(slug && !posts.data.length ? 404 : 200).send(renderBlogHtml(template, site.data, posts.data, media, slug, siteOrigin(process.env), view, links, search))
+    return res.status(slug && !posts.data.length ? 404 : 200).send(renderBlogHtml(template, site.data, posts.data, media, slug, siteOrigin(process.env), view, links, search, !slug && view === 'home' && Object.hasOwn(req.query, 'q')))
   } catch (error) {
     console.error('Blog page unavailable:', error.message)
     // Member hash routes also request /. Keep the app bootable during migration/outages.
