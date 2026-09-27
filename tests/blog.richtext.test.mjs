@@ -2,6 +2,7 @@ import assert from 'node:assert/strict'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { richBody, plainDocument, photoWidth, galleryPreview } from '../src/utils/blogRichText.js'
 import { cropStyles } from '../src/utils/photoCrop.js'
+import { publicationYear, matchesPublicSearch } from '../src/utils/blogPresentation.js'
 
 assert.equal(renderToStaticMarkup(richBody(null, '<img onerror=evil>')), '<div><p>&lt;img onerror=evil&gt;</p></div>')
 const doc = plainDocument('Sample')
@@ -14,6 +15,13 @@ assert.ok(!/javascript|onclick|display:none/.test(html))
 assert.equal(renderToStaticMarkup(richBody({ type: 'doc', content: [{ type: 'script', content: [{ type: 'text', text: 'evil' }] }] })), '<div></div>')
 assert.equal(photoWidth(999), 100)
 assert.equal(photoWidth(-9), 25)
+const book = { title: 'Book', content_year: 1999, event_date: '2000-01-01', published_at: '2026-12-31T17:00:00Z', book_details: { published_on: '1980-01-01' }, author: 'Test Writer' }
+assert.equal(publicationYear(book), '2027')
+assert.equal(matchesPublicSearch(book, '2027'), true)
+assert.equal(matchesPublicSearch(book, '1999'), false)
+assert.equal(matchesPublicSearch(book, '1980'), false)
+assert.equal(matchesPublicSearch(book, 'Test Writer'), true)
+assert.equal(publicationYear({ content_year: 2026 }), '')
 assert.equal(cropStyles({ x: -1 }), null)
 const cropped = cropStyles({ x: 10, y: 20, width: 50, height: 50, naturalWidth: 1200, naturalHeight: 800 })
 assert.equal(cropped.image.width, '200%')

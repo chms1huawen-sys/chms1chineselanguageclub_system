@@ -44,6 +44,9 @@ try {
   const editorMigration = await sql('supabase_migration_2026_09_27_blog_editor.sql')
   await db.exec(editorMigration)
   await db.exec(editorMigration)
+  const authorMigration = await sql('supabase_migration_2026_09_27_blog_authors.sql')
+  await db.exec(authorMigration)
+  await db.exec(authorMigration)
   assert.deepEqual(await snapshot(), before, 'editor migration preserves existing records')
   assert.equal((await q('select count(*)::int as n from blog_albums'))[0].n, 2)
   assert.equal((await q('select count(*)::int as n from blog_media where album_id is not null'))[0].n, 0)
@@ -67,7 +70,8 @@ try {
   const article = await save({ title: 'Long draft', slug: 'long-draft', body: '文'.repeat(500), content_type: 'article', status: 'draft' })
   assert.equal(article.body.length, 500, 'no 450-character enforcement')
   const document = { type: 'doc', content: [{ type: 'paragraph', content: [{ type: 'text', text: 'Formatted', marks: [{ type: 'bold' }] }] }] }
-  const formatted = await save({ ...article, body: 'Formatted', body_document: document, status: 'published' }, [], article.version)
+  const formatted = await save({ ...article, author: 'Test author', body: 'Formatted', body_document: document, status: 'published' }, [], article.version)
+  assert.equal(formatted.author, 'Test author')
   assert.deepEqual(formatted.body_document, document)
   assert.ok(formatted.published_at, 'immediate publishing does not require scheduling')
   const photo = (await q('insert into blog_media(post_id,path) values($1,$2) returning *', [formatted.id, `${formatted.id}/test.jpg`]))[0]

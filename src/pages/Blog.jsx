@@ -9,7 +9,7 @@ import './Blog.css'
 import './BlogPresentation.css'
 import BlogHero from '../components/BlogHero'
 import { readBlogBootstrap } from '../utils/blogBootstrap'
-import { clubStatistics, matchesPublicSearch, submissionNote } from '../utils/blogPresentation'
+import { clubStatistics, matchesPublicSearch, submissionNote, publicationYear } from '../utils/blogPresentation'
 import BlogNavigation, { SocialLinks } from '../components/BlogNavigation'
 import { sections, sectionOf, publicCategories, postTags, safeColor } from '../utils/blogContent'
 
@@ -24,8 +24,8 @@ const imageSource = path => {
 }
 const storagePath = path => typeof path === 'string' && !!path && !/[:\\?#\s]/.test(path) && !path.startsWith('/') && !path.split('/').some(part => !part || part === '..' || part === '.')
 const text = value => typeof value === 'string' ? value : ''
-const yearOf = post => String(post.content_year || (post.event_date || post.published_at || '').slice(0, 4))
-const dateOf = post => post.event_date || post.published_at || ''
+const yearOf = publicationYear
+const dateOf = post => post.published_at || ''
 
 export function BlogImage({ path, alt = '', crop, ...props }) {
   const [signed, setSigned] = useState({ path: '', url: '' })
@@ -51,7 +51,7 @@ export function ArticleContent({ post, media = [], onPhoto, en = false, tagLibra
   const coverCaption = media[coverIndex]?.caption || post.credit || post.title
   const coverImage = <BlogImage className="blog-article-cover" path={post.cover_path} alt={post.title} crop={media[coverIndex]?.crop} />
   return <article className="blog-article">
-    <header><p className="blog-eyebrow">{[post.event_date, post.location].filter(Boolean).join(' · ')}</p><h1>{post.title}</h1>{post.summary && <p className="blog-summary">{post.summary}</p>}{post.credit && <p className="blog-credit">{post.credit}</p>}</header>
+    <header><p className="blog-eyebrow">{[post.event_date, post.location].filter(Boolean).join(' · ')}</p><h1>{post.title}</h1>{post.summary && <div className="blog-article-summary"><span>{en ? 'IN BRIEF' : '内容摘要'}</span><p>{post.summary}</p></div>}{post.author && <p className="blog-article-author"><span>{en ? 'Written by' : '作者'}</span><strong>{post.author}</strong></p>}{post.credit && <p className="blog-credit">{post.credit}</p>}</header>
     {post.cover_path && <figure className="blog-cover-figure" style={{ width: `${photoWidth(media[coverIndex]?.width_percent)}%` }}>{coverIndex >= 0 && onPhoto ? <button className="blog-cover-viewer" aria-label={en ? 'View cover photo' : '查看封面大图'} onClick={() => onPhoto(coverIndex)}>{coverImage}</button> : coverImage}<figcaption>{coverCaption}</figcaption></figure>}
     <div className="blog-prose">{richBody(post.body_document, post.body, BlogImage, media)}</div>
     {post.content_type === 'publication' && <BookDetails details={post.book_details || {}} en={en} />}

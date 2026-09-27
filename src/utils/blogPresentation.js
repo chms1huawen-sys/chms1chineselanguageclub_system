@@ -1,3 +1,10 @@
+export function publicationYear(post) {
+  if (!post.published_at) return ''
+  const date = new Date(post.published_at)
+  if (!Number.isFinite(date.getTime())) return ''
+  return new Intl.DateTimeFormat('en', { year: 'numeric', timeZone: 'Asia/Kuala_Lumpur' }).format(date)
+}
+
 export const submissionNote = en => en
   ? 'Submissions: visual notes are text-only; life essays may include photos. Suggested length: 10–450 characters, reviewed by our editors.'
   : '投稿提示：视觉杂记不配图；生活随笔可配图。两类短篇建议 10–450 字，由编辑人工审核。'
@@ -43,7 +50,7 @@ export function clubStatistics(content, count, en = false, currentYear = new Dat
 export function matchesPublicSearch(post, query, tags = []) {
   const words = query.trim().toLocaleLowerCase().split(/\s+/).filter(Boolean)
   const details = post.book_details || {}
-  const haystack = [post.title, post.summary, post.body, post.location, post.content_year, post.credit,
+  const haystack = [post.title, post.summary, post.body, post.location, publicationYear(post), post.author, post.credit,
     details.author, details.author_bio, details.isbn, ...(post.tags || []), ...tags].filter(Boolean).join(' ').toLocaleLowerCase()
   return words.every(word => haystack.includes(word))
 }

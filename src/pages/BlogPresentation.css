@@ -118,3 +118,10 @@ html:has(.blog-public), body:has(.blog-public) { background: #fbfdff; color-sche
 .blog-prose blockquote { border-left: 3px solid #9ac8de; padding: 8px 20px; background: #f0f7fb; border-radius: 12px; }
 .blog-prose pre { white-space: pre-wrap; overflow-wrap: anywhere; background: #f0f7fb; padding: 16px; border-radius: 12px; }
 @media(max-width:600px) { .blog-public .blog-photo-collage button,.blog-public .blog-collage-preview { height: 150px; } .blog-public .blog-photo-collage figcaption { font-size: 12px; } }
+.blog-article-summary { margin: 24px 0; padding: 22px 26px; background: #edf5fb; border: 1px solid #d8e8f2; border-radius: 20px; }
+.blog-article-summary > span { display: block; font-size: 12px; font-weight: 800; color: #42728e; margin-bottom: 8px; }
+.blog-public .blog-article-summary p,.bs-preview .blog-article-summary p { font-size: 17px; line-height: 1.9; color: #37576b; margin: 0; white-space: pre-line; }
+.blog-article-author { display: flex; align-items: baseline; flex-wrap: wrap; gap: 8px 14px; margin: 20px 0 28px; }
+.blog-article-author > span { color: #815568; background: #fff0f5; border-radius: 10px; padding: 4px 10px; font-size: 12px; }
+.blog-article-author > strong { font-size: 16px; font-weight: 700; color: #25475d; overflow-wrap: anywhere; }
+@media(max-width:600px) { .blog-article-summary { padding: 18px; }.blog-public .blog-article-summary p { font-size: 16px; } }

@@ -3,7 +3,7 @@ import { mkdir } from 'node:fs/promises'
 const { chromium } = await import(process.env.PLAYWRIGHT_MODULE || 'playwright')
 const browser = await chromium.launch({ channel: 'msedge', headless: true })
 const root = 'http://127.0.0.1:5173'
-let story = { id: 'story', slug: 'test-story', title: '学会活动记录', summary: '记录我们的活动。', body: '文章内容', content_type: 'event', content_year: 2026, status: 'published', version: 1, cover_path: '/login-event-2026.jpeg' }
+let story = { id: 'story', slug: 'test-story', title: '学会活动记录', summary: '记录我们的活动。', body: '文章内容', author: '林同学', published_at: '2026-09-27T00:00:00Z', content_type: 'article', content_year: 2025, status: 'published', version: 1, cover_path: '/login-event-2026.jpeg' }
 const media = [{ id: 'cover', path: story.cover_path, caption: '活动封面', width_percent: 75 }, ...Array.from({ length: 9 }, (_, i) => ({ id: `photo-${i}`, path: `/login-group-2026.jpeg?photo=${i}`, caption: `活动照片 ${i + 1}`, width_percent: 100 }))]
 const site = { id: 1, title: '华文学会', subtitle: '古晋中华第一中学', content: {} }
 let saved, saves = 0
@@ -16,6 +16,7 @@ try {
     let data = []
     if (table === 'blog_settings') data = site
     if (table === 'blog_posts') data = [story]
+    if (table === 'blog_categories') data = [{ id: 'parent', name: '文学创作', section: 'article' }, { id: 'child', name: '散文', section: 'article' }]
     if (table === 'blog_media') data = media
     if (table === 'blog_studio_save') { saved = route.request().postDataJSON(); saves++; story = { ...saved.p_post, version: story.version + 1 }; data = story }
     await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(data) })
@@ -35,6 +36,7 @@ try {
     await page.goto(root + '/?q=活动')
     await page.locator('.blog-filters').waitFor()
     assert.equal(await page.locator('.blog-categories').count(), 1)
+    assert.deepEqual(await page.getByRole('combobox', { name: '年份', exact: true }).locator('option').allTextContents(), ['所有年份', '2026'])
     await page.goto(root + '/tests/fixtures/blog.html?mode=article')
     await page.locator('.blog-photo-collage img').first().waitFor()
     assert.equal(await page.locator('.blog-photo-collage figure').count(), 5)
@@ -48,7 +50,10 @@ try {
     await page.screenshot({ path: `test-results/richtext/article-${width}.png`, fullPage: true })
     await page.goto(root + '/tests/fixtures/blog.html?mode=admin')
     await page.getByRole('button', { name: '内容管理', exact: true }).click()
+    assert.equal(await page.getByRole('combobox', { name: '分类', exact: true }).getByRole('option', { name: '文学创作', exact: true }).count(), 0)
+    await page.getByRole('combobox', { name: '管理年份' }).selectOption('')
     await page.getByRole('button', { name: '编辑', exact: true }).first().click()
+    await page.getByLabel('作者', { exact: true }).fill('陈同学')
     await page.locator('.tiptap').waitFor()
     await page.getByLabel('标题', { exact: true }).fill('')
     const before = saves
@@ -72,6 +77,7 @@ try {
     await page.getByRole('button', { name: '应用裁切', exact: true }).click()
     await page.getByRole('button', { name: '保存内容', exact: true }).click()
     await page.getByRole('status').waitFor()
+    assert.equal(saved.p_post.author, '陈同学')
     assert.equal(saved.p_post.body, '格式测试')
     assert.equal(saved.p_post.body_document.content[0].attrs.textAlign, 'center')
     assert.ok(saved.p_post.body_document.content[0].content[0].marks.some(mark => mark.type === 'bold'))
