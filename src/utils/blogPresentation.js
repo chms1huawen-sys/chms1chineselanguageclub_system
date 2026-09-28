@@ -34,6 +34,7 @@ export function heroImageLayout(width, height, boxWidth, boxHeight, fit = 'auto'
   if (![width, height, boxWidth, boxHeight].every(value => Number.isFinite(value) && value > 0)) return null
   const contain = Math.min(boxWidth / width, boxHeight / height)
   const cover = Math.max(boxWidth / width, boxHeight / height)
+  if (fit === 'cover') return { width: width * cover, height: height * cover, mode: 'cover', scale: cover }
   const fills = fit !== 'contain' && cover <= 1.1 && cover / contain <= 1.35
   const scale = Math.min(fills ? cover : contain, 1.1)
   return { width: width * scale, height: height * scale, mode: fills ? 'cover' : 'contain', scale }

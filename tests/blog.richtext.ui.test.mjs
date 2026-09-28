@@ -39,12 +39,12 @@ try {
     assert.deepEqual(await page.getByRole('combobox', { name: '年份', exact: true }).locator('option').allTextContents(), ['所有年份', '2026'])
     await page.goto(root + '/tests/fixtures/blog.html?mode=article')
     await page.locator('.blog-photo-collage img').first().waitFor()
-    assert.equal(await page.locator('.blog-photo-collage figure').count(), 5)
-    assert.equal(await page.locator('.blog-photo-more').textContent(), '+4')
+    assert.equal(await page.locator('.blog-photo-collage figure').count(), 4)
+    assert.equal(await page.locator('.blog-photo-more').textContent(), '+5')
     await page.locator('.blog-photo-more').click()
     await page.getByRole('dialog').waitFor()
     await page.getByRole('button', { name: '下一张', exact: true }).click()
-    assert.ok((await page.getByRole('dialog').textContent()).includes('活动照片 6'))
+    assert.ok((await page.getByRole('dialog').textContent()).includes('活动照片 5'))
     await page.keyboard.press('Escape')
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false)
     await page.screenshot({ path: `test-results/richtext/article-${width}.png`, fullPage: true })
@@ -104,5 +104,5 @@ try {
     assert.deepEqual(errors, [])
     await page.close()
   }
-  console.log('Desktop/mobile: search-only filters, continuous footer, five-photo gallery, inline validation, rich text and photo size persistence passed.')
+  console.log('Desktop/mobile: search-only filters, continuous footer, four-photo gallery, inline validation, rich text and photo size persistence passed.')
 } finally { await browser.close() }

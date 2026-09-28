@@ -43,5 +43,5 @@ export function richBody(document, fallback = '', Image, media = []) {
 
 export function galleryPreview(media, coverPath) {
   const photos = media.map((photo, index) => ({ photo, index })).filter(({ photo }) => photo.path !== coverPath)
-  return { photos: photos.slice(0, 5), remaining: Math.max(0, photos.length - 5) }
+  return { photos: photos.slice(0, 4), remaining: Math.max(0, photos.length - 4) }
 }

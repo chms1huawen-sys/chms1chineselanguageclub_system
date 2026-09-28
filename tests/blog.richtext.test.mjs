@@ -27,6 +27,6 @@ const cropped = cropStyles({ x: 10, y: 20, width: 50, height: 50, naturalWidth: 
 assert.equal(cropped.image.width, '200%')
 assert.equal(cropped.image.left, '-20%')
 const photos = Array.from({ length: 37 }, (_, i) => ({ path: String(i) }))
-assert.equal(galleryPreview(photos, '0').remaining, 31)
-assert.deepEqual(galleryPreview(photos, '0').photos.map(p => p.index), [1, 2, 3, 4, 5])
+assert.equal(galleryPreview(photos, '0').remaining, 32)
+assert.deepEqual(galleryPreview(photos, '0').photos.map(p => p.index), [1, 2, 3, 4])
 console.log('Safe rich-text rendering, legacy text, size limits and gallery counts passed.')

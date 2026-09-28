@@ -22,7 +22,7 @@ export default async function handler(req, res) {
     if (due.error) throw due.error
     const site = await db.from('blog_settings').select('*').eq('id', 1).single()
     if (site.error) throw site.error
-    let query = db.from('blog_posts').select(slug ? '*' : 'id,slug,title,summary,cover_path,featured,is_sticky,published_at,content_type,content_year,book_details').eq('status', 'published')
+    let query = db.from('blog_posts').select(slug ? '*' : 'id,slug,title,author,summary,cover_path,featured,is_sticky,published_at,content_type,content_year,book_details').eq('status', 'published')
     if (!slug && view === 'bookroom') query = query.eq('content_type', 'publication')
     if (!slug && view === 'activities') query = query.eq('content_type', 'event')
     if (!slug && view === 'literature') query = query.eq('content_type', 'article')

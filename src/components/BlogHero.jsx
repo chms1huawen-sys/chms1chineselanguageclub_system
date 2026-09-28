@@ -20,8 +20,8 @@ function HeroPhoto({ Image, slide, priority, siteTitle }) {
     observer.observe(frame.current)
     return () => observer.disconnect()
   }, [])
-  const layout = dimensions && box ? heroImageLayout(dimensions.width, dimensions.height, box.width, box.height, slide.fit) : null
-  return <a ref={frame} className="blog-showcase-photo" data-layout={layout?.mode || 'contain'} href={safePublicLink(slide.link) || '/activities'} aria-label={slide.title || siteTitle}>
+  const layout = dimensions && box ? heroImageLayout(dimensions.width, dimensions.height, box.width, box.height, 'cover') : null
+  return <a ref={frame} className="blog-showcase-photo" data-layout={layout?.mode || 'cover'} href={safePublicLink(slide.link) || '/activities'} aria-label={slide.title || siteTitle}>
     <Image key={JSON.stringify(crop)} path={slide.path} crop={crop} alt={slide.title || siteTitle} fetchPriority={priority ? 'high' : 'auto'}
       onLoad={event => setDimensions({ width: event.currentTarget.naturalWidth * (crop?.width || 100) / 100, height: event.currentTarget.naturalHeight * (crop?.height || 100) / 100 })}
       style={layout ? { width: layout.width, height: layout.height, maxWidth: 'none', maxHeight: 'none' } : undefined} />
@@ -48,6 +48,6 @@ export default function BlogHero({ site, Image, en }) {
         <div className="blog-showcase-caption"><div><p>{site.subtitle}</p><h1>{slide.title}</h1><p>{slide.subtitle}</p></div><a className="blog-showcase-cta" href={safePublicLink(slide.link) || '/activities'}><span>{slide.cta || ({ '/bookroom': t('浏览书坊', 'Browse books'), '/activities': t('查看活动记录', 'Explore activities'), '/news': t('阅读学会资讯', 'Read club news'), '/about': t('认识华文学会', 'About the club') }[slide.link] || t('探索我们的故事', 'Explore our stories'))}</span><ArrowRight size={18} /></a></div>
       </div>)}
     </div>
-    {slides.length > 1 && <div className="blog-showcase-controls"><div className="blog-showcase-dots">{slides.map((slide, i) => <button key={i} title={slide.title} aria-label={`${t('显示画面', 'Show slide')} ${i + 1}: ${slide.title}`} aria-pressed={active === i} onClick={() => setIndex(i)} />)}</div><span>{active + 1} / {slides.length}</span><button aria-label={t('上一张', 'Previous slide')} onClick={() => setIndex(i => (i + slides.length - 1) % slides.length)}><ChevronLeft size={18} /></button><button aria-label={t('下一张', 'Next slide')} onClick={() => setIndex(i => (i + 1) % slides.length)}><ChevronRight size={18} /></button><button aria-label={paused ? t('播放', 'Play') : t('暂停', 'Pause')} onClick={() => setPaused(value => !value)}>{paused ? <Play size={16} /> : <Pause size={16} />}</button></div>}
+    {slides.length > 1 && <div className="blog-showcase-controls"><div className="blog-showcase-dots">{slides.map((slide, i) => <button key={i} title={slide.title} aria-label={`${t('显示画面', 'Show slide')} ${i + 1}: ${slide.title}`} aria-pressed={active === i} onClick={() => setIndex(i)} />)}</div><span className="blog-showcase-count">{active + 1} / {slides.length}</span><button className="blog-showcase-prev" aria-label={t('上一张', 'Previous slide')} onClick={() => setIndex(i => (i + slides.length - 1) % slides.length)}><ChevronLeft size={18} /></button><button className="blog-showcase-next" aria-label={t('下一张', 'Next slide')} onClick={() => setIndex(i => (i + 1) % slides.length)}><ChevronRight size={18} /></button><button className="blog-showcase-pause" aria-label={paused ? t('播放', 'Play') : t('暂停', 'Pause')} onClick={() => setPaused(value => !value)}>{paused ? <Play size={16} /> : <Pause size={16} />}</button></div>}
   </section>
 }
