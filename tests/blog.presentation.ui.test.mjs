@@ -40,7 +40,7 @@ try {
     await page.goto(root)
     await page.getByRole('heading', { name: site.content.hero_title, exact: true }).waitFor()
     await page.getByRole('button', { name: '不允许', exact: true }).click().catch(() => {})
-    await page.getByRole('button', { name: '暂停', exact: true }).click()
+    await page.locator('.blog-showcase').hover()
     await page.waitForFunction(() => [...document.querySelectorAll('.blog-showcase-photo img')].every(img => img.complete && img.naturalWidth > 0))
     assert.equal(await page.locator('.blog-showcase-slide').count(), 2)
     assert.equal(await page.locator('.blog-global-search').count(), 1)

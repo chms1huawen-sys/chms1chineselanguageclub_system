@@ -27,7 +27,7 @@ try {
     await page.setViewportSize({ width, height: 900 })
     await page.goto(root + '/tests/fixtures/blog.html')
     await page.getByRole('heading', { level: 1, name: '古晋一中 · 华文学会' }).waitFor().catch(async error => { console.error(errors, await page.locator('h1').allTextContents(), await page.locator('[role=alert]').allTextContents()); throw error })
-    await page.getByRole('button', { name: '暂停', exact: true }).click()
+    await page.locator('.blog-showcase').hover()
     await page.waitForFunction(() => [...document.querySelectorAll('.blog-showcase-photo img')].every(img => img.complete && img.naturalWidth))
     await page.waitForTimeout(700)
     const sizes = await page.locator('.blog-showcase-photo img').evaluateAll(images => images.map(img => ({ width: img.getBoundingClientRect().width, natural: img.naturalWidth })))
