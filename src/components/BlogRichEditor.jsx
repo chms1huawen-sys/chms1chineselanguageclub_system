@@ -29,6 +29,7 @@ export default function BlogRichEditor({ document, text, onChange, disabled, med
   const [link, setLink] = useState('')
   const [linkError, setLinkError] = useState('')
   const [photosOpen, setPhotosOpen] = useState(false)
+  const [more, setMore] = useState(false)
   const editor = useEditor({
     extensions: [StarterKit.configure({ heading: { levels: [1, 2, 3] }, link: { openOnClick: false, autolink: false } }), TextAlign.configure({ types: ['heading', 'paragraph'] }), Subscript, Superscript, TextStyle, Color, Highlight.configure({ multicolor: true }), Photo],
     content: document?.type === 'doc' ? document : plainDocument(text),
@@ -49,16 +50,17 @@ export default function BlogRichEditor({ document, text, onChange, disabled, med
   return <div className="blog-rich-editor">
     <div className="blog-editor-toolbar" role="group" aria-label={t('正文格式', 'Text formatting')}>
       <select aria-label={t('段落样式', 'Paragraph style')} disabled={disabled} value={editor.isActive('heading') ? editor.getAttributes('heading').level : 'p'} onChange={e => e.target.value === 'p' ? editor.chain().focus().setParagraph().run() : editor.chain().focus().setHeading({ level: Number(e.target.value) }).run()}><option value="p">{t('正文', 'Paragraph')}</option>{[1, 2, 3].map(level => <option key={level} value={level}>H{level}</option>)}</select>
-      {commands.map(([Icon, label, command, active]) => button(Icon, label, () => editor.chain().focus()[command]().run(), editor.isActive(active)))}
-      {[[AlignLeft, 'left', t('左对齐', 'Align left')], [AlignCenter, 'center', t('居中', 'Center')], [AlignRight, 'right', t('右对齐', 'Align right')], [AlignJustify, 'justify', t('两端对齐', 'Justify')]].map(([Icon, align, label]) => button(Icon, label, () => editor.chain().focus().setTextAlign(align).run(), editor.isActive({ textAlign: align })))}
-      <input type="color" aria-label={t('文字颜色', 'Text color')} title={t('文字颜色', 'Text color')} disabled={disabled} value={editor.getAttributes('textStyle').color || '#183f57'} onChange={e => editor.chain().focus().setColor(e.target.value).run()} />
-      <input type="color" aria-label={t('荧光标记', 'Highlight')} title={t('荧光标记', 'Highlight')} disabled={disabled} value={editor.getAttributes('highlight').color || '#fff0a6'} onChange={e => editor.chain().focus().setHighlight({ color: e.target.value }).run()} />
+      {commands.filter((_, index) => more || ![3, 4, 5].includes(index)).map(([Icon, label, command, active]) => button(Icon, label, () => editor.chain().focus()[command]().run(), editor.isActive(active)))}
+      {more && [[AlignLeft, 'left', t('左对齐', 'Align left')], [AlignCenter, 'center', t('居中', 'Center')], [AlignRight, 'right', t('右对齐', 'Align right')], [AlignJustify, 'justify', t('两端对齐', 'Justify')]].map(([Icon, align, label]) => button(Icon, label, () => editor.chain().focus().setTextAlign(align).run(), editor.isActive({ textAlign: align })))}
+      {more && <input type="color" aria-label={t('文字颜色', 'Text color')} title={t('文字颜色', 'Text color')} disabled={disabled} value={editor.getAttributes('textStyle').color || '#183f57'} onChange={e => editor.chain().focus().setColor(e.target.value).run()} />}
+      {more && <input type="color" aria-label={t('荧光标记', 'Highlight')} title={t('荧光标记', 'Highlight')} disabled={disabled} value={editor.getAttributes('highlight').color || '#fff0a6'} onChange={e => editor.chain().focus().setHighlight({ color: e.target.value }).run()} />}
       {button(Link, t('添加链接', 'Add link'), () => { setLink(editor.getAttributes('link').href || ''); setLinkOpen(v => !v) }, editor.isActive('link'))}
       {button(Unlink, t('移除链接', 'Remove link'), () => editor.chain().focus().unsetLink().run(), false, !editor.isActive('link'))}
       {button(ImagePlus, t('插入已上传照片', 'Insert uploaded photo'), () => setPhotosOpen(v => !v))}
-      {button(Minus, t('分隔线', 'Horizontal rule'), () => editor.chain().focus().setHorizontalRule().run())}
+      {more && button(Minus, t('分隔线', 'Horizontal rule'), () => editor.chain().focus().setHorizontalRule().run())}
       {button(Undo2, t('撤销', 'Undo'), () => editor.chain().focus().undo().run(), false, !editor.can().undo())}
       {button(Redo2, t('重做', 'Redo'), () => editor.chain().focus().redo().run(), false, !editor.can().redo())}
+      <button type="button" className="blog-editor-more" aria-expanded={more} onClick={() => setMore(v => !v)}>{more ? t('收起格式', 'Less') : t('更多格式', 'More')}</button>
     </div>
     {linkOpen && <div className="blog-editor-options"><label>URL<input type="url" value={link} onChange={e => { setLink(e.target.value); setLinkError('') }} aria-invalid={!!linkError} /></label><button type="button" onClick={() => { try { const url = new URL(link); if (!['http:', 'https:'].includes(url.protocol) || url.username || url.password) throw new Error(); editor.chain().focus().extendMarkRange('link').setLink({ href: url.href }).run(); setLinkOpen(false) } catch { setLinkError(t('请输入有效的 HTTP(S) 网址。', 'Enter a valid HTTP(S) URL.')) } }}>{t('插入链接', 'Insert link')}</button>{linkError && <p role="alert">{linkError}</p>}</div>}
     {photosOpen && <div className="blog-editor-options"><select aria-label={t('选择正文照片', 'Choose body photo')} defaultValue="" onChange={e => { if (e.target.value) editor.chain().focus().insertContent({ type: 'photo', attrs: { path: e.target.value, width: 100 } }).run(); setPhotosOpen(false) }}><option value="">{media.length ? t('选择照片', 'Choose photo') : t('请先保存内容并上传照片', 'Save and upload photos first')}</option>{media.map((photo, i) => <option key={photo.id} value={photo.path}>{photo.caption || `${t('照片', 'Photo')} ${i + 1}`}</option>)}</select></div>}

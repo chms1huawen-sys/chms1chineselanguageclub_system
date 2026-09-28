@@ -47,6 +47,7 @@ try {
     book = true
     await page.reload()
     await page.getByText('我要购买', { exact: true }).click()
+    assert.ok(await page.locator('.blog-book-details').evaluate(el => !!(el.compareDocumentPosition(document.querySelector('.blog-article > .blog-prose')) & Node.DOCUMENT_POSITION_FOLLOWING)), 'book details and purchase entry precede the article body')
     assert.ok(await page.locator('.blog-purchase-options').getByRole('link', { name: 'Instagram' }).isVisible())
     assert.ok(await page.locator('.blog-purchase-options').getByRole('link', { name: 'Facebook' }).isVisible())
     await page.keyboard.press('Escape')

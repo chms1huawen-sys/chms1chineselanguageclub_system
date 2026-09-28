@@ -1,4 +1,6 @@
 .blog-rich-editor { border: 1px solid #cbdfea; border-radius: 18px; overflow: hidden; background: white; }
+.blog-editor-toolbar .blog-editor-more { width: auto; min-width: 80px; }
+.blog-editor-toolbar button { flex-shrink: 0; }
 .blog-editor-toolbar { display: flex; flex-wrap: wrap; gap: 4px; padding: 10px; background: #f0f7fc; border-bottom: 1px solid #dce9f0; }
 .blog-editor-toolbar button { width: 36px; height: 36px; padding: 0; display: grid; place-items: center; border-radius: 10px; }
 .blog-editor-toolbar button[aria-pressed="true"] { background: #c9e7ff; color: #135d86; }

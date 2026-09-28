@@ -1,0 +1,27 @@
+/* Reading surfaces share the journal identity; keep the approved Hero unchanged. */
+.blog-interior .blog-section-heading h1 { font-size: 28px; line-height: 1.4; margin: 0; color: #244c67; font-weight: 700; }
+.blog-interior .blog-community { margin-top: 0; padding-top: 4px; border-top: 0; align-items: start; gap: 40px; }
+.blog-interior .blog-community-intro h1 { font-size: 30px; line-height: 1.4; margin: 0 0 16px; font-weight: 700; }
+.blog-interior .blog-community-intro > p { font-size: 16px; line-height: 1.8; }
+.blog-interior .blog-community-board { padding: 0; border: 0; border-radius: 0; box-shadow: none; background: transparent; }
+.blog-interior .blog-community-board h3 { font-size: 21px; }
+.blog-interior .blog-community-board li p { font-size: 17px; line-height: 1.9; }
+.blog-interior .blog-community-board ol { gap: 22px; }
+.blog-interior .blog-note-number { display: none; }
+.blog-public .blog-article-author { margin: 12px 0 16px; }
+.blog-public .blog-article-summary { margin: 20px 0; padding: 18px 22px; border: 0; border-radius: 16px; }
+.blog-article-dates { display: flex; flex-wrap: wrap; gap: 8px 20px; font-size: 14px; line-height: 1.7; color: #526b7c; }
+.blog-public .blog-post p.blog-event-date { font-size: 13px; line-height: 1.6; margin-bottom: 12px; color: #375d74; }
+.blog-public .blog-post h3 .blog-card-author { border: 0; padding: 0; margin: 0; }
+.blog-public .blog-book-details { margin: 22px 0; padding: 20px 0; }
+.blog-public .blog-book-details dl { margin: 0 0 20px; }
+.blog-public a.blog-purchase-button { color: #fff; }
+.blog-purchase[open] > summary svg { transform: rotate(180deg); }
+.blog-category-context { display: flex; align-items: center; flex-wrap: wrap; gap: 16px; margin-bottom: 24px; font-size: 15px; color: #355d75; }
+.blog-category-context a { text-decoration: underline; text-underline-offset: 4px; min-height: 44px; display: inline-flex; align-items: center; }
+@media(max-width:700px) {
+  .blog-interior .blog-community { grid-template-columns: minmax(0,1fr); gap: 28px; }
+  .blog-interior .blog-community-board li p { font-size: 16px; }
+  .blog-interior .blog-section-heading h1,.blog-interior .blog-community-intro h1 { font-size: 25px; }
+  .blog-public .blog-article-summary { padding: 16px; }
+}
