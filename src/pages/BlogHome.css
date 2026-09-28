@@ -1,5 +1,5 @@
 /* Homepage-only refinement; shared article, search and administration styles stay intact. */
-.blog-home .blog-public-actions .blog-home-menu-toggle,.blog-home .blog-public-actions .blog-home-search-toggle,.blog-home-language { display: none; }
+.blog-public .blog-public-actions .blog-home-menu-toggle,.blog-public .blog-public-actions .blog-home-search-toggle,.blog-home-language { display: none; }
 .blog-home {
   --home-ink: #233e50;
   --home-copy: #435c6c;
@@ -59,8 +59,8 @@
 @media (max-width: 700px) {
   .blog-home .blog-showcase { padding-inline: 16px; }
   .blog-home > .blog-main { padding: 32px 16px 36px; }
-  .blog-home .blog-nav nav { column-gap: 16px; row-gap: 0; }
-  .blog-home .blog-nav nav > a,.blog-home .blog-nav nav > .blog-menu-item > button { min-height: 44px; }
+  .blog-public .blog-nav nav { column-gap: 16px; row-gap: 0; }
+  .blog-public .blog-nav nav > a,.blog-public .blog-nav nav > .blog-menu-item > button { min-height: 44px; }
   .blog-home .blog-section-heading { margin-bottom: 20px; }
   .blog-home .blog-section-heading h2 { font-size: 24px; }
   .blog-home .blog-section-heading > a { font-size: 13px; max-width: none; white-space: nowrap; }
@@ -130,7 +130,7 @@
 }
 
 /* Compact browsing rhythm for mixed photographs, books and text-only stories. */
-.blog-home .blog-nav { max-width: 1200px; padding-inline: 28px; width: 100%; }
+.blog-public .blog-nav { max-width: 1200px; padding-inline: 28px; width: 100%; }
 .blog-home .blog-showcase-controls { justify-content: center; gap: 8px; }
 .blog-home .blog-showcase-dots { margin-right: 12px; }
 .blog-home .blog-showcase-cta svg { background: transparent; padding: 8px; }
@@ -147,29 +147,33 @@
 .blog-home .blog-community { align-items: center; }
 .blog-home .blog-community-counts > div dd { color: var(--home-accent); }
 .blog-home .blog-footer { padding-block: 24px; gap: 20px; }
-.blog-home .blog-footer a:focus-visible,.blog-home .blog-nav a:focus-visible,.blog-home .blog-nav button:focus-visible { outline: 3px solid #287b9c; outline-offset: 3px; }
+.blog-public .blog-footer a:focus-visible,.blog-public .blog-nav a:focus-visible,.blog-public .blog-nav button:focus-visible { outline: 3px solid #287b9c; outline-offset: 3px; }
 @media (max-width: 1100px) and (min-width: 701px) {
   .blog-home .blog-post[data-cover=true] { grid-template-columns: minmax(0,1fr); }
   .blog-home .blog-post > img { height: 220px; }
 }
 @media (max-width: 700px) {
-  .blog-home .blog-nav { padding: 12px 16px; gap: 10px; align-items: center; }
-  .blog-home .blog-brand { min-width: 0; flex: 1 1 0; gap: 8px; font-size: 15px; }
-  .blog-home .blog-brand > span { min-width: 0; overflow-wrap: anywhere; }
-  .blog-home .blog-brand small { display: none; }
-  .blog-home .blog-brand img { width: 32px; height: 32px; }
-  .blog-home .blog-public-actions { margin-left: auto; gap: 2px; }
-  .blog-home .blog-public-actions button { width: 40px; height: 44px; display: inline-grid; place-items: center; padding: 0; }
-  .blog-home .blog-public-actions .blog-home-menu-toggle,.blog-home .blog-public-actions .blog-home-search-toggle { display: inline-grid; }
-  .blog-home .blog-public-actions > button[title] { display: none; }
-  .blog-home .blog-public-actions .blog-primary { font-size: 12px; min-height: 44px; padding: 8px; }
+  .blog-public .blog-nav { padding: 12px 16px; gap: 10px; align-items: center; }
+  .blog-public .blog-brand { min-width: 0; flex: 1 1 0; gap: 8px; font-size: 15px; }
+  .blog-public .blog-brand > span { min-width: 0; overflow-wrap: anywhere; }
+  .blog-public .blog-brand small { display: none; }
+  .blog-public .blog-brand img { width: 32px; height: 32px; }
+  .blog-public .blog-public-actions { margin-left: auto; gap: 2px; }
+  .blog-public .blog-public-actions button { width: 40px; height: 44px; display: inline-grid; place-items: center; padding: 0; }
+  .blog-public .blog-public-actions .blog-home-menu-toggle,.blog-public .blog-public-actions .blog-home-search-toggle { display: inline-grid; }
+  .blog-public .blog-public-actions > button[title] { display: none; }
+  .blog-public .blog-public-actions .blog-primary { font-size: 12px; min-height: 44px; padding: 8px; }
   .blog-home .blog-primary svg { display: none; }
-  .blog-home .blog-nav nav,.blog-home .blog-global-search { display: none; }
-  .blog-home .blog-nav[data-panel=menu] nav { display: flex; order: 3; width: 100%; padding-top: 8px; border-top: 1px solid var(--home-line); gap: 4px 20px; }
-  .blog-home .blog-nav[data-panel=search] .blog-global-search { display: flex; order: 3; width: 100%; flex-basis: 100%; }
-  .blog-home .blog-home-language { display: inline-flex; align-items: center; gap: 8px; order: 4; min-height: 44px; padding: 8px 12px; }
-  .blog-home .blog-mega-menu { position: static; margin: 0; width: 100%; max-width: 100%; }
-  .blog-home .blog-menu-item:has(.blog-mega-menu.is-open) { flex-wrap: wrap; width: 100%; }
+  .blog-public .blog-nav nav,.blog-public .blog-global-search { display: none; }
+  .blog-public .blog-nav[data-panel=menu] nav { display: grid; grid-template-columns: minmax(0,1fr); align-items: start; order: 3; width: 100%; padding-top: 8px; border-top: 1px solid #dce7ed; gap: 0; }
+  .blog-public .blog-nav nav .blog-menu-item { flex-wrap: wrap; width: 100%; min-width: 0; align-items: center; }
+  .blog-public .blog-nav nav .blog-menu-item > a { flex: 1; min-height: 44px; padding: 10px 8px; white-space: nowrap; }
+  .blog-public .blog-nav nav .blog-menu-item > button { width: 44px; min-height: 44px; }
+  .blog-public .blog-nav[data-panel=search] .blog-global-search { display: flex; order: 3; width: 100%; flex-basis: 100%; }
+  .blog-public .blog-home-language { display: inline-flex; align-items: center; gap: 8px; order: 4; min-height: 44px; padding: 8px 12px; }
+  .blog-public .blog-mega-menu { display: none; position: static; flex-basis: 100%; margin: 0; width: 100%; max-width: 100%; }
+  .blog-public .blog-mega-menu.is-open { display: grid; transform: none; padding: 12px; margin-bottom: 8px; }
+  .blog-public .blog-menu-item:has(.blog-mega-menu.is-open) { flex-wrap: wrap; width: 100%; }
   .blog-home .blog-showcase-controls { gap: 2px; }
   .blog-home .blog-showcase-dots { margin-right: auto; }
   .blog-home .blog-post-grid { grid-template-columns: minmax(0,1fr); gap: 20px; }

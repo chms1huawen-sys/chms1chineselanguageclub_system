@@ -9,6 +9,9 @@
 @media(max-width:650px){.blog-admin-shell>.blog-main{padding:10px}.bs-layout{display:block}.bs-sidebar{padding:14px}.bs-sidebar nav{display:flex;overflow-x:auto}.bs-sidebar nav button{width:auto;white-space:nowrap;flex-shrink:0}.bs-sidebar>a{display:none}.bs-sidebar-title{padding-bottom:12px}.bs-workspace{padding:14px}.bs-heading{align-items:flex-start}.bs-heading h1{font-size:23px}.bs-form-grid,.bs-link-row{grid-template-columns:1fr}.bs-stats>div{padding:14px}.bs-media-grid{grid-template-columns:1fr}.bs-filters>select{max-width:100%;flex:1;min-width:120px}.bs-year-list>div{flex-wrap:wrap}.bs-slide-image input{max-width:100%}.bs-preview{padding:12px}.bs-actions{gap:6px}.bs-inline{align-items:stretch}.bs-table .bs-actions{flex-wrap:nowrap}.bs-pagination{gap:6px}}
 
 /* Operate surface: shared club palette, compact controls and quiet hierarchy. */
+.bs-preview-scroll { overflow-x: auto; margin-top: 16px; border: 1px solid #d9e6ef; border-radius: 16px; background: #edf4f9; }
+.bs-preview-frame { display: block; width: 100%; min-width: 820px; height: 740px; border: 0; margin: 0 auto; background: #fbfdff; }
+.bs-preview-frame[data-size=mobile] { width: 390px; min-width: 320px; max-width: 100%; }
 .bs-layout{--studio-ink:#294658;--studio-line:#d9e6ef;--studio-blue:#dceeff;--studio-radius:12px;background:#f8fbfe;border-color:#e6eef4;color:var(--studio-ink);grid-template-columns:204px minmax(0,1fr)}
 .bs-layout ::selection{background:#cce6ff;color:#163e5f}
 .bs-layout :is(input,textarea){caret-color:#2b78ab}

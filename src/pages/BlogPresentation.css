@@ -1,4 +1,10 @@
 /* Keep the public document light, including overscroll and the consent footer. */
+.blog-public a.blog-post[data-kind=publication] > img { object-fit: contain; aspect-ratio: 4 / 3; padding: 16px; background: #eef5f9; }
+@media(max-width:700px) {
+  .blog-public .blog-post-grid { grid-template-columns: minmax(0,1fr); gap: 22px; }
+  .blog-public .blog-post > div.blog-post-copy { padding: 20px; }
+  .blog-public .blog-post h3 .blog-card-author { font-size: 15px; }
+}
 html:has(.blog-public), body:has(.blog-public) { background: #fbfdff; color-scheme: light; transition: none; }
 .blog-public .blog-footer { padding-block: 18px; gap: 8px 24px; }
 .blog-public .blog-footer p { margin: 5px 0; }
