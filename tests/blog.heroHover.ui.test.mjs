@@ -25,7 +25,10 @@ try {
     if (width <= 700) {
       const button = await cta.boundingBox()
       const arrow = await hero.locator('.blog-showcase-prev').boundingBox()
-      assert.ok(button.y + button.height < arrow.y, 'mobile controls stay below the CTA')
+      const frame = await hero.locator('.blog-showcase-slides').boundingBox()
+      assert.ok(arrow.x + arrow.width <= button.x, 'mobile arrows do not overlap the CTA')
+      assert.ok(frame.height < 250, 'mobile Hero is a compact landscape banner')
+      assert.ok(button.y + button.height <= frame.y + frame.height - 30, 'CTA stays above pagination')
     }
     if (!touch) {
       assert.equal(await title.evaluate(el => getComputedStyle(el).color), 'rgb(23, 59, 80)')
