@@ -160,6 +160,8 @@
   .blog-public .blog-brand img { width: 32px; height: 32px; }
   .blog-public .blog-public-actions { margin-left: auto; gap: 2px; }
   .blog-public .blog-public-actions button { width: 40px; height: 44px; display: inline-grid; place-items: center; padding: 0; }
+  .blog-public .blog-public-actions > a[aria-label] { display: inline-grid; place-items: center; width: 40px; height: 44px; padding: 0; flex: 0 0 40px; border-radius: 12px; }
+  .blog-public .blog-public-actions > a[aria-label] svg { display: block; }
   .blog-public .blog-public-actions .blog-home-menu-toggle,.blog-public .blog-public-actions .blog-home-search-toggle { display: inline-grid; }
   .blog-public .blog-public-actions > button[title] { display: none; }
   .blog-public .blog-public-actions .blog-primary { font-size: 12px; min-height: 44px; padding: 8px; }
@@ -168,6 +170,9 @@
   .blog-public .blog-nav[data-panel=menu] nav { display: grid; grid-template-columns: minmax(0,1fr); align-items: start; order: 3; width: 100%; padding-top: 8px; border-top: 1px solid #dce7ed; gap: 0; }
   .blog-public .blog-nav nav .blog-menu-item { flex-wrap: wrap; width: 100%; min-width: 0; align-items: center; }
   .blog-public .blog-nav nav .blog-menu-item > a { flex: 1; min-height: 44px; padding: 10px 8px; white-space: nowrap; }
+  .blog-public .blog-nav nav .blog-menu-item > a[aria-current=page]::after { display: none; }
+  .blog-public .blog-nav-label { position: relative; display: inline-block; }
+  .blog-public .blog-nav nav a[aria-current=page] > .blog-nav-label::after { content: ''; position: absolute; width: 18px; height: 4px; border-radius: 4px; background: #95cbff; left: calc(50% - 9px); bottom: -7px; }
   .blog-public .blog-nav nav .blog-menu-item > button { width: 44px; min-height: 44px; }
   .blog-public .blog-nav[data-panel=search] .blog-global-search { display: flex; order: 3; width: 100%; flex-basis: 100%; }
   .blog-public .blog-home-language { display: inline-flex; align-items: center; gap: 8px; order: 4; min-height: 44px; padding: 8px 12px; }

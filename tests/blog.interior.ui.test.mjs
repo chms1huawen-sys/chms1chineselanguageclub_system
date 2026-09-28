@@ -16,13 +16,23 @@ try {
     const page = await context.newPage()
     await page.setViewportSize({ width, height: 900 })
     for (const path of ['/literature', '/activities', '/bookroom', '/about']) {
-      await page.route('http://127.0.0.1:5173' + path, r => r.fulfill({ contentType: 'text/html', body: fixture }))
-      await page.goto('http://127.0.0.1:5173' + path)
+      await page.route('http://127.0.0.1:5173' + path + '?mode=editor', r => r.fulfill({ contentType: 'text/html', body: fixture }))
+      await page.goto('http://127.0.0.1:5173' + path + '?mode=editor')
       await page.locator('.blog-skeleton').waitFor({ state: 'hidden' })
       if (width < 700) {
         await page.getByRole('button', { name: '展开菜单', exact: true }).click()
         const nav = await page.locator('.blog-nav nav').boundingBox()
         assert.ok(nav.height < 310, 'closed submenus must not reserve blank space')
+        const active = page.locator('.blog-nav nav a[aria-current=page] .blog-nav-label')
+        assert.ok(await active.evaluate(el => {
+          const s = getComputedStyle(el, '::after')
+          return Math.abs(parseFloat(s.left) + parseFloat(s.width) / 2 - el.getBoundingClientRect().width / 2) < 1 && parseFloat(s.bottom) < 0
+        }), 'active underline is centered below its text')
+        assert.ok(await page.getByRole('link', { name: '文章后台', exact: true }).evaluate(el => {
+          const box = el.getBoundingClientRect(), icon = el.querySelector('svg').getBoundingClientRect()
+          return Math.abs(box.y + box.height / 2 - icon.y - icon.height / 2) < 1
+        }), 'management icon is vertically centered in its touch target')
+        await page.screenshot({ path: `test-results/interior/nav-${width}-${path.slice(1)}.png` })
         await page.getByRole('button', { name: '文学角落分类' }).click()
         assert.equal(await page.locator('.blog-mega-menu.is-open').isVisible(), true)
         await page.keyboard.press('Escape')
@@ -50,6 +60,7 @@ try {
   await admin.goto('http://127.0.0.1:5173/tests/fixtures/blog.html?mode=admin')
   await admin.getByRole('button', { name: '内容管理', exact: true }).click()
   await admin.getByRole('button', { name: '编辑', exact: true }).first().click()
+  assert.equal(await admin.getByLabel('影片网址', { exact: true }).count(), 0)
   await admin.getByRole('button', { name: '预览', exact: true }).click()
   const frame = admin.frameLocator('.bs-preview-frame')
   await frame.locator('.blog-article h1').waitFor()

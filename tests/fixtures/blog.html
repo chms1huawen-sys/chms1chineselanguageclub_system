@@ -8,7 +8,7 @@ import '/src/index.css';
 const params=new URLSearchParams(location.search);
 const mode=params.get('mode');
 if(mode==='admin'){document.body.style.background='#f0f7ff';document.body.style.padding='20px';}
-const profile=params.has('member')||['admin','shell'].includes(mode)?{id:'10000000-0000-0000-0000-000000000001',name:'Test editor',role:['admin','shell'].includes(mode)?'advisor_teacher':'ordinary_member',is_active:true}:null;
+const profile=params.has('member')||['admin','shell','editor'].includes(mode)?{id:'10000000-0000-0000-0000-000000000001',name:'Test editor',role:['admin','shell','editor'].includes(mode)?'advisor_teacher':'ordinary_member',is_active:true}:null;
 if(mode==='article')history.replaceState(null,'','/blog/test-story');
 createRoot(document.getElementById('root')).render(React.createElement(mode==='shell'?BlogAdminShell:mode==='admin'?BlogManagement:Blog,{profile,lang:params.get('lang')||'zh',setLang:()=>{}}));
 </script></body></html>
