@@ -1,7 +1,13 @@
 import { createElement as h, Fragment } from 'react'
 
 export function plainDocument(text = '') {
-  return { type: 'doc', content: String(text).split(/\n\s*\n/).map(text => ({ type: 'paragraph', content: text ? [{ type: 'text', text }] : [] })) }
+  return { type: 'doc', content: String(text).replace(/\r\n?/g, '\n').split(/\n[\t ]*\n/).map(text => ({
+    type: 'paragraph',
+    content: text.split('\n').flatMap((line, index) => [
+      ...(index ? [{ type: 'hardBreak' }] : []),
+      ...(line ? [{ type: 'text', text: line }] : []),
+    ]),
+  })) }
 }
 
 export const photoWidth = value => Math.max(25, Math.min(100, Number(value) || 100))
@@ -36,7 +42,11 @@ export function richBody(document, fallback = '', Image, media = []) {
     const props = { key }
     if (['p', 'h1', 'h2', 'h3'].includes(tag) && ['left', 'center', 'right', 'justify'].includes(attrs.textAlign)) props.style = { textAlign: attrs.textAlign }
     if (tag === 'ol') props.start = Math.max(1, Math.min(9999, Number(attrs.start) || 1))
-    return h(tag, props, ['br', 'hr'].includes(tag) ? undefined : (Array.isArray(node.content) ? node.content : []).map((child, index) => render(child, index, depth + 1)))
+    // Match the editor's empty paragraph line box instead of collapsing blank lines.
+    if (tag === 'p' && !node.content?.length) return h(tag, props, h('br'))
+    const children = (Array.isArray(node.content) ? node.content : []).map((child, index) => render(child, index, depth + 1))
+    if (tag === 'p' && node.content?.at(-1)?.type === 'hardBreak') children.push(h('br', { key: 'trailing-break' }))
+    return h(tag, props, ['br', 'hr'].includes(tag) ? undefined : children)
   }
   return render(root, 'body')
 }
