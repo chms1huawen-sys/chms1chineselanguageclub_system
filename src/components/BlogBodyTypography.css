@@ -1,0 +1,13 @@
+/* Explicit blank lines, not paragraph margins, control the author's spacing. */
+.blog-public .blog-article .blog-prose p,
+.blog-rich-editor .tiptap p {
+  margin: 0;
+  font-size: 18px;
+  line-height: 1.9;
+  white-space: pre-wrap;
+  min-height: 1.9em;
+}
+@media (max-width: 700px) {
+  .blog-public .blog-article .blog-prose p,
+  .blog-rich-editor .tiptap p { font-size: 17px; }
+}

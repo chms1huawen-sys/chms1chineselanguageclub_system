@@ -1,12 +1,9 @@
 import { createElement as h, Fragment } from 'react'
 
 export function plainDocument(text = '') {
-  return { type: 'doc', content: String(text).replace(/\r\n?/g, '\n').split(/\n[\t ]*\n/).map(text => ({
+  return { type: 'doc', content: String(text).replace(/\r\n?/g, '\n').split('\n').map(text => ({
     type: 'paragraph',
-    content: text.split('\n').flatMap((line, index) => [
-      ...(index ? [{ type: 'hardBreak' }] : []),
-      ...(line ? [{ type: 'text', text: line }] : []),
-    ]),
+    content: text ? [{ type: 'text', text }] : [],
   })) }
 }
 

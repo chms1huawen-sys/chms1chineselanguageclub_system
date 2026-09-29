@@ -6,8 +6,8 @@ import { publicationYear, matchesPublicSearch } from '../src/utils/blogPresentat
 
 assert.equal(renderToStaticMarkup(richBody(null, '<img onerror=evil>')), '<div><p>&lt;img onerror=evil&gt;</p></div>')
 assert.equal(renderToStaticMarkup(richBody({ type: 'doc', content: [{ type: 'paragraph' }, { type: 'paragraph', content: [] }] })), '<div><p><br/></p><p><br/></p></div>')
-assert.equal(renderToStaticMarkup(richBody(null, 'First\r\nSecond\r\n\r\n\r\n\r\n  Third')), '<div><p>First<br/>Second</p><p><br/></p><p>  Third</p></div>')
-assert.equal(renderToStaticMarkup(richBody(null, 'First\n')), '<div><p>First<br/><br/></p></div>')
+assert.equal(renderToStaticMarkup(richBody(null, 'First\r\nSecond\r\n\r\n\r\n\r\n  Third')), '<div><p>First</p><p>Second</p><p><br/></p><p><br/></p><p><br/></p><p>  Third</p></div>')
+assert.equal(renderToStaticMarkup(richBody(null, 'First\n')), '<div><p>First</p><p><br/></p></div>')
 const doc = plainDocument('Sample')
 doc.content[0].attrs = { textAlign: 'center', onclick: 'evil()' }
 doc.content[0].content[0].marks = [{ type: 'bold' }, { type: 'link', attrs: { href: 'javascript:alert(1)' } }, { type: 'textStyle', attrs: { color: 'red;display:none' } }]

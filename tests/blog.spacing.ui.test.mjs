@@ -21,6 +21,7 @@ try {
       assert.equal(boxes.length, 7)
       assert.ok(boxes[2].h > 25, `${type}: empty paragraph reserves a line`)
       const normal = boxes[1].y - boxes[0].y
+      assert.ok(Math.abs(normal - boxes[0].h) < 1, 'ordinary Enter has no extra paragraph gap')
       const oneBlank = boxes[3].y - boxes[1].y
       const twoBlanks = boxes[6].y - boxes[3].y
       assert.ok(oneBlank > normal + 25 && twoBlanks > oneBlank + 25, `${type}: extra blank lines produce increasing spacing at ${width}px`)

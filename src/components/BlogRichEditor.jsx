@@ -11,6 +11,7 @@ import { Bold, Italic, Underline, Strikethrough, Subscript as SubIcon, Superscri
 import { StudioImage } from '../pages/BlogStudioMedia'
 import { plainDocument, photoWidth } from '../utils/blogRichText'
 import './BlogRichEditor.css'
+import './BlogBodyTypography.css'
 
 function PhotoView({ node, selected }) {
   return <NodeViewWrapper className={`blog-editor-photo ${selected ? 'is-selected' : ''}`} style={{ width: `${photoWidth(node.attrs.width)}%` }}><StudioImage path={node.attrs.path} /></NodeViewWrapper>
