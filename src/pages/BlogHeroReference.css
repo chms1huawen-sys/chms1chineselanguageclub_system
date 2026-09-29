@@ -1,6 +1,6 @@
 /* Full-photo carousel matching the approved reference; keep CMS content and crops. */
 .blog-home .blog-showcase { max-width: 1440px; padding: 0 28px; margin-top: 0; }
-.blog-home .blog-showcase-slides { border-radius: 20px; }
+.blog-home .blog-showcase-slides { border-radius: 20px; width: 100%; min-width: 0; }
 .blog-home .blog-showcase-slide { min-height: 540px; align-items: center; justify-content: flex-start; }
 .blog-home .blog-showcase-slide[data-position=right] { justify-content: flex-start; }
 .blog-home .blog-showcase-photo,.blog-home .blog-showcase-slide[data-position=right] .blog-showcase-photo { align-items: center; justify-content: center; }

@@ -1,4 +1,4 @@
-/* Homepage-only refinement; shared article, search and administration styles stay intact. */
+/* Homepage refinements and shared public navigation. */
 .blog-public .blog-public-actions .blog-home-menu-toggle,.blog-public .blog-public-actions .blog-home-search-toggle,.blog-home-language { display: none; }
 .blog-home {
   --home-ink: #233e50;
@@ -23,6 +23,10 @@
 .blog-home .blog-post p:not(.blog-eyebrow) { color: var(--home-copy); }
 .blog-home .blog-post-meta time,.blog-home .blog-post .blog-post-meta span { font-size: 13px; }
 .blog-home .blog-post .blog-post-meta span { color: var(--home-accent); }
+@media (max-width: 380px) {
+  .blog-home .blog-section-heading { flex-wrap: wrap; gap: 4px 12px; }
+  .blog-home .blog-section-heading > div { flex-basis: 100%; min-width: 0; }
+}
 .blog-home .blog-post:focus-visible,.blog-home .blog-album:focus-visible { outline: 3px solid #287b9c; outline-offset: 4px; }
 .blog-home .blog-album-section { margin-inline: 0; padding: 32px 0 0; background: transparent; border-bottom: 0; border-radius: 0; }
 .blog-home .blog-album-section .blog-section-heading { justify-content: space-between; text-align: left; margin-bottom: 24px; }
@@ -187,4 +191,11 @@
   .blog-home .blog-post[data-kind=publication] > img { height: 260px; aspect-ratio: auto; padding: 18px; }
   .blog-home .blog-post > div.blog-post-copy { padding: 20px; }
   .blog-home .blog-footer { padding: 24px 20px; gap: 16px; }
+}
+@media (max-width: 360px) {
+  .blog-public .blog-nav { gap: 6px; }
+  .blog-public .blog-brand { gap: 6px; font-size: 14px; }
+  .blog-public .blog-brand > span { white-space: nowrap; }
+  .blog-public .blog-public-actions .blog-primary { font-size: 11px; padding-inline: 6px; gap: 0; }
+  .blog-public .blog-public-actions .blog-primary svg { display: none; }
 }
