@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect } from 'react'
+﻿import { useState, useEffect, useEffectEvent } from 'react'
 import { supabase } from '../supabaseClient'
 import { hasPermission } from '../utils/permissions'
 import {
@@ -60,45 +60,16 @@ export default function CalendarPage({ currentUserProfile, lang, notify }) {
   const isPowerUser = hasPermission(currentUserProfile, 'can_manage_calendar')
   const activeBoardTeam = teams.find(t => t.type === 'board') || teams[0] || null
 
-  useEffect(() => {
+  const notifySuccessMsg = useEffectEvent(() => {
     if (successMsg) notify?.({ type: 'success', title: lang === 'zh' ? '操作成功' : 'Success', message: successMsg })
-  }, [successMsg])
+  })
+  useEffect(() => { notifySuccessMsg() }, [successMsg])
 
-  useEffect(() => {
+  const notifyErrorMsg = useEffectEvent(() => {
     if (errorMsg) notify?.({ type: 'error', title: lang === 'zh' ? '操作失败' : 'Failed', message: errorMsg })
-  }, [errorMsg])
+  })
+  useEffect(() => { notifyErrorMsg() }, [errorMsg])
 
-  useEffect(() => {
-    fetchCalendarData()
-
-    // Subscribe to both 'events' and 'tasks' table changes for realtime calendar synchronization
-    const eventsChannel = supabase
-      .channel('calendar-events-changes')
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'events' },
-        () => {
-          fetchCalendarData(true)
-        }
-      )
-      .subscribe()
-
-    const tasksChannel = supabase
-      .channel('calendar-tasks-changes')
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'tasks' },
-        () => {
-          fetchCalendarData(true)
-        }
-      )
-      .subscribe()
-
-    return () => {
-      supabase.removeChannel(eventsChannel)
-      supabase.removeChannel(tasksChannel)
-    }
-  }, [currentDate])
 
   const fetchCalendarData = async (isSilent = false) => {
     if (!isSilent) setLoading(true)
@@ -148,6 +119,43 @@ export default function CalendarPage({ currentUserProfile, lang, notify }) {
       if (!isSilent) setLoading(false)
     }
   }
+
+  const refreshCalendarData = useEffectEvent((...args) => { return fetchCalendarData(...args) })
+
+  useEffect(() => {
+    const initialLoad = setTimeout(() => {
+      refreshCalendarData()
+    }, 0)
+
+    // Subscribe to both 'events' and 'tasks' table changes for realtime calendar synchronization
+    const eventsChannel = supabase
+      .channel('calendar-events-changes')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'events' },
+        () => {
+          refreshCalendarData(true)
+        }
+      )
+      .subscribe()
+
+    const tasksChannel = supabase
+      .channel('calendar-tasks-changes')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'tasks' },
+        () => {
+          refreshCalendarData(true)
+        }
+      )
+      .subscribe()
+
+    return () => {
+      clearTimeout(initialLoad)
+      supabase.removeChannel(eventsChannel)
+      supabase.removeChannel(tasksChannel)
+    }
+  }, [currentDate])
 
   const handlePrevMonth = () => {
     setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1))

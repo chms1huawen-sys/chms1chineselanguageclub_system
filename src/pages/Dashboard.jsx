@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState, useEffectEvent } from 'react'
 import MobileDashboardList from '../components/MobileDashboardList'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../supabaseClient'
@@ -107,17 +107,19 @@ const formatDate = (date, lang = 'zh') => {
 
 function CountUpNumber({ value }) {
   const [display, setDisplay] = useState(0)
+  const displayedValue = useRef(0)
 
   useEffect(() => {
     const target = Number(value) || 0
-    const start = display
+    const start = displayedValue.current
     const startTime = performance.now()
     const duration = 450
     let frame = 0
 
     const tick = (now) => {
       const progress = Math.min((now - startTime) / duration, 1)
-      setDisplay(Math.round(start + (target - start) * progress))
+      displayedValue.current = Math.round(start + (target - start) * progress)
+      setDisplay(displayedValue.current)
       if (progress < 1) frame = requestAnimationFrame(tick)
     }
 
@@ -150,7 +152,6 @@ export default function Dashboard({ currentUserProfile, lang = 'zh', onShowTutor
   const [birthdays, setBirthdays] = useState([])
   const [announcements, setAnnouncements] = useState([])
   const [committeeTeams, setCommitteeTeams] = useState([])
-  const [myCommitteeTeamIds, setMyCommitteeTeamIds] = useState([])
   const [activityFeed, setActivityFeed] = useState([])
   const [activeTab, setActiveTab] = useState('announcements')
   const [showAnnouncementModal, setShowAnnouncementModal] = useState(false)
@@ -160,7 +161,7 @@ export default function Dashboard({ currentUserProfile, lang = 'zh', onShowTutor
   const [birthdayWishTarget, setBirthdayWishTarget] = useState(null)
   const [birthdayWishText, setBirthdayWishText] = useState('')
   const [birthdayWishSubmitting, setBirthdayWishSubmitting] = useState(false)
-  const [showBirthdayReminder, setShowBirthdayReminder] = useState(false)
+  const [dismissedBirthdayReminder, setDismissedBirthdayReminder] = useState(null)
   const [receivedBirthdayWishes, setReceivedBirthdayWishes] = useState([])
   const [errorMsg, setErrorMsg] = useState('')
 
@@ -169,27 +170,11 @@ export default function Dashboard({ currentUserProfile, lang = 'zh', onShowTutor
   const canManageMembers = hasPermission(currentUserProfile, 'can_manage_accounts')
   const canCreateTasks = hasPermission(currentUserProfile, 'can_create_tasks')
 
-  useEffect(() => {
+  const notifyErrorMsg = useEffectEvent(() => {
     if (errorMsg) notify?.({ type: 'error', title: lang === 'zh' ? '操作失败' : 'Failed', message: errorMsg })
-  }, [errorMsg])
+  })
+  useEffect(() => { notifyErrorMsg() }, [errorMsg])
 
-  useEffect(() => {
-    if (!currentUserProfile?.id) return
-    fetchDashboardData()
-
-    const channel = supabase
-      .channel('dashboard-realtime')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'tasks' }, fetchDashboardData)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'events' }, fetchDashboardData)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'users' }, fetchDashboardData)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'leave_applications' }, fetchDashboardData)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'announcements' }, fetchDashboardData)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'activity_log' }, fetchDashboardData)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'notifications' }, fetchDashboardData)
-      .subscribe()
-
-    return () => { supabase.removeChannel(channel) }
-  }, [currentUserProfile?.id, currentUserProfile?.role])
 
   const fetchDashboardData = async () => {
     setLoading(true)
@@ -286,7 +271,7 @@ export default function Dashboard({ currentUserProfile, lang = 'zh', onShowTutor
         return true
       }).slice(0, 8)
       setCommitteeTeams(committeeTeamsResult.data || [])
-      setMyCommitteeTeamIds(committeeIds)
+
       setAnnouncements(visibleAnnouncements)
       setActivityFeed((activityResult.data?.length ? activityResult.data : notificationFeed).slice(0, 10))
       setReceivedBirthdayWishes(unreadBirthdayWishes)
@@ -297,6 +282,28 @@ export default function Dashboard({ currentUserProfile, lang = 'zh', onShowTutor
       setLoading(false)
     }
   }
+
+  const refreshDashboardData = useEffectEvent((...args) => { return fetchDashboardData(...args) })
+
+  useEffect(() => {
+    if (!currentUserProfile?.id) return
+    const initialLoad = setTimeout(() => {
+      refreshDashboardData()
+    }, 0)
+
+    const channel = supabase
+      .channel('dashboard-realtime')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'tasks' }, () => refreshDashboardData())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'events' }, () => refreshDashboardData())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'users' }, () => refreshDashboardData())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'leave_applications' }, () => refreshDashboardData())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'announcements' }, () => refreshDashboardData())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'activity_log' }, () => refreshDashboardData())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'notifications' }, () => refreshDashboardData())
+      .subscribe()
+
+    return () => { clearTimeout(initialLoad); supabase.removeChannel(channel) }
+  }, [currentUserProfile?.id, currentUserProfile?.role])
 
   const getAnnouncementRecipientIds = async (targetType, targetTeamId) => {
     let recipientQuery = supabase
@@ -528,17 +535,10 @@ export default function Dashboard({ currentUserProfile, lang = 'zh', onShowTutor
   )
   const birthdayWishCandidate = todayBirthdayUsers.find(user => user.id !== currentUserProfile?.id)
 
-  useEffect(() => {
-    if (!currentUserProfile?.id || todayBirthdayUsers.length === 0) return
-    const reminderKey = `birthday-reminder-${currentUserProfile.id}-${todayKey}`
-    try {
-      if (localStorage.getItem(reminderKey) !== 'seen') {
-        setShowBirthdayReminder(true)
-      }
-    } catch {
-      setShowBirthdayReminder(true)
-    }
-  }, [currentUserProfile?.id, todayBirthdayUsers.length, todayKey])
+  const reminderKey = `birthday-reminder-${currentUserProfile?.id}-${todayKey}`
+  let reminderSeen = false
+  try { reminderSeen = localStorage.getItem(reminderKey) === 'seen' } catch { /* Storage can be unavailable in private mode. */ }
+  const showBirthdayReminder = Boolean(currentUserProfile?.id && todayBirthdayUsers.length && !reminderSeen && dismissedBirthdayReminder !== reminderKey)
 
   const closeBirthdayReminder = () => {
     if (currentUserProfile?.id) {
@@ -548,7 +548,7 @@ export default function Dashboard({ currentUserProfile, lang = 'zh', onShowTutor
         // Ignore localStorage errors; the reminder can safely show again later.
       }
     }
-    setShowBirthdayReminder(false)
+    setDismissedBirthdayReminder(reminderKey)
   }
 
   const markBirthdayWishesRead = async () => {

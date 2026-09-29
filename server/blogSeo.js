@@ -1,15 +1,16 @@
 import { cropStyles } from '../src/utils/photoCrop.js'
 import { createElement } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
-import { richBody, photoWidth } from '../src/utils/blogRichText.js'
-import { heroSlides, submissionNote } from '../src/utils/blogPresentation.js'
+import { richBody, photoWidth, galleryPreview } from '../src/utils/blogRichText.js'
+import { heroSlides, submissionNote, publicationYear } from '../src/utils/blogPresentation.js'
 import { safePublicLink } from '../src/utils/blogContent.js'
 import { publicBlogSettings } from '../src/utils/blogBootstrap.js'
+import { compareStories, featuredStories, HOME_STORY_COUNT, STORY_PAGE_SIZE } from '../src/utils/blogFeed.js'
 export const escapeHtml = value => String(value ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]))
 export const siteOrigin = env => new URL(env.BLOG_SITE_URL || 'https://chms1chineselanguageclubsystem.vercel.app').origin
 const safeHref = url => typeof url === 'string' && /^https?:\/\//.test(url) ? url : ''
 
-export function renderBlogHtml(template, site, posts, media, slug, origin, view = 'home', links = [], search = '', browseAll = false) {
+export function renderBlogHtml(template, site, posts, media, slug, origin, view = 'home', links = [], search = '', browseAll = false, homeContent = {}) {
   const searching = !!search || browseAll
   const e = escapeHtml
   const bootstrap = '<script id="blog-site-settings" type="application/json">' + JSON.stringify(publicBlogSettings(site)).replace(/</g, '\\u003c') + '</script>'
@@ -41,11 +42,26 @@ export function renderBlogHtml(template, site, posts, media, slug, origin, view 
     const label = e(details.purchase_label?.trim() || '联系购买')
     return valid.length === 1 ? `<a class="blog-purchase-button" href="${e(valid[0].url)}" target="_blank" rel="noopener noreferrer">${label}</a>` : `<details class="blog-purchase"><summary class="blog-purchase-button">${label}</summary><div class="blog-purchase-options">${socials(valid)}</div></details>`
   }
-  const book = post?.content_type === 'publication' ? `<section><h2>书籍资料</h2><dl>${[['author','作者'],['price','价格'],['published_on','出版日期'],['pages','页数'],['isbn','ISBN']].filter(([key]) => post.book_details?.[key]).map(([key,label]) => `<dt>${label}</dt><dd>${e(post.book_details[key])}</dd>`).join('')}</dl>${paragraphs(post.book_details?.author_bio)}${purchase(post.book_details)}</section>` : ''
+  const book = post?.content_type === 'publication' ? `<section class="blog-book-details"><dl>${[['author','作者'],['price','价格'],['published_on','出版日期'],['pages','页数'],['isbn','ISBN']].filter(([key]) => post.book_details?.[key]).map(([key,label]) => `<div><dt>${label}</dt><dd>${e(post.book_details[key])}</dd></div>`).join('')}</dl>${purchase(post.book_details)}${post.book_details?.author_bio ? `<h2>作者介绍</h2><p>${e(post.book_details.author_bio)}</p>` : ''}</section>` : ''
   const about = `<section class="blog-about"><h2>${e(site.content?.about_title || '关于华文学会')}</h2><div>${site.content?.about_image ? picture(site.content.about_image, site.title) : ''}${paragraphs(view === 'about' ? site.about : (site.content?.about_notes ?? site.about))}</div></section>`
   let body
   if (post) {
-    body = `<main class="blog-main"><article class="blog-article"><h1>${e(post.title)}</h1>${post.summary ? `<div class="blog-article-summary"><span>内容摘要</span><p>${e(post.summary)}</p></div>` : ''}${post.author ? `<p class="blog-article-author"><span>作者</span><strong>${e(post.author)}</strong></p>` : ''}<p>${e(post.event_date)} ${e(post.location)} ${e(post.credit)}</p>${post.cover_path ? `<figure class="blog-cover-figure" style="width:${photoWidth(media.find(photo => photo.path === post.cover_path)?.width_percent)}%">${picture(post.cover_path, post.title, 'blog-article-cover')}<figcaption>${e(media.find(photo => photo.path === post.cover_path)?.caption || post.credit || post.title)}</figcaption></figure>` : ''}<div class="blog-prose">${renderToStaticMarkup(richBody(post.body_document, post.body, ({ path, alt }) => photoElement(path, alt), media))}${book}${post.behind_scenes ? `<h2>幕后花絮</h2>${paragraphs(post.behind_scenes)}` : ''}</div><div class="blog-gallery blog-photo-collage count-${Math.min(4, media.filter(m => m.path !== post.cover_path).length)}">${media.filter(m => m.path !== post.cover_path).slice(0,4).map((m, index) => `<figure><div class="blog-collage-preview">${picture(m.path, m.caption || post.title)}${index === 3 && media.filter(photo => photo.path !== post.cover_path).length > 4 ? `<span class="blog-photo-more">+${media.filter(photo => photo.path !== post.cover_path).length - 4}</span>` : ''} </div><figcaption>${e(m.caption || post.title)}</figcaption></figure>`).join('')}</div>${links.length ? `<section><h2>相关链接</h2>${links.filter(l => safeHref(l.url)).map(l => `<p><a href="${e(l.url)}" target="_blank" rel="noopener noreferrer">${e(l.label)}</a></p>`).join('')}</section>` : ''}</article><a href="/activities">所有文章</a></main>`
+    const gallery = galleryPreview(media, post.cover_path)
+    const coverPhoto = media.find(photo => photo.path === post.cover_path)
+    body = `<main class="blog-main"><article class="blog-article">
+      <header><h1>${e(post.title)}</h1>
+        ${post.author ? `<p class="blog-article-author"><span>作者</span><strong>${e(post.author)}</strong></p>` : ''}
+        <div class="blog-article-dates">${post.published_at ? `<span>发布于：<time datetime="${e(post.published_at)}">${e(post.published_at.slice(0, 10))}</time></span>` : ''}${post.event_date ? `<span>活动日期：<time datetime="${e(post.event_date)}">${e(post.event_date)}</time></span>` : ''}${post.location ? `<span>地点：${e(post.location)}</span>` : ''}</div>
+        ${post.summary ? `<div class="blog-article-summary"><span>内容摘要</span><p>${e(post.summary)}</p></div>` : ''}
+        ${post.credit ? `<p class="blog-credit">${e(post.credit)}</p>` : ''}
+      </header>
+      ${post.cover_path ? `<figure class="blog-cover-figure" style="width:${photoWidth(coverPhoto?.width_percent)}%">${picture(post.cover_path, post.title, 'blog-article-cover')}<figcaption>${e(coverPhoto?.caption || post.credit || post.title)}</figcaption></figure>` : ''}
+      ${book}<div class="blog-prose">${renderToStaticMarkup(richBody(post.body_document, post.body, ({ path, alt }) => photoElement(path, alt), media))}</div>
+      ${safeHref(post.video_url) ? `<p class="blog-prose"><a href="${e(post.video_url)}" target="_blank" rel="noopener noreferrer">观看影片</a></p>` : ''}
+      ${gallery.photos.length ? `<div class="blog-gallery blog-photo-collage count-${gallery.photos.length}">${gallery.photos.map(({ photo }, index) => `<figure><div class="blog-collage-preview">${picture(photo.path, photo.caption || post.title)}${index === 3 && gallery.remaining ? `<span class="blog-photo-more">+${gallery.remaining}</span>` : ''}</div>${photo.caption?.trim() ? `<figcaption>${e(photo.caption)}</figcaption>` : ''}</figure>`).join('')}</div>` : ''}
+      ${post.behind_scenes ? `<section class="blog-prose"><h2>幕后花絮</h2><p>${e(post.behind_scenes)}</p></section>` : ''}
+      ${links.length ? `<section><h2>相关链接</h2>${links.filter(l => safeHref(l.url)).map(l => `<p><a href="${e(l.url)}" target="_blank" rel="noopener noreferrer">${e(l.label)}</a></p>`).join('')}</section>` : ''}
+    </article><a href="/activities">所有文章</a></main>`
   } else if (slug) {
     body = '<main class="blog-main"><h1>文章不存在或尚未公开</h1><a href="/">返回首页</a></main>'
   } else if (view === 'about') {
@@ -53,7 +69,13 @@ export function renderBlogHtml(template, site, posts, media, slug, origin, view 
   } else {
     const hero = view === 'home' && !searching ? `<section class="blog-showcase"><div class="blog-showcase-slides"><div class="blog-showcase-slide is-active" data-position="${slide.position === 'right' ? 'right' : 'left'}" data-tone="${slide.tone === 'dark' ? 'dark' : 'light'}"><a class="blog-showcase-photo" href="${e(safePublicLink(slide.link) || '/activities')}">${picture(slide.path, slide.title)}</a><div class="blog-showcase-caption"><div><p>${e(site.subtitle)}</p><h1>${e(slide.title)}</h1><p>${e(slide.subtitle)}</p></div><a class="blog-showcase-cta" href="${e(safePublicLink(slide.link) || '/activities')}">${e(slide.cta || '探索我们的故事')}</a></div></div></div></section>` : ''
     const level = view === 'home' ? '2' : '1'
-    body = `${hero}<main class="blog-main"><h${level}>${e(searching ? (search ? `搜索结果: ${search}` : '全部内容') : view === 'home' ? (site.content?.latest_title || '最新活动') : names[view])}</h${level}>${view === 'literature' ? `<p class="blog-submission-note">${e(site.content?.submission_note ?? submissionNote(false))}</p>` : ''}<div class="blog-post-grid">${posts.map(p => `<a class="blog-post" data-cover="${!!p.cover_path}" data-kind="${e(p.content_type)}" href="/blog/${e(p.slug)}">${p.cover_path ? picture(p.cover_path, p.title) : ''}<div class="blog-post-copy"><h3>${e(p.title)}${(p.content_type || 'article') === 'article' && p.author ? `<span class="blog-card-author"> / ${e(p.author)}</span>` : ''}</h3><p class="blog-post-excerpt">${e(p.summary)}</p><div class="blog-post-meta"><time>${e((p.published_at || '').slice(0,10) || p.content_year || '')}</time><span>阅读全文</span></div></div></a>`).join('')}</div>${view === 'home' && !searching ? about : ''}</main>`
+    const card = p => `<a class="blog-post" data-cover="${!!p.cover_path}" data-kind="${e(p.content_type)}" href="/blog/${e(p.slug)}">${p.cover_path ? picture(p.cover_path, p.title) : ''}<div class="blog-post-copy"><h3>${e(p.title)}${(p.content_type || 'article') === 'article' && p.author ? `<span class="blog-card-author"> / ${e(p.author)}</span>` : ''}</h3>${p.content_type === 'publication' ? `<p>${e(p.book_details?.author)}${p.book_details?.price ? ` · ${e(p.book_details.price)}` : ''}</p>` : ''}<p class="blog-post-excerpt">${e(p.summary)}</p>${p.content_type === 'event' && p.event_date ? `<p class="blog-event-date">活动日期：${e(p.event_date)}</p>` : ''}<div class="blog-post-meta"><time>发布于 ${e((p.published_at || '').slice(0,10) || publicationYear(p))}</time><span>${p.content_type === 'publication' ? '查看书籍' : '阅读全文'}</span></div></div></a>`
+    const home = view === 'home' && !searching
+    const ordered = [...posts].sort(compareStories)
+    const visible = ordered.slice(0, home ? HOME_STORY_COUNT : STORY_PAGE_SIZE)
+    const featured = featuredStories(homeContent.featured || posts)
+    const moments = homeContent.moments || []
+    body = `${hero}<main class="blog-main"><section class="blog-public-section" id="articles"><h${level}>${e(searching ? (search ? `搜索结果: ${search}` : '全部内容') : home ? (site.content?.latest_title || '最新活动') : names[view])}</h${level}>${view === 'literature' ? `<p class="blog-submission-note">${e(site.content?.submission_note ?? submissionNote(false))}</p>` : ''}<div class="blog-post-grid">${visible.map(card).join('')}</div></section>${home && featured.length ? `<section class="blog-public-section"><h2>${e(site.content?.featured_title || '精选内容')}</h2><div class="blog-post-grid">${featured.map(card).join('')}</div></section>` : ''}${home ? `<section class="blog-public-section blog-album-section" id="albums"><h2>${e(site.content?.albums_title || '活动影像')}</h2><div class="blog-album-grid">${moments.map(item => `<a class="blog-album" href="/blog/${e(item.slug)}">${picture(item.moment_path, item.title)}<span><strong>${e(item.title)}</strong><small>${e(publicationYear(item))}</small></span></a>`).join('')}</div></section>${about}` : ''}</main>`
   }
   return template.replace(/<title>[\s\S]*?<\/title>/, '').replace(/<meta name="description"[^>]*>/, '')
     .replace('</head>', () => metadata + bootstrap + '</head>')

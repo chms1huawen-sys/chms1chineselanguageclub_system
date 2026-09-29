@@ -5,6 +5,7 @@ import Blog from '/src/pages/Blog.jsx';
 import '/src/index.css';
 const params=new URLSearchParams(location.search);
 if(params.get('mode')==='article') history.replaceState(null,'','/blog/test-story');
+else if(params.has('q')) history.replaceState(null,'','/?q='+encodeURIComponent(params.get('q')));
 else if(params.has('view')) history.replaceState(null,'','/'+params.get('view'));
 createRoot(document.getElementById('root')).render(React.createElement(Blog,{profile:params.has('member')?{is_active:true,role:'ordinary_member'}:null,lang:'zh',setLang:()=>{}}));
 </script></body></html>

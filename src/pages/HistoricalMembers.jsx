@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import { useState, useEffect, useEffectEvent } from 'react'
 import { supabase } from '../supabaseClient'
 import {
   Users,
@@ -66,18 +66,6 @@ export default function HistoricalMembers({ lang }) {
   const [errorMsg, setErrorMsg] = useState('')
   const [avatarPreviewUser, setAvatarPreviewUser] = useState(null)
 
-  useEffect(() => {
-    fetchArchivedSessions()
-  }, [])
-
-  useEffect(() => {
-    if (selectedSessionId) {
-      fetchSessionMembers(selectedSessionId)
-    } else {
-      setMembers([])
-    }
-  }, [selectedSessionId])
-
   const fetchArchivedSessions = async () => {
     setLoading(true)
     setErrorMsg('')
@@ -101,6 +89,15 @@ export default function HistoricalMembers({ lang }) {
       setLoading(false)
     }
   }
+
+  const refreshArchivedSessions = useEffectEvent((...args) => { return fetchArchivedSessions(...args) })
+
+  useEffect(() => {
+    const initialLoad = setTimeout(() => {
+      refreshArchivedSessions()
+    }, 0)
+    return () => clearTimeout(initialLoad)
+  }, [])
 
   const fetchSessionMembers = async (teamId) => {
     setMembersLoading(true)
@@ -130,6 +127,15 @@ export default function HistoricalMembers({ lang }) {
       setMembersLoading(false)
     }
   }
+
+  const refreshSessionMembers = useEffectEvent((...args) => { if (!args[0]) { setMembers([]); return }; return fetchSessionMembers(...args) })
+
+  useEffect(() => {
+    const initialLoad = setTimeout(() => {
+      refreshSessionMembers(selectedSessionId)
+    }, 0)
+    return () => clearTimeout(initialLoad)
+  }, [selectedSessionId])
 
   const getSelectedSessionName = () => {
     const session = sessions.find(item => item.id === selectedSessionId)

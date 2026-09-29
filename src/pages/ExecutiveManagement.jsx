@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+import { useEffect, useState, useEffectEvent } from 'react'
 import { supabase } from '../supabaseClient'
 import UserAvatar from '../components/UserAvatar'
 import { canViewExecutiveManagement, hasPermission } from '../utils/permissions'
@@ -187,42 +187,16 @@ export default function ExecutiveManagement({ currentUserProfile, lang = 'zh', n
   const roleText = getRoleText(currentUserProfile, lang)
   const roleDescription = ROLE_DESCRIPTIONS[currentUserProfile?.role]?.[lang] || ''
 
-  useEffect(() => {
-    if (!currentUserProfile?.id || !isExecutive) return
-    fetchDriveSetting()
-    fetchExecutiveMembers()
 
-    const settingsChannel = supabase
-      .channel('executive-drive-setting')
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'system_settings', filter: `key=eq.${EXECUTIVE_DRIVE_SETTING_KEY}` },
-        () => fetchDriveSetting(true),
-      )
-      .subscribe()
-
-    const usersChannel = supabase
-      .channel('executive-members-list')
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'users' },
-        () => fetchExecutiveMembers(true),
-      )
-      .subscribe()
-
-    return () => {
-      supabase.removeChannel(settingsChannel)
-      supabase.removeChannel(usersChannel)
-    }
-  }, [currentUserProfile?.id, isExecutive])
-
-  useEffect(() => {
+  const notifySuccessMsg = useEffectEvent(() => {
     if (successMsg) notify?.({ type: 'success', title: lang === 'zh' ? '操作成功' : 'Success', message: successMsg })
-  }, [successMsg])
+  })
+  useEffect(() => { notifySuccessMsg() }, [successMsg])
 
-  useEffect(() => {
+  const notifyErrorMsg = useEffectEvent(() => {
     if (errorMsg) notify?.({ type: 'error', title: lang === 'zh' ? '操作失败' : 'Failed', message: errorMsg })
-  }, [errorMsg])
+  })
+  useEffect(() => { notifyErrorMsg() }, [errorMsg])
 
   const fetchDriveSetting = async (silent = false) => {
     if (!silent) setLoading(true)
@@ -289,6 +263,41 @@ export default function ExecutiveManagement({ currentUserProfile, lang = 'zh', n
       if (!silent) setMembersLoading(false)
     }
   }
+
+  const refreshDriveSetting = useEffectEvent((...args) => { return fetchDriveSetting(...args) })
+  const refreshExecutiveMembers = useEffectEvent((...args) => { return fetchExecutiveMembers(...args) })
+
+  useEffect(() => {
+    if (!currentUserProfile?.id || !isExecutive) return
+    const initialLoad = setTimeout(() => {
+      refreshDriveSetting()
+      refreshExecutiveMembers()
+    }, 0)
+
+    const settingsChannel = supabase
+      .channel('executive-drive-setting')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'system_settings', filter: `key=eq.${EXECUTIVE_DRIVE_SETTING_KEY}` },
+        () => refreshDriveSetting(true),
+      )
+      .subscribe()
+
+    const usersChannel = supabase
+      .channel('executive-members-list')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'users' },
+        () => refreshExecutiveMembers(true),
+      )
+      .subscribe()
+
+    return () => {
+      clearTimeout(initialLoad)
+      supabase.removeChannel(settingsChannel)
+      supabase.removeChannel(usersChannel)
+    }
+  }, [currentUserProfile?.id, isExecutive])
 
   if (!isExecutive) {
     return (

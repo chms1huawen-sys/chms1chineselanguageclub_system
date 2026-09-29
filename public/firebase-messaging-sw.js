@@ -51,10 +51,10 @@ messaging.onBackgroundMessage((payload) => {
 })
 
 self.addEventListener('push', (event) => {
-  let payload = {}
+  let payload
   try {
     payload = event.data ? event.data.json() : {}
-  } catch (error) {
+  } catch {
     payload = { body: event.data ? event.data.text() : '' }
   }
 

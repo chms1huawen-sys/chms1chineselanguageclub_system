@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect } from 'react'
+﻿import { useState, useEffect, useEffectEvent } from 'react'
 import { supabase } from '../supabaseClient'
 import { hasPermission } from '../utils/permissions'
 import {
@@ -60,13 +60,15 @@ export default function Committees({ currentUserProfile, lang, notify }) {
   const [canViewSelectedCommittee, setCanViewSelectedCommittee] = useState(null)
   const [avatarPreviewUser, setAvatarPreviewUser] = useState(null)
 
-  useEffect(() => {
+  const notifySuccessMsg = useEffectEvent(() => {
     if (successMsg) notify?.({ type: 'success', title: lang === 'zh' ? '操作成功' : 'Success', message: successMsg })
-  }, [successMsg])
+  })
+  useEffect(() => { notifySuccessMsg() }, [successMsg])
 
-  useEffect(() => {
+  const notifyErrorMsg = useEffectEvent(() => {
     if (errorMsg) notify?.({ type: 'error', title: lang === 'zh' ? '操作失败' : 'Failed', message: errorMsg })
-  }, [errorMsg])
+  })
+  useEffect(() => { notifyErrorMsg() }, [errorMsg])
 
   // Modals state
   const [showCreateModal, setShowCreateModal] = useState(false)
@@ -103,19 +105,6 @@ export default function Committees({ currentUserProfile, lang, notify }) {
   )
   const canManageSelectedCommittee = isPowerUser || isSelectedCommitteeManager
 
-  useEffect(() => {
-    if (!currentUserProfile?.id) return
-    fetchCommittees()
-    fetchUsers()
-  }, [currentUserProfile?.id, currentUserProfile?.role])
-
-  useEffect(() => {
-    if (selectedComm) {
-      setCanViewSelectedCommittee(null)
-      fetchCommitteeDetails(selectedComm.id)
-    }
-  }, [selectedComm])
-
   const fetchCommittees = async () => {
     setLoading(true)
     setErrorMsg('')
@@ -143,6 +132,8 @@ export default function Committees({ currentUserProfile, lang, notify }) {
           .select('status')
           .eq('team_id', comm.id)
 
+        if (mErr) throw mErr
+        if (tErr) throw tErr
         const totalTasks = tasks ? tasks.length : 0
         const completedTasks = tasks ? tasks.filter(t => t.status === 'completed').length : 0
 
@@ -176,6 +167,18 @@ export default function Committees({ currentUserProfile, lang, notify }) {
       console.error('Error fetching users:', err)
     }
   }
+
+  const refreshCommittees = useEffectEvent((...args) => { return fetchCommittees(...args) })
+  const refreshUsers = useEffectEvent((...args) => { return fetchUsers(...args) })
+
+  useEffect(() => {
+    if (!currentUserProfile?.id) return
+    const initialLoad = setTimeout(() => {
+      refreshCommittees()
+      refreshUsers()
+    }, 0)
+    return () => clearTimeout(initialLoad)
+  }, [currentUserProfile?.id, currentUserProfile?.role])
 
   const fetchCommitteeDetails = async (commId) => {
     try {
@@ -253,13 +256,22 @@ export default function Committees({ currentUserProfile, lang, notify }) {
     }
   }
 
+  const refreshCommitteeDetails = useEffectEvent((...args) => { setCanViewSelectedCommittee(null); return fetchCommitteeDetails(...args) })
+
+  useEffect(() => {
+    if (selectedComm) {
+      const initialLoad = setTimeout(() => refreshCommitteeDetails(selectedComm.id), 0)
+      return () => clearTimeout(initialLoad)
+    }
+  }, [selectedComm])
+
   const handleCreateCommittee = async (e) => {
     e.preventDefault()
     setFormSubmitting(true)
     setErrorMsg('')
     setSuccessMsg('')
     try {
-      const { data, error } = await supabase
+      const { error } = await supabase
         .from('teams')
         .insert({
           name: newCommData.name,

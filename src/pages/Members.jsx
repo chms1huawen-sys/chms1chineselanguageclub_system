@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import { useState, useEffect, useEffectEvent } from 'react'
 import { supabase } from '../supabaseClient'
 import { createClient } from '@supabase/supabase-js'
 import { UserPlus, Search, Edit2, Shield, UserX, UserCheck, AlertCircle, Loader } from 'lucide-react'
@@ -136,15 +136,16 @@ export default function Members({ currentUserProfile, lang, notify }) {
 
   const canManageAccounts = hasPermission(currentUserProfile, 'can_manage_accounts')
 
-  useEffect(() => {
+  const notifySuccessMsg = useEffectEvent(() => {
     if (successMsg) notify?.({ type: 'success', title: lang === 'zh' ? '操作成功' : 'Success', message: successMsg })
-  }, [successMsg])
+  })
+  useEffect(() => { notifySuccessMsg() }, [successMsg])
 
-  useEffect(() => {
+  const notifyErrorMsg = useEffectEvent(() => {
     if (errorMsg) notify?.({ type: 'error', title: lang === 'zh' ? '操作失败' : 'Failed', message: errorMsg })
-  }, [errorMsg])
+  })
+  useEffect(() => { notifyErrorMsg() }, [errorMsg])
 
-  useEffect(() => { fetchMembers() }, [])
 
   const validateCustomRole = () => {
     if (formData.role !== 'custom') return true
@@ -174,6 +175,10 @@ export default function Members({ currentUserProfile, lang, notify }) {
       setLoading(false)
     }
   }
+
+  const refreshMembers = useEffectEvent((...args) => { return fetchMembers(...args) })
+
+  useEffect(() => { const initialLoad = setTimeout(() => refreshMembers(), 0); return () => clearTimeout(initialLoad) }, [])
 
   const addToCurrentBoardRoster = async (userId, role, customRoleLabel) => {
     if (!userId) return false

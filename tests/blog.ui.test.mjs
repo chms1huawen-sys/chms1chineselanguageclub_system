@@ -38,6 +38,7 @@ try {
     await page.waitForFunction(() => [...document.images].every(img => img.complete && img.naturalWidth > 0))
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false)
     await page.screenshot({ path: `test-results/blog/home-${width}.png`, fullPage: true })
+    if (width < 700) await page.getByRole('button', { name: '展开搜索', exact: true }).click()
     await page.getByRole('searchbox', { name: '搜索公开文章和书籍', exact: true }).fill('不存在')
     await page.getByRole('button', { name: '搜索', exact: true }).click()
     await page.getByText('暂无符合条件的公开文章。').waitFor()
@@ -71,7 +72,7 @@ try {
   assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false)
   await page.screenshot({ path: 'test-results/blog/editor-mobile.png', fullPage: true })
   await page.getByRole('button', { name: '预览', exact: true }).click()
-  await page.getByRole('heading', { name: '新的活动文章', exact: true }).waitFor()
+  await page.frameLocator('.bs-preview-frame').getByRole('heading', { name: '新的活动文章', exact: true }).waitFor()
   for (const width of [1440, 390]) {
     await page.setViewportSize({ width, height: 900 })
     await page.goto(root + '/tests/fixtures/blog.html?mode=admin')

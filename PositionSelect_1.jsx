@@ -2,7 +2,7 @@
 // 替换你 Members.jsx 里所有的 <select> 职务选择
 // 支持预设选项 + 自定义输入
 
-import { useState, useEffect } from 'react'
+
 
 const PRESET_POSITIONS = [
   { value: 'advisor', label: '顾问老师 (Advisor)' },
@@ -42,35 +42,24 @@ const inputStyle = {
  */
 export default function PositionSelect({ value, onChange, disabled = false, label = '系统角色 / 职务 Role' }) {
   const isPreset = PRESET_POSITIONS.some(p => p.value === value && p.value !== '__custom__')
-  const [mode, setMode] = useState(isPreset ? 'preset' : 'custom')
-  const [customText, setCustomText] = useState(isPreset ? '' : value || '')
-
-  useEffect(() => {
-    // 外部 value 变化时同步
-    const preset = PRESET_POSITIONS.some(p => p.value === value && p.value !== '__custom__')
-    if (preset) {
-      setMode('preset')
-    } else if (value) {
-      setMode('custom')
-      setCustomText(value)
-    }
-  }, [value])
+  const mode = isPreset ? 'preset' : 'custom'
+  const customText = isPreset ? '' : value || ''
 
   const handleSelectChange = (e) => {
     const selected = e.target.value
     if (selected === '__custom__') {
-      setMode('custom')
-      setCustomText('')
+
+
       onChange('')
     } else {
-      setMode('preset')
+
       onChange(selected)
     }
   }
 
   const handleCustomChange = (e) => {
     const text = e.target.value
-    setCustomText(text)
+
     onChange(text)
   }
 

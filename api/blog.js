@@ -5,6 +5,7 @@ import { createClient } from '@supabase/supabase-js'
 import { renderBlogHtml, siteOrigin } from '../server/blogSeo.js'
 import { matchesPublicSearch } from '../src/utils/blogPresentation.js'
 import { postTags } from '../src/utils/blogContent.js'
+import { FEATURED_STORY_COUNT, MOMENT_COUNT } from '../src/utils/blogFeed.js'
 
 export default async function handler(req, res) {
   res.setHeader('Cache-Control', 'no-store')
@@ -27,7 +28,7 @@ export default async function handler(req, res) {
     if (!slug && view === 'activities') query = query.eq('content_type', 'event')
     if (!slug && view === 'literature') query = query.eq('content_type', 'article')
     if (!slug && view === 'news') query = query.eq('content_type', 'notice')
-    query = slug ? query.eq('slug', slug) : query.order('is_sticky', { ascending: false }).order('content_year', { ascending: false }).order('published_at', { ascending: false }).limit(100)
+    query = slug ? query.eq('slug', slug) : query.order('is_sticky', { ascending: false }).order('published_at', { ascending: false }).order('id').limit(100)
     const posts = await query
     if (posts.error) throw posts.error
     if (search || (!slug && view === 'home' && Object.hasOwn(req.query, 'q'))) {
@@ -44,6 +45,20 @@ export default async function handler(req, res) {
     }
     let media = []
     let links = []
+    const homeContent = { featured: [], moments: [] }
+    if (!slug && view === 'home' && !Object.hasOwn(req.query, 'q')) {
+      const featured = await db.from('blog_posts').select('*').eq('status', 'published').eq('featured', true).order('published_at', { ascending: false }).order('id').limit(FEATURED_STORY_COUNT)
+      if (featured.error) throw featured.error
+      homeContent.featured = featured.data || []
+      const events = await db.from('blog_posts').select('*').eq('status', 'published').eq('content_type', 'event').or('show_in_moments.is.null,show_in_moments.eq.true').order('published_at', { ascending: false }).order('id').limit(MOMENT_COUNT)
+      if (events.error) throw events.error
+      for (const event of events.data || []) {
+        const photos = await db.from('blog_media').select('path').eq('post_id', event.id).order('position').limit(1)
+        if (photos.error) throw photos.error
+        const path = photos.data?.[0]?.path || event.cover_path
+        if (path) homeContent.moments.push({ ...event, moment_path: path })
+      }
+    }
     if (slug && posts.data[0]) {
       const result = await db.from('blog_media').select('*').eq('post_id', posts.data[0].id).order('position')
       if (result.error) throw result.error
@@ -54,7 +69,7 @@ export default async function handler(req, res) {
     }
     if (slug && !posts.data.length) res.setHeader('X-Robots-Tag', 'noindex')
     res.setHeader('Content-Type', 'text/html; charset=utf-8')
-    return res.status(slug && !posts.data.length ? 404 : 200).send(renderBlogHtml(template, site.data, posts.data, media, slug, siteOrigin(process.env), view, links, search, !slug && view === 'home' && Object.hasOwn(req.query, 'q')))
+    return res.status(slug && !posts.data.length ? 404 : 200).send(renderBlogHtml(template, site.data, posts.data, media, slug, siteOrigin(process.env), view, links, search, !slug && view === 'home' && Object.hasOwn(req.query, 'q'), homeContent))
   } catch (error) {
     console.error('Blog page unavailable:', error.message)
     // Member hash routes also request /. Keep the app bootable during migration/outages.

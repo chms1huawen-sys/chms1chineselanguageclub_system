@@ -1,7 +1,7 @@
 // src/pages/Settings.jsx
 import { useState } from 'react'
 import { supabase } from '../supabaseClient'
-import { KeyRound, User, Bell, BellOff, CheckCircle, AlertCircle, Loader, ShieldCheck } from 'lucide-react'
+import { KeyRound, User, Bell, CheckCircle, AlertCircle, Loader, ShieldCheck } from 'lucide-react'
 
 const ROLE_LABELS = {
   advisor: '顾问老师 (Advisor)',

@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState, useEffectEvent } from 'react'
 import { supabase } from '../supabaseClient'
 import { hasPermission } from '../utils/permissions'
 import TermReport from '../components/TermReport'
@@ -107,22 +107,21 @@ export default function Handover({ currentUserProfile, lang, notify }) {
   const sessionLabel = `${newYear} ${newHalf}`
   const sessionCode = `${newYear}-${newHalf === '上半年' ? 'H1' : 'H2'}`
 
-  useEffect(() => {
+  const notifySuccessMsg = useEffectEvent(() => {
     if (successMsg) notify?.({ type: 'success', title: lang === 'zh' ? '操作成功' : 'Success', message: successMsg })
-  }, [successMsg])
+  })
+  useEffect(() => { notifySuccessMsg() }, [successMsg])
 
-  useEffect(() => {
+  const notifyErrorMsg = useEffectEvent(() => {
     if (errorMsg) notify?.({ type: 'error', title: lang === 'zh' ? '操作失败' : 'Failed', message: errorMsg })
-  }, [errorMsg])
+  })
+  useEffect(() => { notifyErrorMsg() }, [errorMsg])
 
   const keptUsers = useMemo(
     () => activeUsers.filter(user => !deactivateIds.includes(user.id)),
     [activeUsers, deactivateIds],
   )
 
-  useEffect(() => {
-    fetchHandoverData()
-  }, [])
 
   const fetchHandoverData = async () => {
     setLoading(true)
@@ -154,6 +153,15 @@ export default function Handover({ currentUserProfile, lang, notify }) {
       setLoading(false)
     }
   }
+
+  const refreshHandoverData = useEffectEvent((...args) => { return fetchHandoverData(...args) })
+
+  useEffect(() => {
+    const initialLoad = setTimeout(() => {
+      refreshHandoverData()
+    }, 0)
+    return () => clearTimeout(initialLoad)
+  }, [])
 
   const toggleDeactivate = (userId) => {
     if (userId === currentUserProfile?.id) return

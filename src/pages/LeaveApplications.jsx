@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState, useEffectEvent } from 'react'
 import { supabase } from '../supabaseClient'
 import { createNotificationsAndPush } from '../utils/pushNotifications'
 import { canViewLeaveRecords } from '../utils/permissions'
@@ -108,29 +108,16 @@ export default function LeaveApplications({ currentUserProfile, lang = 'zh', not
 
   const isManager = canViewLeaveRecords(currentUserProfile)
 
-  useEffect(() => {
+  const notifySuccessMsg = useEffectEvent(() => {
     if (successMsg) notify?.({ type: 'success', title: lang === 'zh' ? '操作成功' : 'Success', message: successMsg })
-  }, [successMsg])
+  })
+  useEffect(() => { notifySuccessMsg() }, [successMsg])
 
-  useEffect(() => {
+  const notifyErrorMsg = useEffectEvent(() => {
     if (errorMsg) notify?.({ type: 'error', title: lang === 'zh' ? '操作失败' : 'Failed', message: errorMsg })
-  }, [errorMsg])
+  })
+  useEffect(() => { notifyErrorMsg() }, [errorMsg])
 
-  useEffect(() => {
-    fetchApplications()
-    fetchDriveFolderSetting()
-
-    const channel = supabase
-      .channel('leave-applications-changes')
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'leave_applications' },
-        () => fetchApplications(true),
-      )
-      .subscribe()
-
-    return () => { supabase.removeChannel(channel) }
-  }, [currentUserProfile?.id, currentUserProfile?.role])
 
   const fetchDriveFolderSetting = async () => {
     setSettingsLoading(true)
@@ -216,6 +203,27 @@ export default function LeaveApplications({ currentUserProfile, lang = 'zh', not
       if (!silent) setLoading(false)
     }
   }
+
+  const refreshDriveFolderSetting = useEffectEvent((...args) => { return fetchDriveFolderSetting(...args) })
+  const refreshApplications = useEffectEvent((...args) => { return fetchApplications(...args) })
+
+  useEffect(() => {
+    const initialLoad = setTimeout(() => {
+      refreshApplications()
+      refreshDriveFolderSetting()
+    }, 0)
+
+    const channel = supabase
+      .channel('leave-applications-changes')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'leave_applications' },
+        () => refreshApplications(true),
+      )
+      .subscribe()
+
+    return () => { clearTimeout(initialLoad); supabase.removeChannel(channel) }
+  }, [currentUserProfile?.id, currentUserProfile?.role])
 
   const notifyManagers = async (application) => {
     const { data: recipients, error } = await supabase

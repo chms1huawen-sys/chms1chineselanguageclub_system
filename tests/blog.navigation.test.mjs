@@ -31,8 +31,13 @@ try {
     await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(data) })
   })
   const page = await context.newPage()
+  const requestedModules = []
+  page.on('request', request => requestedModules.push(new URL(request.url()).pathname))
   await page.goto(root + '/blog/navigation')
   await page.getByRole('heading', { name: 'Navigation test', exact: true }).waitFor()
+  for (const name of ['MemberShell', 'BlogAdminShell', 'Tasks', 'Finance', 'Inventory']) {
+    assert.ok(!requestedModules.includes(`/src/pages/${name}.jsx`), `${name} must not load on the public article`)
+  }
   await page.getByRole('link', { name: '会员登入', exact: true }).click()
   await page.getByPlaceholder('请输入电子邮箱').fill('editor@example.test')
   await page.getByPlaceholder('请输入密码').fill('not-a-real-password')
@@ -51,6 +56,7 @@ try {
   await page.goto(root + '/#/login')
   assert.equal(await page.getByPlaceholder('请输入电子邮箱').count(), 0)
   await page.locator('.club-sidebar').waitFor()
+  assert.ok(requestedModules.includes('/src/pages/MemberShell.jsx'))
   if (process.env.TEST_INSTALLED === 'true') {
     await page.goto(root)
     await page.locator('.club-sidebar').waitFor()

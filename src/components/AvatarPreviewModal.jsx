@@ -1,4 +1,4 @@
-import React from 'react'
+
 import UserAvatar from './UserAvatar'
 
 export default function AvatarPreviewModal({ user, lang = 'zh', onClose }) {

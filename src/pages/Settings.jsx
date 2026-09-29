@@ -1,5 +1,5 @@
 // src/pages/Settings.jsx
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useEffectEvent } from 'react'
 import { supabase } from '../supabaseClient'
 import { KeyRound, User, Bell, CheckCircle, AlertCircle, Loader, ShieldCheck, Camera, Trash2 } from 'lucide-react'
 import { requestFcmToken } from '../firebase'
@@ -174,9 +174,11 @@ export default function Settings({ currentUserProfile, lang = 'zh', onProfileUpd
   const [avatarError, setAvatarError] = useState('')
   const [avatarSuccess, setAvatarSuccess] = useState('')
 
-  useEffect(() => {
+  const [draftSource, setDraftSource] = useState(currentUserProfile)
+  if (draftSource !== currentUserProfile) {
+    setDraftSource(currentUserProfile)
     setProfileDraft(currentUserProfile || {})
-  }, [currentUserProfile])
+  }
 
   // ── Password change ──
   const [pwCurrent, setPwCurrent] = useState('')
@@ -424,21 +426,25 @@ export default function Settings({ currentUserProfile, lang = 'zh', onProfileUpd
     }
     : badge
 
-  useEffect(() => {
+  const notifyPwSuccess = useEffectEvent(() => {
     if (pwSuccess) notify?.({ type: 'success', title: lang === 'zh' ? '密码已更新' : 'Password Updated', message: pwSuccess })
-  }, [pwSuccess])
+  })
+  useEffect(() => { notifyPwSuccess() }, [pwSuccess])
 
-  useEffect(() => {
+  const notifyPwError = useEffectEvent(() => {
     if (pwError) notify?.({ type: 'error', title: lang === 'zh' ? '密码更新失败' : 'Password Update Failed', message: pwError })
-  }, [pwError])
+  })
+  useEffect(() => { notifyPwError() }, [pwError])
 
-  useEffect(() => {
+  const notifyAvatarSuccess = useEffectEvent(() => {
     if (avatarSuccess) notify?.({ type: 'success', title: lang === 'zh' ? '头像已更新' : 'Avatar Updated', message: avatarSuccess })
-  }, [avatarSuccess])
+  })
+  useEffect(() => { notifyAvatarSuccess() }, [avatarSuccess])
 
-  useEffect(() => {
+  const notifyAvatarError = useEffectEvent(() => {
     if (avatarError) notify?.({ type: 'error', title: lang === 'zh' ? '头像操作失败' : 'Avatar Action Failed', message: avatarError })
-  }, [avatarError])
+  })
+  useEffect(() => { notifyAvatarError() }, [avatarError])
 
   const userRoleText = currentUserProfile?.role
     ? (currentUserProfile.role === 'custom' && currentUserProfile.custom_role_label

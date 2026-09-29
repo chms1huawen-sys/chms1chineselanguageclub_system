@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect } from 'react'
+﻿import { useState, useEffect, useEffectEvent } from 'react'
 import { supabase } from '../supabaseClient'
 import { createNotificationsAndPush } from '../utils/pushNotifications'
 import { taskPerformance } from '../utils/taskPerformance'
@@ -19,7 +19,6 @@ import {
   Trash2,
   Edit2,
   User,
-  Users,
   ChevronDown,
   Loader,
   ArrowRight,
@@ -121,41 +120,15 @@ export default function Tasks({ currentUserProfile, lang, notify, comparisonOnly
   const isPowerUser = hasPermission(currentUserProfile, 'can_create_tasks')
   const canViewPerformance = canViewTaskPerformance(currentUserProfile)
 
-  useEffect(() => {
+  const notifySuccessMsg = useEffectEvent(() => {
     if (successMsg) notify?.({ type: 'success', title: lang === 'zh' ? '操作成功' : 'Success', message: successMsg })
-  }, [successMsg])
+  })
+  useEffect(() => { notifySuccessMsg() }, [successMsg])
 
-  useEffect(() => {
+  const notifyErrorMsg = useEffectEvent(() => {
     if (errorMsg) notify?.({ type: 'error', title: lang === 'zh' ? '操作失败' : 'Failed', message: errorMsg })
-  }, [errorMsg])
-
-  useEffect(() => {
-    if (comparisonOnly && !canViewPerformance) return
-    fetchInitialData()
-  }, [])
-
-  useEffect(() => {
-    if (!activeTeam) return
-    setTasks([])
-    fetchTasks(activeTeam.id)
-
-    // Subscribe to task changes for realtime Kanban sync
-    const tasksChannel = supabase
-      .channel(`tasks-team-${activeTeam.id}`)
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'tasks', filter: `team_id=eq.${activeTeam.id}` },
-        () => {
-          fetchTasks(activeTeam.id)
-        }
-      )
-      .subscribe()
-
-    return () => {
-      taskLoadVersion.current += 1
-      supabase.removeChannel(tasksChannel)
-    }
-  }, [activeTeam])
+  })
+  useEffect(() => { notifyErrorMsg() }, [errorMsg])
 
   const fetchInitialData = async () => {
     setLoading(true)
@@ -229,6 +202,16 @@ export default function Tasks({ currentUserProfile, lang, notify, comparisonOnly
       setLoading(false)
     }
   }
+
+  const refreshInitialData = useEffectEvent((...args) => { return fetchInitialData(...args) })
+
+  useEffect(() => {
+    if (comparisonOnly && !canViewPerformance) return
+    const initialLoad = setTimeout(() => {
+      refreshInitialData()
+    }, 0)
+    return () => clearTimeout(initialLoad)
+  }, [comparisonOnly, canViewPerformance, currentUserProfile?.id, isPowerUser])
 
   const handleCreateDefaultSession = async () => {
     setLoading(true)
@@ -312,6 +295,33 @@ export default function Tasks({ currentUserProfile, lang, notify, comparisonOnly
     }
   }
 
+  const refreshTasks = useEffectEvent((...args) => { if (args[1]) setTasks([]); return fetchTasks(args[0]) })
+
+  useEffect(() => {
+    if (!activeTeam) return
+    const initialLoad = setTimeout(() => {
+      refreshTasks(activeTeam.id, true)
+    }, 0)
+
+    // Subscribe to task changes for realtime Kanban sync
+    const tasksChannel = supabase
+      .channel(`tasks-team-${activeTeam.id}`)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'tasks', filter: `team_id=eq.${activeTeam.id}` },
+        () => {
+          refreshTasks(activeTeam.id)
+        }
+      )
+      .subscribe()
+
+    return () => {
+      clearTimeout(initialLoad)
+      taskLoadVersion.current += 1
+      supabase.removeChannel(tasksChannel)
+    }
+  }, [activeTeam])
+
 
   const formatTaskDueText = (dueDate) => (
     dueDate
@@ -326,7 +336,7 @@ export default function Tasks({ currentUserProfile, lang, notify, comparisonOnly
     completed: _('已完成', 'Completed')
   }[status] || status)
 
-  const insertNotifications = async (notifications, options = {}) => {
+  const insertNotifications = async (notifications) => {
     const rows = (notifications || []).filter(Boolean)
     if (rows.length === 0) return
 
@@ -378,50 +388,6 @@ export default function Tasks({ currentUserProfile, lang, notify, comparisonOnly
       body: completedBy + _(' 已完成任务。截止：', ' completed the task. Due: ') + dueText,
       dedupe_key: `task-completed-${task.id}-${userId}-${timestamp}`
     })))
-  }
-
-  const createDueReminderNotifications = async (taskList) => {
-    if (!isPowerUser || !Array.isArray(taskList) || taskList.length === 0) return
-
-    const startOfToday = new Date()
-    startOfToday.setHours(0, 0, 0, 0)
-    const todayKey = startOfToday.toISOString().slice(0, 10)
-
-    const notifications = []
-    taskList.forEach(task => {
-      if (!task.due_date || task.status === 'completed' || !Array.isArray(task.assigned_to)) return
-
-      const due = new Date(task.due_date)
-      const dueDay = new Date(due)
-      dueDay.setHours(0, 0, 0, 0)
-      const daysLeft = Math.round((dueDay - startOfToday) / 86400000)
-      let type = ''
-      let title = ''
-
-      if (daysLeft === 1) {
-        type = 'task_due_tomorrow'
-        title = _('任务明天到期：', 'Due tomorrow: ') + task.title
-      } else if (daysLeft === 0) {
-        type = 'task_due_today'
-        title = _('任务今天到期：', 'Due today: ') + task.title
-      } else if (daysLeft < 0) {
-        type = 'task_overdue'
-        title = _('任务已逾期：', 'Overdue: ') + task.title
-      }
-
-      const body = _('截止时间：', 'Due: ') + formatTaskDueText(task.due_date) + _('。请尽快更新任务状态。', '. Please update the task status.')
-      ;[...new Set(task.assigned_to)].filter(Boolean).forEach(userId => {
-        notifications.push({
-          user_id: userId,
-          type,
-          title,
-          body,
-          dedupe_key: type + '_' + task.id + '_' + userId + '_' + todayKey
-        })
-      })
-    })
-
-    await insertNotifications(notifications, { dedupe: true })
   }
 
   const getNextWeeklyOccurrences = () => {
@@ -969,7 +935,7 @@ export default function Tasks({ currentUserProfile, lang, notify, comparisonOnly
                       const priority = PRIORITY_LABELS[task.priority] || PRIORITY_LABELS.low
                       const overdue = isOverdue(task)
                       const assignees = users.filter(u => task.assigned_to?.includes(u.id))
-                      const hasAssignedMe = task.assigned_to?.includes(currentUserProfile.id)
+
 
                       return (
                         <div

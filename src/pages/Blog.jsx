@@ -14,6 +14,7 @@ import '../components/BlogBodyTypography.css'
 import BookPurchase from '../components/BookPurchase'
 import BlogHero from '../components/BlogHero'
 import { readBlogBootstrap } from '../utils/blogBootstrap'
+import { compareStories, featuredStories, HOME_STORY_COUNT, STORY_PAGE_SIZE, MOMENT_COUNT } from '../utils/blogFeed'
 import { clubStatistics, matchesPublicSearch, submissionNote, publicationYear } from '../utils/blogPresentation'
 import BlogNavigation, { SocialLinks } from '../components/BlogNavigation'
 import { sections, sectionOf, publicCategories, postTags, safeColor } from '../utils/blogContent'
@@ -154,7 +155,7 @@ export default function Blog({ profile, lang, setLang }) {
           if (active) setLinks([...publicLinks, ...memberLinks])
         } else if (view === 'home') {
           const items = []
-          for (const event of articles.filter(item => item.content_type === 'event' && item.show_in_moments !== false).slice(0, 8)) {
+          for (const event of articles.filter(item => item.content_type === 'event' && item.show_in_moments !== false).slice(0, MOMENT_COUNT)) {
             const photos = await rows(supabase.from('blog_media').select('*').eq('post_id', event.id).order('position').limit(1))
             const path = photos[0]?.path || event.cover_path
             if (path) items.push({ ...event, moment_path: path })
@@ -213,9 +214,9 @@ export default function Blog({ profile, lang, setLang }) {
   const scopedCategories = publicCategories(categories, searching ? null : type)
   const categoryIds = [category, ...categories.filter(cat => cat.parent_id === category).map(cat => cat.id)]
   const filtered = scopedPosts.filter(item => (!category || categoryIds.includes(item.category_id)) && (!year || yearOf(item) === year) && (!tag || postTags(item, tagLibrary).map(tag => tag.name).includes(tag)) && matchesPublicSearch(item, searching ? search : '', postTags(item, tagLibrary).map(tag => tag.name)))
-    .sort((a, b) => Number(!!b.is_sticky) - Number(!!a.is_sticky) || (sort === 'asc' ? 1 : -1) * (yearOf(a).localeCompare(yearOf(b)) || dateOf(a).localeCompare(dateOf(b))) || a.id.localeCompare(b.id))
-  const visibleCount = (view === 'home' && !searching ? 6 : 8) + (page - 1) * 8
-  const featuredPosts = posts.filter(item => item.featured).slice(0, 6)
+    .sort((a, b) => compareStories(a, b, sort))
+  const visibleCount = (view === 'home' && !searching ? HOME_STORY_COUNT : STORY_PAGE_SIZE) + (page - 1) * STORY_PAGE_SIZE
+  const featuredPosts = featuredStories(posts)
   const years = [...new Set(scopedPosts.map(yearOf).filter(Boolean))].sort().reverse()
   const tags = [...new Set(scopedPosts.flatMap(item => postTags(item, tagLibrary).map(tag => tag.name)))].sort()
   const manual = Array.isArray(post?.related_ids) ? post.related_ids : []

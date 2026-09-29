@@ -2,7 +2,7 @@
 // 用于 Members.jsx 的职务/角色选择器
 // 支持全部系统预设角色 + 自定义职称输入（会保存到 users.custom_role_label）
 
-import { useState, useEffect } from 'react'
+
 
 // 与 Members.jsx 完全同步的完整角色列表
 const ROLE_OPTIONS = [
@@ -57,26 +57,16 @@ const inputStyle = {
  */
 export default function PositionSelect({ value, onChange, customLabel = '', onCustomLabelChange, disabled = false, lang = 'zh' }) {
   const isPreset = ROLE_OPTIONS.some(r => r.value === value)
-  const [mode, setMode] = useState(isPreset ? 'preset' : 'custom')
-
-  // 外部 value 改变时同步
-  useEffect(() => {
-    const preset = ROLE_OPTIONS.some(r => r.value === value)
-    if (preset) {
-      setMode('preset')
-    } else {
-      setMode('custom')
-    }
-  }, [value])
+  const mode = isPreset ? 'preset' : 'custom'
 
   const handleSelectChange = (e) => {
     const selected = e.target.value
     if (selected === CUSTOM_TRIGGER) {
-      setMode('custom')
+
       onCustomLabelChange?.('')
       onChange('custom')       // 存入 DB 的值仍是合法的 'custom'
     } else {
-      setMode('preset')
+
       onCustomLabelChange?.('')
       onChange(selected)
     }
