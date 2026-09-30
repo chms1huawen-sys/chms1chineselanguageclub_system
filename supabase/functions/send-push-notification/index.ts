@@ -45,7 +45,7 @@ type AnnouncementSyncInput = {
   recipient_ids?: string[]
 }
 
-const announcementManagerRoles = ['convener_teacher', 'advisor_teacher', 'chairperson', 'vice_chairperson']
+const announcementManagerRoles = ['convener_teacher', 'advisor_teacher', 'advisor', 'chairperson', 'vice_chairperson']
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -77,20 +77,6 @@ const importPrivateKey = async (pem: string) => {
     false,
     ['sign'],
   )
-}
-
-const getJwtSubject = (jwt: string) => {
-  const payload = jwt.split('.')[1]
-  if (!payload) return null
-
-  try {
-    const normalized = payload.replace(/-/g, '+').replace(/_/g, '/')
-    const padded = normalized.padEnd(Math.ceil(normalized.length / 4) * 4, '=')
-    const decoded = JSON.parse(atob(padded))
-    return typeof decoded.sub === 'string' && decoded.sub ? decoded.sub : null
-  } catch {
-    return null
-  }
 }
 
 const getFirebaseAccessToken = async (serviceAccount: ServiceAccount) => {
@@ -229,18 +215,19 @@ Deno.serve(async (request) => {
         return new Response(JSON.stringify({ error: 'Unauthorized.' }), { status: 401, headers: corsHeaders })
       }
 
-      const requesterId = getJwtSubject(requesterJwt)
-      if (!requesterId) {
+      const { data: requester, error: authError } = await supabase.auth.getUser(requesterJwt)
+      const requesterId = requester?.user?.id
+      if (authError || !requesterId) {
         return new Response(JSON.stringify({ error: 'Unauthorized.' }), { status: 401, headers: corsHeaders })
       }
 
       const { data: requesterProfile, error: requesterProfileError } = await supabase
         .from('users')
-        .select('role')
+        .select('role, is_active, can_manage_announcements')
         .eq('id', requesterId)
         .single()
 
-      if (requesterProfileError || !announcementManagerRoles.includes(requesterProfile?.role)) {
+      if (requesterProfileError || !requesterProfile?.is_active || !(requesterProfile.can_manage_announcements === true || announcementManagerRoles.includes(requesterProfile.role))) {
         return new Response(JSON.stringify({ error: 'Forbidden.' }), { status: 403, headers: corsHeaders })
       }
 

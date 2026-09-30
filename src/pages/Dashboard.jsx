@@ -3,6 +3,7 @@ import MobileDashboardList from '../components/MobileDashboardList'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../supabaseClient'
 import { createNotificationsAndPush, syncAnnouncementNotifications } from '../utils/pushNotifications'
+import { announcementDelivery } from '../utils/announcementDelivery'
 import UserAvatar from '../components/UserAvatar'
 import { canViewExecutiveManagement, canViewLeaveRecords, hasPermission } from '../utils/permissions'
 import {
@@ -412,14 +413,16 @@ export default function Dashboard({ currentUserProfile, lang = 'zh', onShowTutor
 
         if (error) throw error
 
-        const recipientIds = await getAnnouncementRecipientIds(payload.target_type, payload.target_team_id)
-        await syncAnnouncementNotifications({
-          action: 'update',
-          announcementId: data.id,
-          title: `新公告：${data.title}`,
-          body: data.body,
-          recipientIds,
-        })
+        const delivery = await announcementDelivery(async () => {
+          const recipientIds = await getAnnouncementRecipientIds(payload.target_type, payload.target_team_id)
+          return syncAnnouncementNotifications({
+            action: 'update',
+            announcementId: data.id,
+            title: `新公告：${data.title}`,
+            body: data.body,
+            recipientIds,
+          })
+        }, lang, true)
 
         await supabase.from('activity_log').insert({
           actor_id: currentUserProfile.id,
@@ -427,7 +430,7 @@ export default function Dashboard({ currentUserProfile, lang = 'zh', onShowTutor
           message: `${currentUserProfile.name} 修改了公告《${data.title}》`,
         })
 
-        notify?.({ type: 'success', title: lang === 'zh' ? '保存成功' : 'Saved', message: lang === 'zh' ? '公告已更新。' : 'Announcement updated.' })
+        notify?.({ ...delivery, title: lang === 'zh' ? '公告已保存' : 'Announcement saved' })
         resetAnnouncementModal()
         fetchDashboardData()
         return
@@ -448,17 +451,19 @@ export default function Dashboard({ currentUserProfile, lang = 'zh', onShowTutor
 
       if (error) throw error
 
-      const recipientIds = await getAnnouncementRecipientIds(announcementForm.target_type, announcementForm.target_team_id)
+      const delivery = await announcementDelivery(async () => {
+        const recipientIds = await getAnnouncementRecipientIds(announcementForm.target_type, announcementForm.target_team_id)
 
-      const notificationRows = [...new Set(recipientIds)].map(userId => ({
-        user_id: userId,
-        type: 'announcement',
-        title: `新公告：${data.title}`,
-        body: data.body,
-        dedupe_key: `announcement-${data.id}-${userId}`,
-      }))
+        const notificationRows = [...new Set(recipientIds)].map(userId => ({
+          user_id: userId,
+          type: 'announcement',
+          title: `新公告：${data.title}`,
+          body: data.body,
+          dedupe_key: `announcement-${data.id}-${userId}`,
+        }))
 
-      await createNotificationsAndPush(notificationRows, '/')
+        return createNotificationsAndPush(notificationRows, '/#/')
+      }, lang)
 
       await supabase.from('activity_log').insert({
         actor_id: currentUserProfile.id,
@@ -468,7 +473,7 @@ export default function Dashboard({ currentUserProfile, lang = 'zh', onShowTutor
 
       setAnnouncementForm({ title: '', body: '', is_pinned: false, target_type: 'all', target_team_id: '' })
       setShowAnnouncementModal(false)
-      notify?.({ type: 'success', title: lang === 'zh' ? '发布成功' : 'Published', message: lang === 'zh' ? '公告已发布，并已发送通知。' : 'Announcement published and notifications sent.' })
+      notify?.({ ...delivery, title: lang === 'zh' ? '公告已发布' : 'Announcement published' })
       fetchDashboardData()
     } catch (err) {
       setErrorMsg(err.message || (lang === 'zh' ? '发布公告失败' : 'Failed to publish announcement.'))
