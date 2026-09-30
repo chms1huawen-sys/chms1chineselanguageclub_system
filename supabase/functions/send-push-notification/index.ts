@@ -1,6 +1,7 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { isInvalidFcmTokenError } from './fcmErrors.js'
 import { fetchWithRetry } from './retry.js'
+import { authorizePushRequest } from './requestAuth.js'
 
 type ServiceAccount = {
   client_email: string
@@ -27,6 +28,7 @@ type NotificationInput = {
 
 type UserPushSetting = {
   id: string
+  is_active: boolean
   fcm_token: string | null
   notification_enabled: boolean
 }
@@ -209,6 +211,11 @@ Deno.serve(async (request) => {
     }
 
     const supabase = createClient(Deno.env.get('SUPABASE_URL')!, serviceRoleKey)
+    const requesterJwt = (request.headers.get('Authorization') || '').replace(/^Bearer\s+/i, '').trim()
+    const authStatus = await authorizePushRequest(supabase, requesterJwt, serviceRoleKey)
+    if (authStatus !== 200) {
+      return new Response(JSON.stringify({ error: authStatus === 401 ? 'Unauthorized.' : 'Forbidden.' }), { status: authStatus, headers: corsHeaders })
+    }
     const retrySubscription = typeof body.retry_subscription_id === 'string' ? body.retry_subscription_id : ''
     if (retrySubscription && request.headers.get('Authorization') !== `Bearer ${serviceRoleKey}`) {
       return new Response(JSON.stringify({ error: 'Forbidden.' }), { status: 403, headers: corsHeaders })
@@ -357,7 +364,7 @@ Deno.serve(async (request) => {
     const userIds = [...new Set(notifications.map((notification: NotificationRow) => notification.user_id))]
     const { data: users, error: usersError } = await supabase
       .from('users')
-      .select('id, fcm_token, notification_enabled')
+      .select('id, fcm_token, notification_enabled, is_active')
       .in('id', userIds)
 
     if (usersError) {
@@ -394,7 +401,7 @@ Deno.serve(async (request) => {
     }
 
     const tokenCount = [...subscriptionsByUserId.entries()]
-      .filter(([userId]) => usersById.get(userId)?.notification_enabled)
+      .filter(([userId]) => usersById.get(userId)?.notification_enabled && usersById.get(userId)?.is_active)
       .reduce((sum, [, rows]) => sum + rows.length, 0)
     console.log('[send-push-notification] recipients loaded', {
       notifications: notifications.length,
@@ -410,7 +417,7 @@ Deno.serve(async (request) => {
         const user = usersById.get(notification.user_id)
         const userSubscriptions = (subscriptionsByUserId.get(notification.user_id) || [])
           .filter(subscription => !retrySubscription || subscription.id === retrySubscription)
-        if (!user?.notification_enabled || userSubscriptions.length === 0) {
+        if (!user?.is_active || !user.notification_enabled || userSubscriptions.length === 0) {
           return [Promise.resolve('skipped')]
         }
 
