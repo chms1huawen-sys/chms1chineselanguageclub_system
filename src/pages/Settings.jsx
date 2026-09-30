@@ -211,7 +211,8 @@ export default function Settings({ currentUserProfile, lang = 'zh', onProfileUpd
         .maybeSingle()
 
       if (!active) return
-      if (error || !data?.is_active) {
+      if (error) return
+      if (!data?.is_active) {
         window.localStorage.removeItem('clc_fcm_token')
         setLocalFcmToken('')
       }
@@ -367,8 +368,6 @@ export default function Settings({ currentUserProfile, lang = 'zh', onProfileUpd
 
         // 获取 FCM Token
         const token = await requestFcmToken()
-
-        console.log('FCM TOKEN:', token)
 
         // 没拿到 token
         if (!token) {

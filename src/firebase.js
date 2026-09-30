@@ -1,5 +1,6 @@
 import { initializeApp } from 'firebase/app'
 import { getMessaging, getToken, isSupported, onMessage } from 'firebase/messaging'
+import { withPushTimeout } from './utils/pushRuntime'
 
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
@@ -21,11 +22,11 @@ export const requestFcmToken = async () => {
   const messaging = await getFirebaseMessaging()
   if (!messaging) throw new Error('此浏览器不支持 Firebase 推送通知。')
 
-  const registration = await navigator.serviceWorker.ready
-  return getToken(messaging, {
+  const registration = await withPushTimeout(navigator.serviceWorker.ready)
+  return withPushTimeout(getToken(messaging, {
     vapidKey: import.meta.env.VITE_FIREBASE_VAPID_KEY,
     serviceWorkerRegistration: registration,
-  })
+  }))
 }
 
 export const listenForegroundMessages = async (callback) => {

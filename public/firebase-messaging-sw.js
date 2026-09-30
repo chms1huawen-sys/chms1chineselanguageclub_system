@@ -46,7 +46,8 @@ const showPushNotification = (payload = {}) => {
 }
 
 messaging.onBackgroundMessage((payload) => {
-  console.log('[firebase-messaging-sw] Background message:', payload)
+  // Firebase already displays notification payloads; only display data-only messages here.
+  if (payload.notification) return
   return showPushNotification(payload)
 })
 

@@ -34,6 +34,12 @@ test('inventory transactions, role checks, privacy and stock conservation', asyn
     }
     const mutate = async (action, data) => (await db.query('select inventory_mutate($1,$2::jsonb) as result', [action, JSON.stringify({ operation_id: randomUUID(), ...data })])).rows[0].result
     const stock = async id => (await db.query('select available,reserved,on_loan,damaged,lost from inventory_items where id=$1',[id])).rows[0]
+    const recipients = async (result, actor) => {
+      await db.exec('reset role')
+      const rows = (await db.query('select user_id from notifications where id = any($1::uuid[])', [result.notification_ids])).rows
+      await as(actor)
+      return rows.map(row => row.user_id).sort()
+    }
     await as(teacher)
     const category = (await mutate('category',{ name:'Stationery' })).id
     const item = (await mutate('item',{ name:'Scissors',category_id:category,mode:'loan',quantity:5 })).id
@@ -46,8 +52,9 @@ test('inventory transactions, role checks, privacy and stock conservation', asyn
     await assert.rejects(db.query('update users set can_manage_inventory=true where id=$1',[member]), /INVENTORY_FORBIDDEN/)
     await assert.rejects(db.query('update inventory_items set available=100'), /permission denied/)
     const req = randomUUID()
-    await submit(req,[{ item_id:item,quantity:3 },{ item_id:paper,quantity:4 }])
-    await submit(req,[{ item_id:item,quantity:3 },{ item_id:paper,quantity:4 }])
+    const submitted = await submit(req,[{ item_id:item,quantity:3 },{ item_id:paper,quantity:4 }])
+    assert.deepEqual(await recipients(submitted, member), [teacher, president].sort())
+    assert.deepEqual((await submit(req,[{ item_id:item,quantity:3 },{ item_id:paper,quantity:4 }])).notification_ids, [])
     assert.equal((await db.query('select * from inventory_requests')).rows.length,1)
     await assert.rejects(mutate('approve',{ id:req }), /INVENTORY_SELF_APPROVAL/)
     await as(other)
@@ -60,15 +67,15 @@ test('inventory transactions, role checks, privacy and stock conservation', asyn
     const own = randomUUID()
     await submit(own,[{ item_id:item,quantity:1 }])
     await assert.rejects(mutate('approve',{ id:own }), /INVENTORY_SELF_APPROVAL/)
-    await mutate('approve',{ id:req })
+    assert.deepEqual(await recipients(await mutate('approve',{ id:req }), president), [member])
     assert.deepEqual(await stock(item), {available:2,reserved:3,on_loan:0,damaged:0,lost:0})
     await assert.rejects(mutate('approve',{ id:competing }), /INVENTORY_STOCK_UNAVAILABLE/)
     await assert.rejects(mutate('adjust',{id:item,available:-3,note:'Count'}), /check constraint/)
-    await mutate('issue',{ id:req })
+    assert.deepEqual(await recipients(await mutate('issue',{ id:req }), president), [member])
     await assert.rejects(db.query('select inventory_due_reminders()'), /permission denied/)
     await db.exec('reset role')
     const reminders = (await db.query('select inventory_due_reminders() as ids')).rows[0].ids
-    assert.ok(reminders.length >= 2)
+    assert.deepEqual((await db.query('select user_id from notifications where id = any($1::uuid[])', [reminders])).rows.map(row => row.user_id).sort(), [member, teacher, president].sort())
     assert.deepEqual((await db.query('select inventory_due_reminders() as ids')).rows[0].ids, [])
     await as(president)
     assert.deepEqual(await stock(item), {available:2,reserved:0,on_loan:3,damaged:0,lost:0})
@@ -77,8 +84,8 @@ test('inventory transactions, role checks, privacy and stock conservation', asyn
     const lines = (await db.query('select * from inventory_request_lines where request_id=$1',[req])).rows
     const loan = lines.find(l => l.item_id === item), consumable = lines.find(l => l.item_id === paper)
     const partial = { id:req,operation_id:randomUUID(),lines:[{id:loan.id,good:1}] }
-    await mutate('return',partial)
-    await mutate('return',partial)
+    assert.deepEqual(await recipients(await mutate('return',partial), president), [member])
+    assert.deepEqual((await mutate('return',partial)).notification_ids, [])
     assert.equal((await stock(item)).on_loan,2)
     await assert.rejects(mutate('return',{id:req,lines:[{id:loan.id,good:3}]}),/INVENTORY_RETURN_INVALID/)
     await mutate('return',{id:req,note:'Damaged and missing',lines:[{id:loan.id,damaged:1,lost:1},{id:consumable.id,good:2}]})
@@ -90,7 +97,7 @@ test('inventory transactions, role checks, privacy and stock conservation', asyn
     const teacherOwn = randomUUID()
     await submit(teacherOwn,[{ item_id:item,quantity:1 }])
     await mutate('approve',{id:teacherOwn})
-    await mutate('cancel',{id:teacherOwn})
+    assert.deepEqual(await recipients(await mutate('cancel',{id:teacherOwn}), teacher), [teacher])
     assert.equal((await stock(item)).available,3)
     await db.query('update users set can_approve_inventory=true where id=$1',[custom])
     await as(custom)
@@ -101,6 +108,11 @@ test('inventory transactions, role checks, privacy and stock conservation', asyn
     await as(custom)
     assert.equal((await db.query('select * from inventory_requests')).rows.length,0)
     await assert.rejects(mutate('approve',{id:competing}),/INVENTORY_FORBIDDEN/)
+    await as(teacher)
+    assert.deepEqual(await recipients(await mutate('reject',{id:competing,note:'Not available'}), teacher), [other])
+    await db.exec('reset role')
+    await db.query('delete from notifications where dedupe_key like $1', ['inventory-due-%'])
+    assert.deepEqual((await db.query('select inventory_due_reminders() as ids')).rows[0].ids, [], 'closed, approved and rejected requests must not receive due reminders')
     console.log('Verified: migration reruns, teacher self-approval, non-teacher restriction, RLS privacy, custom grants, deactivation, stock reservation, rollback, partial returns, damage/loss, consumable returns, duplicate retries.')
   } finally { await db.close() }
 })

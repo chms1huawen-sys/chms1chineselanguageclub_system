@@ -14,6 +14,7 @@ try {
     const problems = []
     let submissions = 0
     let operationId
+    let pushCalls = 0
     const secondItem = { ...item, id: 'i2', name: '绘画纸', mode: 'consumable', available: 20 }
     page.on('pageerror', e => problems.push(e.message))
     await page.route('**/*.supabase.co/**', async route => {
@@ -33,7 +34,12 @@ try {
           }
           assert.equal(body.p_data.operation_id,operationId)
         }
-        data = { id: 'saved', notification_ids: [] }
+        data = { id: 'saved', notification_ids: body.p_action === 'submit' ? ['test-notification'] : [] }
+      }
+      if (path.endsWith('/send-push-notification')) {
+        pushCalls++
+        assert.deepEqual(route.request().postDataJSON(), { notification_ids: ['test-notification'], url: '/#/inventory' })
+        data = { push_sent: width === 390 ? 0 : 1, push_failed: width === 390 ? 1 : 0 }
       }
       await route.fulfill({ status: 200, contentType: 'application/json', headers: { 'Content-Range': '0-0/0', 'Access-Control-Allow-Origin': '*' }, body: JSON.stringify(data) })
     })
@@ -78,6 +84,11 @@ try {
     await dialog.waitFor({ state: 'hidden' })
     assert.equal(await page.locator('.inv-cart-bar').count(),0)
     assert.equal(submissions,2)
+    for (let attempt = 0; pushCalls === 0 && attempt < 50; attempt++) await new Promise(resolve => setTimeout(resolve, 100))
+    assert.equal(pushCalls, 1)
+    if (width === 390) {
+      await page.waitForFunction(() => window.lastInventoryNotice?.type === 'error' && /推送|Phone push/.test(window.lastInventoryNotice?.message || ''))
+    }
     assert.ok((await page.evaluate(() => window.lastInventoryNotice))?.title)
     await page.getByRole('button', { name: lang === 'zh' ? '我的申请' : 'My requests', exact: true }).click()
     await page.getByRole('button', { name: /测试会员/ }).click()

@@ -7,6 +7,7 @@ const BlogAdminShell = lazy(() => import('./pages/BlogAdminShell'))
 import { safeBlogReturn } from './utils/blog'
 import { Loader } from 'lucide-react'
 import PageLoading from './components/PageLoading'
+import { showForegroundPush, withPushTimeout } from './utils/pushRuntime'
 const MemberShell = lazy(() => import('./pages/MemberShell'))
 
 export default function App() {
@@ -27,17 +28,9 @@ export default function App() {
     import('./firebase').then(({ listenForegroundMessages }) => active ? listenForegroundMessages((payload) => {
       if (!active || !('Notification' in window) || Notification.permission !== 'granted') return
 
-      const notification = payload.notification || {}
-      const data = payload.data || {}
-      const title = notification.title || data.title || '一中华文学会系统'
-      const body = notification.body || data.body || '你有一则新的系统通知。'
-
-      new Notification(title, {
-        body,
-        icon: '/logo-192.png',
-        badge: '/logo-192.png',
-        data: { url: data.url || '/#/' },
-      })
+      withPushTimeout(navigator.serviceWorker.ready)
+        .then(registration => active ? showForegroundPush(payload, registration) : undefined)
+        .catch(error => console.warn('Foreground notification failed:', error.message))
     }) : undefined).then((cleanup) => {
       if (typeof cleanup !== 'function') return
       if (active) unsubscribe = cleanup

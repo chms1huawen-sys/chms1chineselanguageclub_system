@@ -1,4 +1,5 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { isInvalidFcmTokenError } from './fcmErrors.js'
 
 type ServiceAccount = {
   client_email: string
@@ -172,9 +173,6 @@ const sendFcmNotification = async (
     throw new Error(errorText || `FCM send failed with ${response.status}`)
   }
 }
-
-const isInvalidFcmTokenError = (message: string) =>
-  /UNREGISTERED|registration-token-not-registered|INVALID_ARGUMENT|Requested entity was not found/i.test(message)
 
 Deno.serve(async (request) => {
   console.log('[send-push-notification] request received', {
