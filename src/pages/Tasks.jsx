@@ -2,6 +2,7 @@
 import { supabase } from '../supabaseClient'
 import { createNotificationsAndPush } from '../utils/pushNotifications'
 import { taskPerformance } from '../utils/taskPerformance'
+import { savedTaskDelivery } from '../utils/savedTaskDelivery'
 import { compareMembers } from '../utils/memberOrder'
 import TaskPerformancePage from './TaskPerformancePage'
 import CollapsiblePerformanceCards from '../components/CollapsiblePerformanceCards'
@@ -87,6 +88,7 @@ export default function Tasks({ currentUserProfile, lang, notify, comparisonOnly
   const [users, setUsers] = useState([])
   const [committeeMembers, setCommitteeMembers] = useState([])
   const taskLoadVersion = useRef(0)
+  const taskSaveLock = useRef(false)
   const [loading, setLoading] = useState(true)
   const [errorMsg, setErrorMsg] = useState('')
   const [successMsg, setSuccessMsg] = useState('')
@@ -340,7 +342,14 @@ export default function Tasks({ currentUserProfile, lang, notify, comparisonOnly
     const rows = (notifications || []).filter(Boolean)
     if (rows.length === 0) return
 
-    await createNotificationsAndPush(rows, '/tasks')
+    const result = await createNotificationsAndPush(rows, '/tasks')
+    if (result?.push_failed > 0) throw new Error('Push delivery failed')
+  }
+
+  const deliverSavedTaskNotifications = async (send) => {
+    if (!await savedTaskDelivery(send)) {
+      notify?.({ type: 'error', title: _('任务已保存', 'Task saved'), message: _('通知未能确认送达，请勿重复发布任务。', 'Notification delivery was not confirmed. Do not publish the task again.') })
+    }
   }
 
   const createTaskNotifications = async (task) => {
@@ -424,7 +433,8 @@ export default function Tasks({ currentUserProfile, lang, notify, comparisonOnly
 
   const handleCreateOrEditTask = async (e) => {
     e.preventDefault()
-    if (!activeTeam) return
+    if (!activeTeam || taskSaveLock.current) return
+    taskSaveLock.current = true
     setFormSubmitting(true)
     setErrorMsg('')
     setSuccessMsg('')
@@ -442,7 +452,7 @@ export default function Tasks({ currentUserProfile, lang, notify, comparisonOnly
         
         if (error) throw error
         if (payload.status === 'completed' && selectedTask.status !== 'completed') {
-          await notifyTaskCompleted({ ...selectedTask, ...payload })
+          await deliverSavedTaskNotifications(() => notifyTaskCompleted({ ...selectedTask, ...payload }))
         }
         setSuccessMsg(_('任务已成功更新', 'Task updated.'))
       } else if (formData.repeat_enabled) {
@@ -454,7 +464,7 @@ export default function Tasks({ currentUserProfile, lang, notify, comparisonOnly
           .select()
 
         if (error) throw error
-        await Promise.all((data || []).map(task => createTaskNotifications(task)))
+        await deliverSavedTaskNotifications(() => Promise.all((data || []).map(task => createTaskNotifications(task))))
         setSuccessMsg(_('已成功创建 ', 'Created ') + (data?.length || payloads.length) + _(' 个重复任务', ' recurring tasks.'))
       } else {
         const { data, error } = await supabase
@@ -464,7 +474,7 @@ export default function Tasks({ currentUserProfile, lang, notify, comparisonOnly
           .single()
 
         if (error) throw error
-        await createTaskNotifications(data)
+        await deliverSavedTaskNotifications(() => createTaskNotifications(data))
         setSuccessMsg(_('任务已成功创建', 'Task created.'))
       }
 
@@ -473,6 +483,7 @@ export default function Tasks({ currentUserProfile, lang, notify, comparisonOnly
     } catch (err) {
       setErrorMsg(err.message)
     } finally {
+      taskSaveLock.current = false
       setFormSubmitting(false)
     }
   }

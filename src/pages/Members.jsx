@@ -166,7 +166,7 @@ export default function Members({ currentUserProfile, lang, notify }) {
     setLoading(true)
     setErrorMsg('')
     try {
-      const { data, error } = await supabase.from('users').select('*')
+      const { data, error } = await supabase.from('users').select(['id', 'name', 'email', 'role', 'custom_role_label', 'birthday', 'is_active', 'avatar_url', 'created_at', ...PERMISSION_FIELDS].join(','))
       if (error) throw error
       setMembers(sortMembersByRole(data || []))
     } catch (err) {
@@ -473,7 +473,7 @@ export default function Members({ currentUserProfile, lang, notify }) {
                 <div key={m.id} className="p-4 rounded-2xl flex flex-col justify-between gap-4"
                   style={{ border: '1.5px solid #e0f1ff', background: 'white', boxShadow: '0 2px 12px rgba(149,203,255,0.12)' }}>
                   <div className="space-y-2">
-                    <div className="flex items-start justify-between gap-2">
+                    <div className="flex flex-wrap items-start justify-between gap-2">
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-2">
                           <UserAvatar user={m} size={34} rounded={13} onClick={() => setAvatarPreviewUser(m)} />
@@ -482,7 +482,7 @@ export default function Members({ currentUserProfile, lang, notify }) {
                           </div>
                         </div>
                       </div>
-                      <span className="px-2 py-0.5 text-[10px] font-black rounded-full shrink-0 max-w-[32%] break-words"
+                      <span className="px-2 py-1 text-xs font-bold rounded-xl max-w-full break-words"
                         style={{ background: roleLabel.bg, color: roleLabel.color, border: `1.5px solid ${roleLabel.border}` }}>
                         {roleLabel[lang]}
                       </span>
@@ -503,14 +503,14 @@ export default function Members({ currentUserProfile, lang, notify }) {
                     </div>
                   </div>
                   {canManageAccounts && (
-                    <div className="flex gap-2 justify-end pt-3 mt-1" style={{ borderTop: '1.5px solid #f0f7ff' }}>
+                    <div className="flex flex-wrap gap-2 justify-end pt-3 mt-1" style={{ borderTop: '1.5px solid #f0f7ff' }}>
                       <button onClick={() => openEditModal(m)}
-                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer"
+                        className="min-h-11 flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-bold transition cursor-pointer"
                         style={{ border: '1.5px solid #e0f1ff', background: '#f0f7ff', color: '#6b7280' }}>
                         <Edit2 size={12} />{_('编辑', 'Edit')}
                       </button>
                       <button onClick={() => handleToggleStatus(m)}
-                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer"
+                        className="min-h-11 flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-bold transition cursor-pointer"
                         style={{
                           border: m.is_active ? '1.5px solid #fca5a5' : '1.5px solid #86efac',
                           background: m.is_active ? '#fee2e2' : '#dcfce7',
