@@ -9,3 +9,6 @@ verify_jwt = false
 
 [functions.inventory-reminder]
 verify_jwt = false
+
+[functions.push-retry]
+verify_jwt = false

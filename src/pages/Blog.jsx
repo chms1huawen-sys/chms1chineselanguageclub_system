@@ -1,4 +1,5 @@
 import { cropStyles } from '../utils/photoCrop'
+import { signBlogImage } from '../utils/blogImages'
 import { richBody, galleryPreview, photoWidth } from '../utils/blogRichText'
 import { publicHomeUrl } from '../utils/pwaLaunch'
 import { useEffect, useRef, useState } from 'react'
@@ -40,14 +41,14 @@ export function BlogImage({ path, alt = '', crop, ...props }) {
   useEffect(() => {
     if (direct || !storagePath(path)) return
     let active = true
-    supabase.storage.from('blog-photos').createSignedUrl(path, 3600)
+    signBlogImage(path)
       .then(({ data }) => { if (active) setSigned({ path, url: webLink(data?.signedUrl) }) })
       .catch(() => { if (active) setSigned({ path, url: '' }) })
     return () => { active = false }
   }, [path, direct])
   const src = direct || (signed.path === path ? signed.url : '')
   const styles = cropStyles(crop)
-  if (styles) return <span className={props.className} style={{ ...styles.frame, ...props.style }}><BlogImage path={path} alt={alt} loading={props.loading} onLoad={props.onLoad} style={styles.image} /></span>
+  if (styles) return <span className={props.className} style={{ ...styles.frame, ...props.style }}><BlogImage path={path} alt={alt} loading={props.loading} fetchPriority={props.fetchPriority} onLoad={props.onLoad} style={styles.image} /></span>
   return src && failed !== src ? <img src={src} alt={alt} {...props} onError={() => setFailed(src)} /> : <div className={`blog-image-placeholder ${props.className || ''}`} role="img" aria-label={alt || '照片 / Photo'}><Camera aria-hidden="true" /></div>
 }
 

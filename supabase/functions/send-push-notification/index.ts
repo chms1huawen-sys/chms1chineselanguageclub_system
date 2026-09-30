@@ -1,5 +1,6 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { isInvalidFcmTokenError } from './fcmErrors.js'
+import { fetchWithRetry } from './retry.js'
 
 type ServiceAccount = {
   client_email: string
@@ -124,7 +125,7 @@ const sendFcmNotification = async (
   url: string,
   linkUrl: string,
 ) => {
-  const response = await fetch(`https://fcm.googleapis.com/v1/projects/${projectId}/messages:send`, {
+  const response = await fetchWithRetry(`https://fcm.googleapis.com/v1/projects/${projectId}/messages:send`, {
     method: 'POST',
     headers: {
       Authorization: `Bearer ${accessToken}`,
@@ -148,6 +149,7 @@ const sendFcmNotification = async (
           notification: {
             icon: '/logo-192.png',
             badge: '/logo-192.png',
+            tag: notification.id,
           },
         },
       },
@@ -207,6 +209,10 @@ Deno.serve(async (request) => {
     }
 
     const supabase = createClient(Deno.env.get('SUPABASE_URL')!, serviceRoleKey)
+    const retrySubscription = typeof body.retry_subscription_id === 'string' ? body.retry_subscription_id : ''
+    if (retrySubscription && request.headers.get('Authorization') !== `Bearer ${serviceRoleKey}`) {
+      return new Response(JSON.stringify({ error: 'Forbidden.' }), { status: 403, headers: corsHeaders })
+    }
 
     if (announcementSync) {
       const authHeader = request.headers.get('Authorization') || ''
@@ -402,7 +408,8 @@ Deno.serve(async (request) => {
     const pushResults = await Promise.allSettled(
       (notifications as NotificationRow[]).flatMap((notification) => {
         const user = usersById.get(notification.user_id)
-        const userSubscriptions = subscriptionsByUserId.get(notification.user_id) || []
+        const userSubscriptions = (subscriptionsByUserId.get(notification.user_id) || [])
+          .filter(subscription => !retrySubscription || subscription.id === retrySubscription)
         if (!user?.notification_enabled || userSubscriptions.length === 0) {
           return [Promise.resolve('skipped')]
         }
@@ -410,6 +417,11 @@ Deno.serve(async (request) => {
         return userSubscriptions.map(async (subscription) => {
           try {
             await sendFcmNotification(accessToken, firebaseProjectId, subscription.fcm_token, notification, url, linkUrl)
+            if (subscription.id) {
+              const { error: retryError } = await supabase.from('push_retry_jobs').update({ status: 'sent', updated_at: new Date().toISOString() })
+                .eq('notification_id', notification.id).eq('subscription_id', subscription.id)
+              if (retryError) console.error('[push retry] mark sent failed', retryError.message)
+            }
             return 'sent'
           } catch (error) {
             const message = error.message || String(error)
@@ -418,6 +430,11 @@ Deno.serve(async (request) => {
                 .from('push_subscriptions')
                 .update({ is_active: false })
                 .eq('id', subscription.id)
+            } else if (subscription.id && !retrySubscription) {
+              const { error: retryError } = await supabase.from('push_retry_jobs').upsert({
+                notification_id: notification.id, subscription_id: subscription.id, target_url: url,
+              }, { onConflict: 'notification_id,subscription_id', ignoreDuplicates: true })
+              if (retryError) console.error('[push retry] enqueue failed', retryError.message)
             }
             throw error
           }

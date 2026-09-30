@@ -1,4 +1,5 @@
 import BlogPhotoCrop from '../components/BlogPhotoCrop'
+import { signBlogImage } from '../utils/blogImages'
 import { cropStyles } from '../utils/photoCrop'
 import { useEffect, useState } from 'react'
 import { Upload, Image, Trash2, ArrowUp, ArrowDown } from 'lucide-react'
@@ -21,9 +22,9 @@ export function StudioImage({ path, alt = '', publicAsset = false, crop, ...prop
       const { data } = supabase.storage.from('blog-site-media').getPublicUrl(path)
       Promise.resolve().then(() => { if (active) setImage({ path, url: data.publicUrl }) })
     } else {
-      supabase.storage.from('blog-photos').createSignedUrl(path, 3600).then(({ data }) => {
+      signBlogImage(path).then(({ data }) => {
         if (active) setImage({ path, url: data?.signedUrl })
-      })
+      }).catch(() => { if (active) setImage(null) })
     }
     return () => { active = false }
   }, [path, publicAsset])

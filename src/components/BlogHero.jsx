@@ -43,7 +43,7 @@ export default function BlogHero({ site, Image, en }) {
   return <section className="blog-showcase" aria-label={t('学会故事', 'Club stories')} aria-roledescription="carousel" onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)} onFocusCapture={() => setHovered(true)} onBlurCapture={event => { if (!event.currentTarget.contains(event.relatedTarget)) setHovered(false) }}>
     <div className="blog-showcase-slides">
       {slides.map((slide, i) => <div key={`${i}-${slide.path}`} data-position={slide.position === 'right' ? 'right' : 'left'} data-tone={slide.tone === 'dark' ? 'dark' : 'light'} className={`blog-showcase-slide${i === active ? ' is-active' : ''}`} inert={i !== active} aria-hidden={i !== active}>
-        <HeroPhoto Image={Image} slide={slide} priority={i === 0} siteTitle={site.title} />
+        {i === active && <HeroPhoto Image={Image} slide={slide} priority={i === 0} siteTitle={site.title} />}
         <div className="blog-showcase-caption"><div><p>{site.subtitle}</p><h1>{slide.title}</h1><p>{slide.subtitle}</p></div><a className="blog-showcase-cta" href={safePublicLink(slide.link) || '/activities'}><span>{slide.cta || ({ '/bookroom': t('浏览书坊', 'Browse books'), '/activities': t('查看活动记录', 'Explore activities'), '/news': t('阅读学会资讯', 'Read club news'), '/about': t('认识华文学会', 'About the club') }[slide.link] || t('探索我们的故事', 'Explore our stories'))}</span><ArrowRight size={18} /></a></div>
       </div>)}
     </div>

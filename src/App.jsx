@@ -21,6 +21,31 @@ export default function App() {
   const [user, setUser] = useState(null)
   const [profile, setProfile] = useState(null)
   useEffect(() => {
+    if (!profile?.is_active || !profile?.notification_enabled) return
+    let active = true
+    let pending = false
+    let lastAttempt = 0
+    const refresh = async () => {
+      if (!active || document.hidden || pending || Date.now() - lastAttempt < 3600000) return
+      pending = true
+      lastAttempt = Date.now()
+      try {
+        const { refreshPushRegistration } = await import('./utils/refreshPushRegistration')
+        if (active) await refreshPushRegistration(profile.id, () => active)
+      } catch (error) {
+        console.warn('Push registration refresh failed:', error.message)
+      } finally { pending = false }
+    }
+    refresh()
+    document.addEventListener('visibilitychange', refresh)
+    window.addEventListener('online', refresh)
+    return () => {
+      active = false
+      document.removeEventListener('visibilitychange', refresh)
+      window.removeEventListener('online', refresh)
+    }
+  }, [profile?.id, profile?.is_active, profile?.notification_enabled])
+  useEffect(() => {
     if (!profile?.is_active) return
     let unsubscribe = () => {}
     let active = true
