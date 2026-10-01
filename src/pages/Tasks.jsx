@@ -310,7 +310,10 @@ export default function Tasks({ currentUserProfile, lang, notify, comparisonOnly
     }
   }
 
-  const refreshTasks = useEffectEvent((...args) => { if (args[1]) setTasks([]); return fetchTasks(args[0]) })
+  const refreshTasks = useEffectEvent((...args) => {
+    if (args[1]) { setTasks([]); setPerformanceTasks([]); setRepeatPlans([]) }
+    return fetchTasks(args[0])
+  })
 
   useEffect(() => {
     if (!activeTeam) return
