@@ -6,6 +6,8 @@ import { savedTaskDelivery } from '../utils/savedTaskDelivery'
 import { compareMembers } from '../utils/memberOrder'
 import TaskPerformancePage from './TaskPerformancePage'
 import CollapsiblePerformanceCards from '../components/CollapsiblePerformanceCards'
+import RepeatTaskSchedule from '../components/RepeatTaskSchedule'
+import { weeklyTaskPreview, taskScheduleDate } from '../utils/taskSchedule'
 import { useRef } from 'react'
 import { isExecutiveAccount, taskRosterOptions, taskRosterName } from '../utils/taskRosters'
 import UserAvatar from '../components/UserAvatar'
@@ -83,6 +85,8 @@ export default function Tasks({ currentUserProfile, lang, notify, comparisonOnly
   const _ = (zh, en) => lang === 'zh' ? zh : en
   const teamDisplayName = team => taskRosterName(team, lang)
   const [tasks, setTasks] = useState([])
+  const [performanceTasks, setPerformanceTasks] = useState([])
+  const [repeatPlans, setRepeatPlans] = useState([])
   const [teams, setTeams] = useState([])
   const [activeTeam, setActiveTeam] = useState(null)
   const [users, setUsers] = useState([])
@@ -113,6 +117,8 @@ export default function Tasks({ currentUserProfile, lang, notify, comparisonOnly
     priority: 'medium',
     status: 'pending',
     repeat_enabled: false,
+    repeat_first: '',
+    repeat_immediate: false,
     repeat_weekday: '4',
     repeat_time: '19:00',
     repeat_count: 4
@@ -280,6 +286,7 @@ export default function Tasks({ currentUserProfile, lang, notify, comparisonOnly
         .from('tasks')
         .select('*')
         .eq('team_id', teamId)
+        .is('archived_at', null)
           .order('created_at', { ascending: false })
 
       if (activeTeam?.type === 'board') query = query.eq('task_scope', activeTeam.task_scope)
@@ -288,10 +295,16 @@ export default function Tasks({ currentUserProfile, lang, notify, comparisonOnly
         query = query.contains('assigned_to', [currentUserProfile.id])
       }
 
-      const { data, error } = await query
+      const [{ data, error }, history, plans] = await Promise.all([
+        query,
+        canViewPerformance ? supabase.rpc('task_performance_records', { p_team: teamId, p_scope: activeTeam?.task_scope || 'members' }) : { data: [] },
+        isPowerUser ? supabase.from('task_repeat_plans').select('*,task_repeat_occurrences(sequence,publish_at,due_date,status)').eq('team_id',teamId).eq('task_scope',activeTeam?.task_scope || 'members').is('cancelled_at',null).order('created_at',{ascending:false}) : { data: [] },
+      ])
 
       if (error) throw error
-      if (requestVersion === taskLoadVersion.current) setTasks(data || [])
+      if (history.error) throw history.error
+      if (plans.error) throw plans.error
+      if (requestVersion === taskLoadVersion.current) { setTasks(data || []); setPerformanceTasks(history.data || []); setRepeatPlans(plans.data || []) }
     } catch (err) {
       if (requestVersion === taskLoadVersion.current) setErrorMsg(err.code === '42703' ? _('请先运行任务名单分组 SQL，再刷新页面。', 'Run the task roster scopes SQL, then refresh.') : err.message || _('获取任务列表失败', 'Failed to load tasks.'))
     }
@@ -400,25 +413,6 @@ export default function Tasks({ currentUserProfile, lang, notify, comparisonOnly
     })))
   }
 
-  const getNextWeeklyOccurrences = () => {
-    const count = Math.min(Math.max(Number(formData.repeat_count) || 1, 1), 12)
-    const weekday = Number(formData.repeat_weekday)
-    const [hour, minute] = (formData.repeat_time || '19:00').split(':').map(Number)
-    const now = new Date()
-    const first = new Date(now)
-    first.setHours(hour || 0, minute || 0, 0, 0)
-
-    const daysUntil = (weekday - first.getDay() + 7) % 7
-    first.setDate(first.getDate() + daysUntil)
-    if (first <= now) first.setDate(first.getDate() + 7)
-
-    return Array.from({ length: count }, (_, index) => {
-      const date = new Date(first)
-      date.setDate(first.getDate() + index * 7)
-      return date
-    })
-  }
-
   const buildTaskPayload = (dueDate) => ({
     title: formData.title,
     description: formData.description,
@@ -457,16 +451,15 @@ export default function Tasks({ currentUserProfile, lang, notify, comparisonOnly
         }
         setSuccessMsg(_('任务已成功更新', 'Task updated.'))
       } else if (formData.repeat_enabled) {
-        const occurrences = getNextWeeklyOccurrences()
-        const payloads = occurrences.map(date => buildTaskPayload(date))
-        const { data, error } = await supabase
-          .from('tasks')
-          .insert(payloads)
-          .select()
-
+        const preview = weeklyTaskPreview({ first: formData.repeat_first, immediate: formData.repeat_immediate, weekday: formData.repeat_weekday, time: formData.repeat_time, count: formData.repeat_count })
+        if (!preview.length || !formData.repeat_immediate && Date.parse(preview[0].publish)<=Date.now()) throw new Error(_('请选择未来的首次发布时间。','Choose a future first publication time.'))
+        const { error } = await supabase.rpc('create_task_repeat_plan', {
+          p_team: activeTeam.id, p_scope: activeTeam.task_scope || 'members', p_title: formData.title, p_description: formData.description,
+          p_assigned: formData.assigned_to, p_priority: formData.priority, p_first: preview[0].publish, p_immediate: formData.repeat_immediate,
+          p_weekday: Number(formData.repeat_weekday), p_time: formData.repeat_time, p_count: Number(formData.repeat_count),
+        })
         if (error) throw error
-        await deliverSavedTaskNotifications(() => Promise.all((data || []).map(task => createTaskNotifications(task))))
-        setSuccessMsg(_('已成功创建 ', 'Created ') + (data?.length || payloads.length) + _(' 个重复任务', ' recurring tasks.'))
+        setSuccessMsg(formData.repeat_immediate ? _('第一期已发布，后续任务已安排。','First task published; remaining tasks scheduled.') : _('计划已保存，首次发布：','Plan saved. First publication: ')+taskScheduleDate(preview[0].publish,lang))
       } else {
         const { data, error } = await supabase
           .from('tasks')
@@ -499,6 +492,8 @@ export default function Tasks({ currentUserProfile, lang, notify, comparisonOnly
       priority: 'medium',
       status: 'pending',
       repeat_enabled: false,
+      repeat_first: '',
+      repeat_immediate: false,
       repeat_weekday: '4',
       repeat_time: '19:00',
       repeat_count: 4
@@ -517,6 +512,8 @@ export default function Tasks({ currentUserProfile, lang, notify, comparisonOnly
       priority: task.priority,
       status: task.status,
       repeat_enabled: false,
+      repeat_first: '',
+      repeat_immediate: false,
       repeat_weekday: '4',
       repeat_time: '19:00',
       repeat_count: 4
@@ -608,7 +605,10 @@ export default function Tasks({ currentUserProfile, lang, notify, comparisonOnly
   }
 
   const openDetailModal = (task) => {
-    setSelectedTask(task)
+    if (task.archived_at) return
+    const live = tasks.find(item => item.id===task.id)
+    if (!live) return
+    setSelectedTask(live)
     fetchComments(task.id)
     setShowDetailModal(true)
   }
@@ -674,7 +674,7 @@ export default function Tasks({ currentUserProfile, lang, notify, comparisonOnly
   }
 
   const memberPerformance = users.map(user => {
-    const assignedTasks = tasks.filter(task => task.assigned_to?.includes(user.id))
+    const assignedTasks = performanceTasks.filter(task => task.assigned_to?.includes(user.id))
     const metrics = taskPerformance(assignedTasks)
     const labels = {
       none: _('暂无任务', 'No tasks'), overdue: _('逾期需跟进', 'Overdue'),
@@ -805,6 +805,24 @@ export default function Tasks({ currentUserProfile, lang, notify, comparisonOnly
         </div>
       </div>
 
+      {isPowerUser && repeatPlans.some(plan => plan.task_repeat_occurrences?.some(item => item.status==='scheduled')) && <section className="space-y-3">
+        <h2 className="text-base font-black text-gray-900">{_('待发布计划','Scheduled publications')}</h2>
+        {repeatPlans.filter(plan => plan.task_repeat_occurrences?.some(item => item.status==='scheduled')).map(plan => {
+          const upcoming = plan.task_repeat_occurrences.filter(item => item.status==='scheduled').sort((a,b) => a.sequence-b.sequence)
+          return <div key={plan.id} className="flex flex-col sm:flex-row sm:items-center gap-3 py-3 border-b border-blue-100">
+            <div className="flex-1 min-w-0"><strong className="block break-words text-sm text-gray-900">{plan.title}</strong><p className="text-sm text-blue-900 mt-1">{_('下次发布：','Next publication: ')}{taskScheduleDate(upcoming[0].publish_at,lang)} · {_(`剩余 ${upcoming.length} 期`,`${upcoming.length} remaining`)}</p>
+              <details className="text-sm mt-2 text-blue-900"><summary className="cursor-pointer min-h-8">{_('查看发布时间与截止时间','Publication and deadline dates')}</summary><ul className="space-y-2 mt-2">{upcoming.map(item => <li key={item.sequence}>{_(`第 ${item.sequence} 期：`,`Task ${item.sequence}: `)}{taskScheduleDate(item.publish_at,lang)} → {taskScheduleDate(item.due_date,lang)}</li>)}</ul></details>
+            </div>
+            <button type="button" className="min-h-11 px-4 py-2 rounded-xl border border-red-200 text-red-800 text-sm font-bold self-start" onClick={async () => {
+              if (!window.confirm(_('取消这个计划所有尚未发布的任务？已发布任务和表现记录会保留。','Cancel all future publications? Published tasks and performance records will remain.'))) return
+              const result = await supabase.rpc('cancel_task_repeat_plan',{p_plan:plan.id})
+              if (result.error) setErrorMsg(result.error.message)
+              else { setSuccessMsg(_('后续发布已取消。','Future publications cancelled.')); fetchTasks(activeTeam.id) }
+            }}>{_('取消后续发布','Cancel future tasks')}</button>
+          </div>
+        })}
+      </section>}
+
       {canViewPerformance && activeTeam && (
         <section className="p-5 rounded-3xl bg-white border border-[#e0f1ff] space-y-4"
           style={{ boxShadow: '0 4px 20px rgba(149,203,255,0.10)' }}>
@@ -824,7 +842,7 @@ export default function Tasks({ currentUserProfile, lang, notify, comparisonOnly
             </span>
           </div>
 
-          <p className="text-xs text-gray-600 leading-relaxed mb-4">{_('仅统计当前团队仍保留的任务；完成率 = 完成 / 总数，准时率 = 按时完成 / 可核实完成时间的任务。未到期任务不会被判为消极；多人任务的完成状态共同计算，不代表个人贡献评分。', 'Existing tasks in this team only. Completion = completed / total; on-time rate = on-time / completions with verifiable dates. Future tasks are not penalised. Shared task status is not an individual contribution score.')}</p>
+          <p className="text-xs text-gray-600 leading-relaxed mb-4">{_('统计已发布任务及归档记录；归档不会减少总任务数。完成率 = 完成 / 总数，准时率 = 按时完成 / 可核实完成时间的任务。多人任务采用共同完成状态。', 'Published tasks and archived records are counted. Archiving does not reduce totals. Completion = completed / total; on time = on-time / completions with verifiable dates. Shared tasks use their shared status.')}</p>
           {memberPerformance.length === 0 ? (
             <div className="text-center py-8 rounded-2xl text-xs font-bold text-gray-400 border-2 border-dashed border-gray-100">
               {_('目前还没有成员被分配任务。', 'No members have assigned tasks yet.')}
@@ -895,7 +913,8 @@ export default function Tasks({ currentUserProfile, lang, notify, comparisonOnly
                   </div>
                   <details className="text-xs text-gray-600">
                     <summary className="cursor-pointer font-bold">{_('查看计算明细', 'View task evidence')}</summary>
-                    <div className="max-h-48 overflow-y-auto divide-y mt-2">{item.assignedTasks.map(task => <button key={task.id} onClick={() => openDetailModal(task)} className="block w-full text-left py-2 break-words">
+                    <div className="max-h-48 overflow-y-auto divide-y mt-2">{item.assignedTasks.map(task => <button key={task.id} disabled={!!task.archived_at} onClick={() => openDetailModal(task)} className="block w-full text-left py-2 break-words">
+                      {task.archived_at && <span className="text-xs text-blue-900">{_('已归档 · ','Archived · ')}</span>}
                       <strong>{task.title}</strong><br/>
                       {_('截止', 'Due')}: {task.due_date ? new Date(task.due_date).toLocaleString(lang === 'zh' ? 'zh-CN' : 'en-GB') : '—'}<br/>
                       {_('完成', 'Completed')}: {task.completed_at ? new Date(task.completed_at).toLocaleString(lang === 'zh' ? 'zh-CN' : 'en-GB') : '—'}
@@ -1035,6 +1054,7 @@ export default function Tasks({ currentUserProfile, lang, notify, comparisonOnly
             </div>
             
             <form onSubmit={handleCreateOrEditTask} className="p-6 space-y-4 flex-1">
+              {errorMsg && <p role="alert" className="text-sm text-red-800 rounded-xl bg-red-50 p-3">{errorMsg}</p>}
               <div>
                 <label className="block text-xs font-black uppercase tracking-wider mb-1.5 text-gray-500">{_('任务名称', 'Task Name')}</label>
                 <input
@@ -1061,7 +1081,7 @@ export default function Tasks({ currentUserProfile, lang, notify, comparisonOnly
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
+                <div hidden={formData.repeat_enabled && !isEditing}>
                   <label className="block text-xs font-black uppercase tracking-wider mb-1.5 text-gray-500">{_('截止时间', 'Due Date')}</label>
                   <input
                     type="datetime-local"
@@ -1103,67 +1123,7 @@ export default function Tasks({ currentUserProfile, lang, notify, comparisonOnly
                 </div>
               )}
 
-              {!isEditing && (
-                <div className="space-y-3 p-4 rounded-2xl" style={{ background: '#f8fbff', border: '1.5px solid #e0f1ff' }}>
-                  <label className="flex items-center gap-2 text-xs font-black text-gray-600 cursor-pointer select-none">
-                    <input
-                      type="checkbox"
-                      checked={formData.repeat_enabled}
-                      onChange={(e) => setFormData({ ...formData, repeat_enabled: e.target.checked })}
-                      className="h-4 w-4 accent-[#95CBFF]"
-                    />
-                    {_('重复发布', 'Repeat Weekly')}
-                  </label>
-                  {formData.repeat_enabled && (
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                      <div>
-                        <label className="block text-[10px] font-black uppercase tracking-wider mb-1 text-gray-400">{_('星期', 'Day')}</label>
-                        <select
-                          value={formData.repeat_weekday}
-                          onChange={(e) => setFormData({ ...formData, repeat_weekday: e.target.value })}
-                          className="w-full px-3 py-2 text-xs outline-none transition"
-                          style={selectStyle}
-                        >
-                          <option value="1">{_('星期一', 'Monday')}</option>
-                          <option value="2">{_('星期二', 'Tuesday')}</option>
-                          <option value="3">{_('星期三', 'Wednesday')}</option>
-                          <option value="4">{_('星期四', 'Thursday')}</option>
-                          <option value="5">{_('星期五', 'Friday')}</option>
-                          <option value="6">{_('星期六', 'Saturday')}</option>
-                          <option value="0">{_('星期日', 'Sunday')}</option>
-                        </select>
-                      </div>
-                      <div>
-                        <label className="block text-[10px] font-black uppercase tracking-wider mb-1 text-gray-400">{_('时间', 'Time')}</label>
-                        <input
-                          type="time"
-                          value={formData.repeat_time}
-                          onChange={(e) => setFormData({ ...formData, repeat_time: e.target.value })}
-                          className="w-full px-3 py-2 text-xs outline-none transition"
-                          style={inputStyle}
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-[10px] font-black uppercase tracking-wider mb-1 text-gray-400">{_('次数', 'Count')}</label>
-                        <input
-                          type="number"
-                          min="1"
-                          max="12"
-                          value={formData.repeat_count}
-                          onChange={(e) => setFormData({ ...formData, repeat_count: e.target.value })}
-                          className="w-full px-3 py-2 text-xs outline-none transition"
-                          style={inputStyle}
-                        />
-                      </div>
-                    </div>
-                  )}
-                  {formData.repeat_enabled && (
-                    <p className="text-[11px] font-bold text-gray-500 leading-relaxed">
-                      {_('系统会一次建立未来 ' + (formData.repeat_count || 1) + ' 周的任务，并把截止时间设为你选择的星期与时间。', 'Will create ' + (formData.repeat_count || 1) + ' weeks of tasks, each due on the selected day and time.')}
-                    </p>
-                  )}
-                </div>
-              )}
+              {!isEditing && <RepeatTaskSchedule value={formData} onChange={setFormData} lang={lang}/>}
 
               <div>
                 <label className="block text-xs font-black uppercase tracking-wider mb-1.5 text-gray-500">
@@ -1202,7 +1162,7 @@ export default function Tasks({ currentUserProfile, lang, notify, comparisonOnly
                 <button type="submit" disabled={formSubmitting}
                   className="px-5 py-2.5 rounded-2xl text-sm font-black transition cursor-pointer text-white"
                   style={{ background: '#95CBFF', opacity: formSubmitting ? 0.7 : 1 }}>
-                  {formSubmitting ? _('提交中...', 'Submitting...') : (isEditing ? _('确认更新', 'Update') : (formData.repeat_enabled ? _('确认重复发布', 'Create Recurring') : _('确认发布', 'Create')))}
+                  {formSubmitting ? _('保存中...', 'Saving...') : (isEditing ? _('确认更新', 'Update') : (formData.repeat_enabled ? (formData.repeat_immediate ? _('发布第一期并保存计划','Publish first & schedule') : _('保存发布计划','Save publication plan')) : _('立即发布任务', 'Publish task now')))}
                 </button>
               </div>
             </form>

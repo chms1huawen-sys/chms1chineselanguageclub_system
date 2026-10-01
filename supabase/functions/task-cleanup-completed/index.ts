@@ -1,6 +1,6 @@
 // supabase/functions/task-cleanup-completed/index.ts
 // Deploy: supabase functions deploy task-cleanup-completed
-// Schedule: run once per day. It deletes tasks completed more than 30 days ago.
+// Legacy cron endpoint: archive expired tasks without deleting performance history.
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
@@ -26,23 +26,18 @@ Deno.serve(async (req) => {
     }
 
     const supabase = createClient(supabaseUrl, serviceRoleKey)
-    const cutoff = new Date()
-    cutoff.setDate(cutoff.getDate() - 30)
+    const bearer = (req.headers.get('Authorization') || '').replace(/^Bearer\s+/i,'')
+    const secret = Deno.env.get('INVENTORY_CRON_SECRET')
+    if (bearer !== serviceRoleKey && (!secret || req.headers.get('x-cron-secret') !== secret)) return Response.json({ error: 'Unauthorized' }, { status: 401 })
 
-    const { data, error } = await supabase
-      .from('tasks')
-      .delete()
-      .eq('status', 'completed')
-      .lt('completed_at', cutoff.toISOString())
-      .select('id')
+    const { data, error } = await supabase.rpc('archive_expired_tasks')
 
     if (error) throw error
 
     return new Response(
       JSON.stringify({
-        message: `Deleted ${data?.length || 0} completed tasks older than 30 days.`,
-        deleted: data?.length || 0,
-        cutoff: cutoff.toISOString(),
+        message: 'Expired tasks archived. No tasks deleted.',
+        archived: data || 0,
       }),
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
     )

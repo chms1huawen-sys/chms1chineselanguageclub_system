@@ -301,6 +301,8 @@ Deno.serve(async (request) => {
     .from('tasks')
     .select('id, title, due_date, assigned_to, priority, status, created_at')
     .neq('status', 'completed')
+    .is('archived_at', null)
+    .gt('due_date', new Date(Date.now()-30*86400000).toISOString())
     .not('due_date', 'is', null)
 
   if (error) {

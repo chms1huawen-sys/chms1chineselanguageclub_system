@@ -8,11 +8,31 @@ import { safeBlogReturn } from './utils/blog'
 import { Loader } from 'lucide-react'
 import PageLoading from './components/PageLoading'
 import { showForegroundPush, withPushTimeout } from './utils/pushRuntime'
+import { publicNavigationTarget } from './utils/publicNavigation'
 const MemberShell = lazy(() => import('./pages/MemberShell'))
 
 export default function App() {
   const blogRedirecting = useRef(false)
   const [hash, setHash] = useState(window.location.hash)
+  const [publicRoute, setPublicRoute] = useState(window.location.pathname + window.location.search)
+  useEffect(() => {
+    const update = () => setPublicRoute(window.location.pathname + window.location.search)
+    const navigate = event => {
+      if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return
+      const link = event.target.closest?.('.club-blog a[href]')
+      if (!link || link.target || link.hasAttribute('download')) return
+      const target = publicNavigationTarget(link.href, window.location.origin)
+      if (!target) return
+      event.preventDefault()
+      if (target === window.location.pathname + window.location.search) return
+      window.history.pushState(null, '', target)
+      update()
+      window.scrollTo({ top: 0, behavior: 'instant' })
+    }
+    window.addEventListener('popstate', update)
+    document.addEventListener('click', navigate)
+    return () => { window.removeEventListener('popstate', update); document.removeEventListener('click', navigate) }
+  }, [])
   useEffect(() => {
     const update = () => setHash(window.location.hash)
     window.addEventListener('hashchange', update)
@@ -162,7 +182,7 @@ export default function App() {
   }
 
   if (window.location.pathname === '/blog-admin' || hash === '#/blog-management') return <Suspense fallback={<PageLoading lang={lang} />}><BlogAdminShell profile={profile} loading={loading} lang={lang} setLang={setLang} /></Suspense>
-  if (!memberSurface) return <><Blog profile={profile} lang={lang} setLang={setLang} /><BlogAnalyticsConsent lang={lang} /></>
+  if (!memberSurface) return <><Blog key={publicRoute} profile={profile} lang={lang} setLang={setLang} /><BlogAnalyticsConsent lang={lang} /></>
 
   if (loading || (user && profile && hash.startsWith('#/login?') && new URLSearchParams(hash.split('?')[1]).has('return'))) {
     return (

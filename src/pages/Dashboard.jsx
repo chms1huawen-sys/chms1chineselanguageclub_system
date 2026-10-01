@@ -202,7 +202,7 @@ export default function Dashboard({ currentUserProfile, lang = 'zh', onShowTutor
         activityResult,
         notificationsResult,
       ] = await Promise.all([
-        supabase.from('tasks').select('id, status, assigned_to').contains('assigned_to', [currentUserProfile.id]),
+        supabase.from('tasks').select('id, status, assigned_to').is('archived_at', null).contains('assigned_to', [currentUserProfile.id]),
         supabase.from('events').select('id, type, color, title, date').gte('date', monthStart).lte('date', monthEnd).neq('title', 'EXEC_DRIVE_LINK').not('title', 'ilike', 'Google Drive%'),
         supabase.from('events').select('*').gte('date', todayStr).lte('date', weekEndStr).in('type', ['event', 'meeting']).in('color', ['blue', 'green']).neq('title', 'EXEC_DRIVE_LINK').not('title', 'ilike', 'Google Drive%').order('date', { ascending: true }),
         supabase.rpc('get_active_member_count'),

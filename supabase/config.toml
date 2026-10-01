@@ -12,3 +12,6 @@ verify_jwt = false
 
 [functions.push-retry]
 verify_jwt = false
+
+[functions.task-scheduler]
+verify_jwt = false

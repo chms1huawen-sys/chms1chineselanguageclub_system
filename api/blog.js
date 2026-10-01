@@ -19,7 +19,8 @@ export default async function handler(req, res) {
     const view = req.query.view === 'blog' ? 'home' : String(req.query.view || 'home')
     if (!['home', 'activities', 'bookroom', 'about', 'literature', 'news'].includes(view)) return res.status(404).send('Not found')
     if (slug && !/^[a-z0-9]+(-[a-z0-9]+)*$/.test(slug)) return res.status(404).send('Not found')
-    const due = db.rpc('blog_publish_due').then(result => { if (result.error) throw result.error })
+    const started = performance.now()
+    const publishDue = () => db.rpc('blog_publish_due').then(result => { if (result.error) throw result.error })
     const siteQuery = db.from('blog_settings').select('*').eq('id', 1).single()
     let query = db.from('blog_posts').select(slug ? '*' : 'id,slug,title,author,summary,cover_path,featured,is_sticky,published_at,content_type,content_year,book_details').eq('status', 'published')
     if (!slug && view === 'bookroom') query = query.eq('content_type', 'publication')
@@ -27,7 +28,14 @@ export default async function handler(req, res) {
     if (!slug && view === 'literature') query = query.eq('content_type', 'article')
     if (!slug && view === 'news') query = query.eq('content_type', 'notice')
     query = slug ? query.eq('slug', slug) : query.order('is_sticky', { ascending: false }).order('published_at', { ascending: false }).order('id').limit(100)
-    const [site, posts] = await Promise.all([siteQuery, due.then(() => query)])
+    // Existing stories are read-only requests. Only a missing/scheduled slug needs publishing first.
+    const [site, posts] = await Promise.all([siteQuery, slug ? query : publishDue().then(() => query)])
+    if (slug && !posts.error && !posts.data.length) {
+      await publishDue()
+      const retry = await db.from('blog_posts').select('*').eq('status', 'published').eq('slug', slug)
+      posts.data = retry.data || []
+      posts.error = retry.error
+    }
     if (site.error) throw site.error
     if (posts.error) throw posts.error
     if (search || (!slug && view === 'home' && Object.hasOwn(req.query, 'q'))) {
@@ -70,6 +78,7 @@ export default async function handler(req, res) {
     }
     if (slug && !posts.data.length) res.setHeader('X-Robots-Tag', 'noindex')
     res.setHeader('Content-Type', 'text/html; charset=utf-8')
+    res.setHeader('Server-Timing', `blog;dur=${Math.round(performance.now() - started)}`)
     return res.status(slug && !posts.data.length ? 404 : 200).send(renderBlogHtml(template, site.data, posts.data, media, slug, siteOrigin(process.env), view, links, search, !slug && view === 'home' && Object.hasOwn(req.query, 'q'), homeContent))
   } catch (error) {
     console.error('Blog page unavailable:', error.message)
