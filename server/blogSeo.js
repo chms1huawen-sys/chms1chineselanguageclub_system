@@ -4,7 +4,7 @@ import { renderToStaticMarkup } from 'react-dom/server'
 import { richBody, photoWidth, galleryPreview } from '../src/utils/blogRichText.js'
 import { heroSlides, submissionNote, publicationYear } from '../src/utils/blogPresentation.js'
 import { safePublicLink } from '../src/utils/blogContent.js'
-import { publicBlogSettings } from '../src/utils/blogBootstrap.js'
+import { publicBlogSettings, publicBlogArticle } from '../src/utils/blogBootstrap.js'
 import { compareStories, featuredStories, HOME_STORY_COUNT, STORY_PAGE_SIZE } from '../src/utils/blogFeed.js'
 export const escapeHtml = value => String(value ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]))
 export const siteOrigin = env => new URL(env.BLOG_SITE_URL || 'https://chms1chineselanguageclubsystem.vercel.app').origin
@@ -78,6 +78,6 @@ export function renderBlogHtml(template, site, posts, media, slug, origin, view 
     body = `${hero}<main class="blog-main"><section class="blog-public-section" id="articles"><h${level}>${e(searching ? (search ? `搜索结果: ${search}` : '全部内容') : home ? (site.content?.latest_title || '最新活动') : names[view])}</h${level}>${view === 'literature' ? `<p class="blog-submission-note">${e(site.content?.submission_note ?? submissionNote(false))}</p>` : ''}<div class="blog-post-grid">${visible.map(card).join('')}</div></section>${home && featured.length ? `<section class="blog-public-section"><h2>${e(site.content?.featured_title || '精选内容')}</h2><div class="blog-post-grid">${featured.map(card).join('')}</div></section>` : ''}${home ? `<section class="blog-public-section blog-album-section" id="albums"><h2>${e(site.content?.albums_title || '活动影像')}</h2><div class="blog-album-grid">${moments.map(item => `<a class="blog-album" href="/blog/${e(item.slug)}">${picture(item.moment_path, item.title)}<span><strong>${e(item.title)}</strong><small>${e(publicationYear(item))}</small></span></a>`).join('')}</div></section>${about}` : ''}</main>`
   }
   return template.replace(/<title>[\s\S]*?<\/title>/, '').replace(/<meta name="description"[^>]*>/, '')
-    .replace('</head>', () => metadata + bootstrap + '</head>')
+    .replace('</head>', () => metadata + bootstrap + (post ? '<script id="blog-article-data" type="application/json">' + JSON.stringify(publicBlogArticle(post, media, links)).replace(/</g, '\\u003c') + '</script>' : '') + '</head>')
     .replace('<div id="root"></div>', () => `<div id="root"><div class="club-blog blog-public${view === 'home' && !slug && !searching ? ' blog-home' : ''}">${nav}${body}<footer class="blog-footer">${e(site.contact)} ${socials(site.content?.social_links)}</footer></div></div>`)
 }

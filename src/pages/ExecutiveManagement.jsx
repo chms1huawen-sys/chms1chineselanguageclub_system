@@ -521,22 +521,22 @@ export default function ExecutiveManagement({ currentUserProfile, lang = 'zh', n
             {executiveMembers.map((member, index) => (
               <div
                 key={member.id}
-                className="grid grid-cols-[auto_1fr] md:grid-cols-[auto_1fr_1fr] gap-3 md:gap-5 items-center p-4"
+                className="grid grid-cols-1 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)] gap-2 md:gap-5 items-center p-4"
                 style={{
                   background: index % 2 === 0 ? 'white' : '#f8fbff',
                   borderBottom: index === executiveMembers.length - 1 ? 'none' : '1px solid #e0f1ff',
                 }}>
                 <div className="flex items-center gap-3 min-w-0">
                   <UserAvatar user={member} name={member.name} size={42} rounded={18} />
-                  <div className="min-w-0">
+                  <div className="min-w-0 flex-1">
                     <p className="text-sm font-black truncate" style={{ color: '#1a1a1a' }}>{member.name || '-'}</p>
-                    <p className="text-xs font-bold mt-0.5 md:hidden truncate" style={{ color: '#6b7280' }}>{member.email || '-'}</p>
+                    <p className="text-sm font-medium mt-0.5 md:hidden break-all" style={{ color: '#5b6875' }}>{member.email || '-'}</p>
                   </div>
                 </div>
 
-                <div className="min-w-0">
-                  <span className="inline-flex px-3 py-1 rounded-full text-xs font-black"
-                    style={{ background: '#f0f7ff', color: '#4a9dea', border: '1px solid #b8deff' }}>
+                <div className="min-w-0 pl-[54px] md:pl-0">
+                  <span className="inline-flex max-w-full px-3 py-1 rounded-full text-xs font-bold break-words"
+                    style={{ background: '#f0f7ff', color: '#28689f', border: '1px solid #b8deff' }}>
                     {getRoleText(member, lang)}
                   </span>
                 </div>

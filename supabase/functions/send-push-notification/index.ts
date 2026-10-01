@@ -2,6 +2,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { isInvalidFcmTokenError } from './fcmErrors.js'
 import { fetchWithRetry } from './retry.js'
 import { authorizePushRequest } from './requestAuth.js'
+import { authorizeNotificationBatch } from './recipientAuth.js'
 
 type ServiceAccount = {
   client_email: string
@@ -221,6 +222,14 @@ Deno.serve(async (request) => {
       return new Response(JSON.stringify({ error: 'Forbidden.' }), { status: 403, headers: corsHeaders })
     }
 
+    if (!announcementSync && requesterJwt !== serviceRoleKey) {
+      const requester = await supabase.auth.getUser(requesterJwt)
+      const profile = await supabase.from('users').select('*').eq('id', requester.data.user?.id).single()
+      if (profile.error || !await authorizeNotificationBatch(supabase, profile.data, notificationRows, notificationIds)) {
+        return new Response(JSON.stringify({ error: 'Notification recipients are outside your permitted scope.' }), { status: 403, headers: corsHeaders })
+      }
+    }
+
     if (announcementSync) {
       const authHeader = request.headers.get('Authorization') || ''
       const requesterJwt = authHeader.replace(/^Bearer\s+/i, '').trim()
@@ -273,6 +282,12 @@ Deno.serve(async (request) => {
 
         if (!title || !notificationBody) {
           return new Response(JSON.stringify({ error: 'title and body are required.' }), { status: 400, headers: corsHeaders })
+        }
+
+        const scopeProfile = await supabase.from('users').select('*').eq('id', requesterId).single()
+        const scopedRows = recipientIds.map(userId => ({ user_id: userId, type: 'announcement', title, body: notificationBody, dedupe_key: `announcement-${announcementId}-${userId}` }))
+        if (scopeProfile.error || !await authorizeNotificationBatch(supabase, scopeProfile.data, scopedRows, [])) {
+          return new Response(JSON.stringify({ error: 'Notification recipients are outside the announcement audience.' }), { status: 403, headers: corsHeaders })
         }
 
         const { error: deleteError } = await supabase

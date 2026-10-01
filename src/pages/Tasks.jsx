@@ -362,6 +362,7 @@ export default function Tasks({ currentUserProfile, lang, notify, comparisonOnly
     await insertNotifications(recipients.map(userId => ({
       user_id: userId,
       type: 'task_assigned',
+      dedupe_key: `task-assigned-${task.id}-${userId}`,
       title: _('新任务：', 'New task: ') + task.title,
       body: _('负责人', 'Assigner') + _(' 指派了任务给你。截止：', ' assigned a task to you. Due: ') + dueText
     })))
@@ -369,7 +370,7 @@ export default function Tasks({ currentUserProfile, lang, notify, comparisonOnly
 
   const notifyTaskCreator = async (task, type, title, body) => {
     if (!task?.created_by || task.created_by === currentUserProfile?.id) return
-    await insertNotifications([{ user_id: task.created_by, type, title, body }])
+    await insertNotifications([{ user_id: task.created_by, type, title, body, dedupe_key: `task-status-${task.id}-${task.created_by}-${Date.now()}` }])
   }
 
   const notifyTaskCompleted = async (task) => {

@@ -1,0 +1,18 @@
+<!doctype html><html lang="zh"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head><body><div id="root"></div><script type="module">
+import React from 'react';
+import { createRoot } from 'react-dom/client';
+import { supabase } from '/src/supabaseClient.js';
+import ExecutiveManagement from '/src/pages/ExecutiveManagement.jsx';
+import '/src/index.css';
+const users = [
+  { id: 'one', name: '示例会员甲', email: 'member@example.com', role: 'vice_treasurer', is_active: true },
+  { id: 'two', name: '示例会员乙', email: '20261129@student.chms1.edu.my', role: 'activity_member', is_active: true },
+  { id: 'three', name: '示例会员丙', email: 'long.member.address.for.layout@example.com', role: 'custom', custom_role_label: '活动宣传与摄影协调负责人', is_active: true },
+];
+supabase.from = table => {
+  const result = { data: table === 'users' ? users : [], error: null };
+  const query = { select: () => query, eq: () => query, in: () => query, order: () => query, maybeSingle: async () => ({ data: null, error: null }), then: (resolve, reject) => Promise.resolve(result).then(resolve, reject) };
+  return query;
+};
+createRoot(document.getElementById('root')).render(React.createElement('main', { style: { maxWidth: 1120, margin: 'auto', padding: 16 } }, React.createElement(ExecutiveManagement, { currentUserProfile: { id: 'viewer', role: 'chairperson', is_active: true }, lang: 'zh' })));
+</script></body></html>

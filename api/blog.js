@@ -19,17 +19,16 @@ export default async function handler(req, res) {
     const view = req.query.view === 'blog' ? 'home' : String(req.query.view || 'home')
     if (!['home', 'activities', 'bookroom', 'about', 'literature', 'news'].includes(view)) return res.status(404).send('Not found')
     if (slug && !/^[a-z0-9]+(-[a-z0-9]+)*$/.test(slug)) return res.status(404).send('Not found')
-    const due = await db.rpc('blog_publish_due')
-    if (due.error) throw due.error
-    const site = await db.from('blog_settings').select('*').eq('id', 1).single()
-    if (site.error) throw site.error
+    const due = db.rpc('blog_publish_due').then(result => { if (result.error) throw result.error })
+    const siteQuery = db.from('blog_settings').select('*').eq('id', 1).single()
     let query = db.from('blog_posts').select(slug ? '*' : 'id,slug,title,author,summary,cover_path,featured,is_sticky,published_at,content_type,content_year,book_details').eq('status', 'published')
     if (!slug && view === 'bookroom') query = query.eq('content_type', 'publication')
     if (!slug && view === 'activities') query = query.eq('content_type', 'event')
     if (!slug && view === 'literature') query = query.eq('content_type', 'article')
     if (!slug && view === 'news') query = query.eq('content_type', 'notice')
     query = slug ? query.eq('slug', slug) : query.order('is_sticky', { ascending: false }).order('published_at', { ascending: false }).order('id').limit(100)
-    const posts = await query
+    const [site, posts] = await Promise.all([siteQuery, due.then(() => query)])
+    if (site.error) throw site.error
     if (posts.error) throw posts.error
     if (search || (!slug && view === 'home' && Object.hasOwn(req.query, 'q'))) {
       const library = await db.from('blog_tags').select('*')
@@ -60,10 +59,12 @@ export default async function handler(req, res) {
       }
     }
     if (slug && posts.data[0]) {
-      const result = await db.from('blog_media').select('*').eq('post_id', posts.data[0].id).order('position')
+      const [result, publicLinks] = await Promise.all([
+        db.from('blog_media').select('*').eq('post_id', posts.data[0].id).order('position'),
+        db.from('blog_links').select('label,url,visibility,type').eq('post_id', posts.data[0].id).eq('visibility', 'public').order('position'),
+      ])
       if (result.error) throw result.error
       media = result.data
-      const publicLinks = await db.from('blog_links').select('label,url').eq('post_id', posts.data[0].id).eq('visibility', 'public').order('position')
       if (publicLinks.error) throw publicLinks.error
       links = publicLinks.data
     }

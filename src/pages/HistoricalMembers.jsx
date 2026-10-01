@@ -241,7 +241,7 @@ export default function HistoricalMembers({ lang }) {
                         </div>
                         <p title={user.email} className="text-xs font-mono font-semibold text-gray-500 break-all min-w-0 col-start-2 md:col-auto">{user.email}</p>
                         <div className="flex flex-wrap items-center gap-2 col-start-2 md:col-auto">
-                          <span className="w-fit text-[10px] font-black px-2.5 py-1 rounded-full bg-blue-50 text-blue-600 border border-blue-200">
+                          <span className="w-fit max-w-full text-xs font-bold break-words px-2.5 py-1 rounded-full bg-blue-50 text-blue-700 border border-blue-200">
                             {member.position}
                           </span>
                           {user.is_active === false && (

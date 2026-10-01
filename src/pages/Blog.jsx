@@ -14,7 +14,7 @@ import './BlogInterior.css'
 import '../components/BlogBodyTypography.css'
 import BookPurchase from '../components/BookPurchase'
 import BlogHero from '../components/BlogHero'
-import { readBlogBootstrap } from '../utils/blogBootstrap'
+import { readBlogBootstrap, readBlogArticleBootstrap } from '../utils/blogBootstrap'
 import { compareStories, featuredStories, HOME_STORY_COUNT, STORY_PAGE_SIZE, MOMENT_COUNT } from '../utils/blogFeed'
 import { clubStatistics, matchesPublicSearch, submissionNote, publicationYear } from '../utils/blogPresentation'
 import BlogNavigation, { SocialLinks } from '../components/BlogNavigation'
@@ -56,7 +56,7 @@ export function ArticleContent({ post, media = [], onPhoto, en = false, tagLibra
   const gallery = galleryPreview(media, post.cover_path)
   const coverIndex = media.findIndex(photo => photo.path === post.cover_path)
   const coverCaption = media[coverIndex]?.caption || post.credit || post.title
-  const coverImage = <BlogImage className="blog-article-cover" path={post.cover_path} alt={post.title} crop={media[coverIndex]?.crop} />
+  const coverImage = <BlogImage className="blog-article-cover" path={post.cover_path} alt={post.title} crop={media[coverIndex]?.crop} fetchPriority="high" />
   return <article className="blog-article">
     <header><h1>{post.title}</h1>{post.author && <p className="blog-article-author"><span>{en ? 'Written by' : '作者'}</span><strong>{post.author}</strong></p>}
       <div className="blog-article-dates">{post.published_at && <span>{en ? 'Published: ' : '发布于：'}<time dateTime={post.published_at}>{post.published_at.slice(0, 10)}</time></span>}{post.event_date && <span>{en ? 'Event: ' : '活动日期：'}<time dateTime={post.event_date}>{post.event_date}</time></span>}{post.location && <span>{en ? 'Location: ' : '地点：'}{post.location}</span>}</div>
@@ -100,15 +100,17 @@ export default function Blog({ profile, lang, setLang }) {
   const section = sections.find(item => item.path === pathname) || sections[0]
   const view = section.path === '/' ? 'home' : section.path.slice(1)
   const type = section.type
+  const [initialArticle] = useState(() => readBlogArticleBootstrap(slug))
   const [settings, setSettings] = useState(() => readBlogBootstrap() || { title: '', subtitle: '', intro: '', about: '', contact: '', hero_path: '', content: {} })
   const siteReady = !!settings.title
   const [posts, setPosts] = useState([])
+  const [article, setArticle] = useState(initialArticle?.post || null)
   const [categories, setCategories] = useState([])
   const [moments, setMoments] = useState([])
   const [tagLibrary, setTagLibrary] = useState([])
-  const [media, setMedia] = useState([])
-  const [links, setLinks] = useState([])
-  const [loading, setLoading] = useState(true)
+  const [media, setMedia] = useState(initialArticle?.media || [])
+  const [links, setLinks] = useState(initialArticle?.links || [])
+  const [loading, setLoading] = useState(!initialArticle)
   const [error, setError] = useState('')
   const search = (new URLSearchParams(window.location.search).get('q') || '').trim().slice(0, 200)
   const searching = pathname === '/' && new URLSearchParams(window.location.search).has('q')
@@ -128,7 +130,7 @@ export default function Blog({ profile, lang, setLang }) {
   const dialogRef = useRef(null)
   const albumTriggerRef = useRef(null)
   const activeMember = profile?.is_active === true
-  const post = posts.find(item => item.slug === slug)
+  const post = article
   const content = settings.content && typeof settings.content === 'object' ? settings.content : {}
   const override = (key, fallback) => text(content[key]) || text(content.sections?.[key]) || fallback
 
@@ -136,40 +138,63 @@ export default function Blog({ profile, lang, setLang }) {
     let active = true
     async function load() {
       try {
-        const schedule = await supabase.rpc('blog_publish_due')
-        if (schedule.error) throw schedule.error
-        const site = await supabase.from('blog_settings').select('*').eq('id', 1).single()
-        if (site.error) throw site.error
-        if (active) setSettings({ ...defaultBlogSettings, ...site.data })
-        const cats = await rows(supabase.from('blog_categories').select('*').order('name'))
-        // Published-only at the query boundary, including recommendations and tag searches.
-        const articles = await allRows(() => supabase.from('blog_posts').select('*').eq('status', 'published').order('published_at', { ascending: false }).order('id'))
-        if (!active) return
-        setCategories(cats); setPosts(articles)
-        const library = await rows(supabase.from('blog_tags').select('*').order('name'))
-        if (active) setTagLibrary(library)
-        const current = articles.find(item => item.slug === slug)
-        const pictures = current ? await allRows(() => supabase.from('blog_media').select('*').eq('post_id', current.id).order('position').order('id')) : []
+        const metadata = Promise.all([
+          supabase.from('blog_settings').select('*').eq('id', 1).single().then(site => {
+            if (site.error) throw site.error
+            if (active) setSettings({ ...defaultBlogSettings, ...site.data })
+          }),
+          rows(supabase.from('blog_categories').select('*').order('name')).then(cats => { if (active) setCategories(cats) }),
+          rows(supabase.from('blog_tags').select('*').order('name')).then(library => { if (active) setTagLibrary(library) }),
+        ])
+        // Metadata failures must not delay or replace an otherwise readable article.
+        const metadataReady = metadata.catch(() => { if (active) setError('load') })
+        const fields = 'id,title,slug,summary,author,category_id,event_date,location,tags,credit,cover_path,featured,published_at,content_type,content_year,is_sticky,related_ids,event_id,tag_ids,book_details,show_in_moments'
+        const feed = async () => {
+          const articles = await allRows(() => supabase.from('blog_posts').select(searching ? `${fields},body` : fields).eq('status', 'published').order('published_at', { ascending: false }).order('id'))
+          if (active) setPosts(articles)
+          return articles
+        }
+        let current = null
+        let articles = []
+        if (slug) {
+          const due = supabase.rpc('blog_publish_due').then(result => { if (result.error) throw result.error }).catch(() => {})
+          let result = await supabase.from('blog_posts').select('*').eq('status', 'published').eq('slug', slug).maybeSingle()
+          if (!result.error && !result.data) {
+            await due
+            result = await supabase.from('blog_posts').select('*').eq('status', 'published').eq('slug', slug).maybeSingle()
+          }
+          if (result.error) throw result.error
+          current = result.data
+          if (active) { setArticle(current); setLoading(false) }
+          // Recommendations load separately from the requested story.
+          void feed().catch(() => {})
+        } else {
+          const schedule = await supabase.rpc('blog_publish_due')
+          if (schedule.error) throw schedule.error
+          articles = await feed()
+        }
         if (current) {
-          const publicLinks = await rows(supabase.from('blog_links').select('*').eq('post_id', current.id).eq('visibility', 'public').order('position'))
-          const memberLinks = activeMember ? await rows(supabase.from('blog_links').select('*').eq('post_id', current.id).eq('visibility', 'member').order('position')) : []
-          if (active) setLinks([...publicLinks, ...memberLinks])
+          const [pictures, publicLinks, memberLinks] = await Promise.all([
+            allRows(() => supabase.from('blog_media').select('*').eq('post_id', current.id).order('position').order('id')),
+            rows(supabase.from('blog_links').select('*').eq('post_id', current.id).eq('visibility', 'public').order('position')),
+            activeMember ? rows(supabase.from('blog_links').select('*').eq('post_id', current.id).eq('visibility', 'member').order('position')) : [],
+          ])
+          if (active) { setLinks([...publicLinks, ...memberLinks]); setMedia(pictures) }
         } else if (view === 'home') {
-          const items = []
-          for (const event of articles.filter(item => item.content_type === 'event' && item.show_in_moments !== false).slice(0, MOMENT_COUNT)) {
+          const items = await Promise.all(articles.filter(item => item.content_type === 'event' && item.show_in_moments !== false).slice(0, MOMENT_COUNT).map(async event => {
             const photos = await rows(supabase.from('blog_media').select('*').eq('post_id', event.id).order('position').limit(1))
             const path = photos[0]?.path || event.cover_path
-            if (path) items.push({ ...event, moment_path: path })
-          }
-          if (active) setMoments(items)
+            return path ? { ...event, moment_path: path } : null
+          }))
+          if (active) setMoments(items.filter(Boolean))
         }
-        if (active) setMedia(pictures)
+        await metadataReady
       } catch { if (active) setError('load') }
       finally { if (active) setLoading(false) }
     }
     load()
     return () => { active = false }
-  }, [slug, activeMember, view])
+  }, [slug, activeMember, view, searching])
 
 
   useEffect(() => {
