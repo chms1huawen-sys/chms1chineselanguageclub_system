@@ -1,5 +1,6 @@
 import { cropStyles } from '../utils/photoCrop'
 import { signBlogImage } from '../utils/blogImages'
+import { requestWhenVisible } from '../utils/lazyImageRequest'
 import { richBody, galleryPreview, photoWidth } from '../utils/blogRichText'
 import { publicHomeUrl } from '../utils/pwaLaunch'
 import { useEffect, useRef, useState } from 'react'
@@ -35,21 +36,29 @@ const yearOf = publicationYear
 const dateOf = post => post.published_at || ''
 
 export function BlogImage({ path, alt = '', crop, ...props }) {
+  const imageRef = useRef(null)
   const [signed, setSigned] = useState({ path: '', url: '' })
   const [failed, setFailed] = useState('')
   const direct = imageSource(path)
+  const lazy = props.loading === 'lazy'
+  const cropped = !!cropStyles(crop)
   useEffect(() => {
-    if (direct || !storagePath(path)) return
+    if (direct || cropped || !storagePath(path)) return
     let active = true
-    signBlogImage(path)
-      .then(({ data }) => { if (active) setSigned({ path, url: webLink(data?.signedUrl) }) })
-      .catch(() => { if (active) setSigned({ path, url: '' }) })
-    return () => { active = false }
-  }, [path, direct])
+    const request = () => {
+      signBlogImage(path)
+        .then(({ data }) => { if (active) setSigned({ path, url: webLink(data?.signedUrl) }) })
+        .catch(() => { if (active) setSigned({ path, url: '' }) })
+    }
+    let stop = () => {}
+    if (lazy) stop = requestWhenVisible(imageRef.current, request)
+    else request()
+    return () => { active = false; stop() }
+  }, [path, direct, lazy, cropped])
   const src = direct || (signed.path === path ? signed.url : '')
   const styles = cropStyles(crop)
   if (styles) return <span className={props.className} style={{ ...styles.frame, ...props.style }}><BlogImage path={path} alt={alt} loading={props.loading} fetchPriority={props.fetchPriority} onLoad={props.onLoad} style={styles.image} /></span>
-  return src && failed !== src ? <img src={src} alt={alt} {...props} onError={() => setFailed(src)} /> : <div className={`blog-image-placeholder ${props.className || ''}`} role="img" aria-label={alt || '照片 / Photo'}><Camera aria-hidden="true" /></div>
+  return src && failed !== src ? <img ref={imageRef} src={src} alt={alt} {...props} onError={() => setFailed(src)} /> : <div ref={imageRef} style={props.style} className={`blog-image-placeholder ${props.className || ''}`} role="img" aria-label={alt || '照片 / Photo'}><Camera aria-hidden="true" /></div>
 }
 
 export function ArticleContent({ post, media = [], onPhoto, en = false, tagLibrary = [] }) {

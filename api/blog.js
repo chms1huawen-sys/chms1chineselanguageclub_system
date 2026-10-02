@@ -7,6 +7,8 @@ import { matchesPublicSearch } from '../src/utils/blogPresentation.js'
 import { postTags } from '../src/utils/blogContent.js'
 import { FEATURED_STORY_COUNT, MOMENT_COUNT } from '../src/utils/blogFeed.js'
 
+const feedFields = 'id,slug,title,author,summary,cover_path,featured,is_sticky,published_at,content_type,content_year,book_details'
+
 export default async function handler(req, res) {
   res.setHeader('Cache-Control', 'no-store')
   if (!['GET', 'HEAD'].includes(req.method)) return res.status(405).end()
@@ -22,7 +24,7 @@ export default async function handler(req, res) {
     const started = performance.now()
     const publishDue = () => db.rpc('blog_publish_due').then(result => { if (result.error) throw result.error })
     const siteQuery = db.from('blog_settings').select('*').eq('id', 1).single()
-    let query = db.from('blog_posts').select(slug ? '*' : 'id,slug,title,author,summary,cover_path,featured,is_sticky,published_at,content_type,content_year,book_details').eq('status', 'published')
+    let query = db.from('blog_posts').select(slug ? '*' : feedFields).eq('status', 'published')
     if (!slug && view === 'bookroom') query = query.eq('content_type', 'publication')
     if (!slug && view === 'activities') query = query.eq('content_type', 'event')
     if (!slug && view === 'literature') query = query.eq('content_type', 'article')
@@ -43,7 +45,7 @@ export default async function handler(req, res) {
       if (library.error) throw library.error
       posts.data = []
       for (let offset = 0; ; offset += 100) {
-        const batch = await db.from('blog_posts').select('*').eq('status', 'published').order('published_at', { ascending: false }).order('id').range(offset, offset + 99)
+        const batch = await db.from('blog_posts').select(`${feedFields},body,tags,tag_ids`).eq('status', 'published').order('published_at', { ascending: false }).order('id').range(offset, offset + 99)
         if (batch.error) throw batch.error
         posts.data.push(...batch.data.filter(post => matchesPublicSearch(post, search, postTags(post, library.data).map(tag => tag.name))))
         if (batch.data.length < 100) break
@@ -54,10 +56,10 @@ export default async function handler(req, res) {
     let links = []
     const homeContent = { featured: [], moments: [] }
     if (!slug && view === 'home' && !Object.hasOwn(req.query, 'q')) {
-      const featured = await db.from('blog_posts').select('*').eq('status', 'published').eq('featured', true).order('published_at', { ascending: false }).order('id').limit(FEATURED_STORY_COUNT)
+      const featured = await db.from('blog_posts').select(feedFields).eq('status', 'published').eq('featured', true).order('published_at', { ascending: false }).order('id').limit(FEATURED_STORY_COUNT)
       if (featured.error) throw featured.error
       homeContent.featured = featured.data || []
-      const events = await db.from('blog_posts').select('*').eq('status', 'published').eq('content_type', 'event').or('show_in_moments.is.null,show_in_moments.eq.true').order('published_at', { ascending: false }).order('id').limit(MOMENT_COUNT)
+      const events = await db.from('blog_posts').select(feedFields).eq('status', 'published').eq('content_type', 'event').or('show_in_moments.is.null,show_in_moments.eq.true').order('published_at', { ascending: false }).order('id').limit(MOMENT_COUNT)
       if (events.error) throw events.error
       for (const event of events.data || []) {
         const photos = await db.from('blog_media').select('path').eq('post_id', event.id).order('position').limit(1)

@@ -2,16 +2,12 @@
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
   "functions": { "api/blog.js": { "includeFiles": "dist/index.html" } },
-  "headers": [{ "source": "/blog-admin", "headers": [{ "key": "X-Robots-Tag", "value": "noindex, nofollow" }] }],
-  "rewrites": [
-    { "source": "/blog-admin", "destination": "/index.html" },
-    { "source": "/", "destination": "/api/blog" },
-    { "source": "/activities", "destination": "/api/blog?view=activities" },
-    { "source": "/literature", "destination": "/api/blog?view=literature" },
-    { "source": "/news", "destination": "/api/blog?view=news" },
-    { "source": "/bookroom", "destination": "/api/blog?view=bookroom" },
-    { "source": "/about", "destination": "/api/blog?view=about" },
-    { "source": "/blog/:slug", "destination": "/api/blog?slug=:slug" },
-    { "source": "/sitemap.xml", "destination": "/api/sitemap" }
+  "routes": [
+    { "src": "^/blog-admin$", "dest": "/index.html", "headers": { "X-Robots-Tag": "noindex, nofollow" } },
+    { "src": "^/$", "dest": "/api/blog" },
+    { "handle": "filesystem" },
+    { "src": "^/(activities|literature|news|bookroom|about)/?$", "dest": "/api/blog?view=$1" },
+    { "src": "^/blog/([^/]+)/?$", "dest": "/api/blog?slug=$1" },
+    { "src": "^/sitemap\\.xml$", "dest": "/api/sitemap" }
   ]
 }
