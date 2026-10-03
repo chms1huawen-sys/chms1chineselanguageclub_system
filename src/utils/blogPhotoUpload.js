@@ -9,7 +9,7 @@ export async function uploadBlogPhoto(bucket, file, ownerId, extension, preview 
     const copy = await preview(file)
     if (copy) {
       const display = `${ownerId}/${uuid()}.webp`
-      const result = await bucket.upload(display, copy, { contentType: 'image/webp' })
+      const result = await bucket.upload(display, copy, { contentType: 'image/webp', cacheControl: '86400' })
       if (!result.error) path = display
     }
   } catch {
