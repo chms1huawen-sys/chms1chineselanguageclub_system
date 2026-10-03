@@ -1,6 +1,7 @@
 import { cloneElement, useCallback, useEffect, useId, useRef, useState } from 'react'
 import { Package, Plus, Minus, ShoppingCart, Tag, Search, Pencil, X, RefreshCw, ChevronLeft, ChevronRight, Loader, ImagePlus, Settings } from 'lucide-react'
 import { supabase } from '../supabaseClient'
+import { secureUpload } from '../utils/secureUpload'
 import { hasPermission } from '../utils/permissions'
 import { sendPushForNotifications } from '../utils/pushNotifications'
 import './Inventory.css'
@@ -157,7 +158,7 @@ export default function Inventory({ currentUserProfile, lang = 'zh', notify, man
       if (action === 'item' && photo) {
         if (!['image/jpeg', 'image/png', 'image/webp'].includes(photo.type) || photo.size > 5 * 1024 * 1024) throw new Error(t('照片只支持 JPG、PNG、WEBP，最大 5MB。', 'Photos must be JPG, PNG or WEBP, up to 5MB.'))
         uploadedPath = `${currentUserProfile.id}/${crypto.randomUUID()}.${({ 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp' })[photo.type]}`
-        const result = await supabase.storage.from('inventory-photos').upload(uploadedPath, photo)
+        const result = await secureUpload('inventory-photos', uploadedPath, photo)
         if (result.error) throw result.error
         payload = { ...payload, photo_path: uploadedPath }
       }

@@ -1,5 +1,6 @@
 import BlogArticlePreview from '../components/BlogArticlePreview'
 import { createImagePreview } from '../utils/imagePreview'
+import { secureUpload } from '../utils/secureUpload'
 import BlogPhotoCrop from '../components/BlogPhotoCrop'
 import ValidatedField from '../components/BlogValidatedField'
 import { lazy, Suspense, useState } from 'react'
@@ -106,13 +107,13 @@ export function StudioSettings({ initial, busy, run, reload, en, setDirty }) {
       if (!ext || file.size > 10 * 1024 * 1024) throw new Error(t('仅支持 JPG、PNG、WEBP，每张最多 10MB。', 'Only JPG, PNG, WEBP, up to 10MB each.'))
       const path = `${crypto.randomUUID()}.${ext}`
       const bucket = supabase.storage.from('blog-site-media')
-      await checked(bucket.upload(path, file))
+      await checked(secureUpload('blog-site-media', path, file))
       let displayPath = path
       try {
         const preview = await createImagePreview(file)
         if (preview) {
           const previewPath = `${path}.preview.webp`
-          await checked(bucket.upload(previewPath, preview, { contentType: 'image/webp' }))
+          await checked(secureUpload('blog-site-media', previewPath, preview))
           displayPath = previewPath
         }
       } catch (error) {

@@ -1,6 +1,7 @@
 // src/pages/Settings.jsx
 import { useEffect, useState, useEffectEvent } from 'react'
 import { supabase } from '../supabaseClient'
+import { secureUpload } from '../utils/secureUpload'
 import { KeyRound, User, Bell, CheckCircle, AlertCircle, Loader, ShieldCheck, Camera, Trash2 } from 'lucide-react'
 import { requestFcmToken } from '../firebase'
 import { getDeviceKey, getDevicePlatform } from '../utils/pushDevice'
@@ -278,15 +279,9 @@ export default function Settings({ currentUserProfile, lang = 'zh', onProfileUpd
 
     setAvatarLoading(true)
     try {
-      const ext = file.name.split('.').pop()?.toLowerCase() || 'jpg'
+      const ext = { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp' }[file.type]
       const filePath = `${currentUserProfile.id}/avatar-${Date.now()}.${ext}`
-      const { error: uploadError } = await supabase.storage
-        .from('avatars')
-        .upload(filePath, file, {
-          cacheControl: '3600',
-          contentType: file.type,
-          upsert: true,
-        })
+      const { error: uploadError } = await secureUpload('avatars', filePath, file)
 
       if (uploadError) throw uploadError
 

@@ -1,6 +1,7 @@
 import BlogPhotoCrop from '../components/BlogPhotoCrop'
 import { signBlogImage } from '../utils/blogImages'
 import { uploadBlogPhoto } from '../utils/blogPhotoUpload'
+import { secureUpload } from '../utils/secureUpload'
 import { cropStyles } from '../utils/photoCrop'
 import { useEffect, useState } from 'react'
 import { Upload, Image, Trash2, ArrowUp, ArrowDown } from 'lucide-react'
@@ -45,7 +46,7 @@ export default function StudioMedia({ owner, kind, media, setMedia, changeCover,
       const types = { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp' }
       if (files.some(file => !types[file.type] || file.size > 10 * 1024 * 1024)) throw new Error(t('只支持 JPG、PNG、WEBP，每张最多 10MB。', 'Use JPG, PNG or WEBP, up to 10MB each.'))
       for (const file of files) {
-        const paths = await uploadBlogPhoto(supabase.storage.from('blog-photos'), file, owner.id, types[file.type])
+        const paths = await uploadBlogPhoto({ upload: (path, file) => secureUpload('blog-photos', path, file) }, file, owner.id, types[file.type])
         const row = await checked(supabase.from('blog_media').insert({ [field]: owner.id, ...paths, caption: '', position: media.length + files.indexOf(file) }).select().single())
         setMedia(items => [...items, row])
       }

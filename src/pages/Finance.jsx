@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { flushSync } from 'react-dom'
 import { Wallet, Plus, Settings, X, RefreshCw, Loader, ChevronLeft, ChevronRight, ExternalLink, Printer, Pencil } from 'lucide-react'
 import { supabase } from '../supabaseClient'
+import { secureUpload } from '../utils/secureUpload'
 import { hasPermission } from '../utils/permissions'
 import { sendPushForNotifications } from '../utils/pushNotifications'
 import './Inventory.css'
@@ -159,7 +160,7 @@ export default function Finance({ currentUserProfile: profile, lang = 'zh', noti
           const file = files[i]
           const ext = { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp', 'application/pdf': 'pdf' }[file.type]
           const path = `${profile.id}/${form.id}/${crypto.randomUUID()}.${ext}`
-          const { error: err } = await supabase.storage.from('finance-receipts').upload(path, file)
+          const { error: err } = await secureUpload('finance-receipts', path, file)
           if (err) throw err
           uploaded.current.push({ name: file.name, path })
         }

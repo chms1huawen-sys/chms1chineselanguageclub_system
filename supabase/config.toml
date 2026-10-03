@@ -15,3 +15,6 @@ verify_jwt = false
 
 [functions.task-scheduler]
 verify_jwt = false
+
+[functions.secure-upload]
+verify_jwt = false
