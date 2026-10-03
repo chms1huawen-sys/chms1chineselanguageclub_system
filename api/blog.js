@@ -56,17 +56,20 @@ export default async function handler(req, res) {
     let links = []
     const homeContent = { featured: [], moments: [] }
     if (!slug && view === 'home' && !Object.hasOwn(req.query, 'q')) {
-      const featured = await db.from('blog_posts').select(feedFields).eq('status', 'published').eq('featured', true).order('published_at', { ascending: false }).order('id').limit(FEATURED_STORY_COUNT)
+      const [featured, events] = await Promise.all([
+        db.from('blog_posts').select(feedFields).eq('status', 'published').eq('featured', true).order('published_at', { ascending: false }).order('id').limit(FEATURED_STORY_COUNT),
+        db.from('blog_posts').select(feedFields).eq('status', 'published').eq('content_type', 'event').or('show_in_moments.is.null,show_in_moments.eq.true').order('published_at', { ascending: false }).order('id').limit(MOMENT_COUNT),
+      ])
       if (featured.error) throw featured.error
       homeContent.featured = featured.data || []
-      const events = await db.from('blog_posts').select(feedFields).eq('status', 'published').eq('content_type', 'event').or('show_in_moments.is.null,show_in_moments.eq.true').order('published_at', { ascending: false }).order('id').limit(MOMENT_COUNT)
       if (events.error) throw events.error
-      for (const event of events.data || []) {
+      const moments = await Promise.all((events.data || []).map(async event => {
         const photos = await db.from('blog_media').select('path').eq('post_id', event.id).order('position').limit(1)
         if (photos.error) throw photos.error
         const path = photos.data?.[0]?.path || event.cover_path
-        if (path) homeContent.moments.push({ ...event, moment_path: path })
-      }
+        return path ? { ...event, moment_path: path } : null
+      }))
+      homeContent.moments = moments.filter(Boolean)
     }
     if (slug && posts.data[0]) {
       const [result, publicLinks] = await Promise.all([

@@ -9,7 +9,7 @@ import { safeBlogReturn } from './utils/blog'
 import { Loader } from 'lucide-react'
 import PageLoading from './components/PageLoading'
 import { showForegroundPush, withPushTimeout } from './utils/pushRuntime'
-import { publicNavigationTarget } from './utils/publicNavigation'
+import { navigatePublicLink } from './utils/publicNavigation'
 const MemberShell = lazy(() => import('./pages/MemberShell'))
 
 export default function App() {
@@ -17,16 +17,12 @@ export default function App() {
   const [hash, setHash] = useState(window.location.hash)
   const [publicRoute, setPublicRoute] = useState(window.location.pathname + window.location.search)
   useEffect(() => {
-    const update = () => setPublicRoute(window.location.pathname + window.location.search)
+    const update = () => {
+      setPublicRoute(window.location.pathname + window.location.search)
+      setHash(window.location.hash)
+    }
     const navigate = event => {
-      if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return
-      const link = event.target.closest?.('.club-blog a[href]')
-      if (!link || link.target || link.hasAttribute('download')) return
-      const target = publicNavigationTarget(link.href, window.location.origin)
-      if (!target) return
-      event.preventDefault()
-      if (target === window.location.pathname + window.location.search) return
-      window.history.pushState(null, '', target)
+      if (!navigatePublicLink(event, window)) return
       update()
       window.scrollTo({ top: 0, behavior: 'instant' })
     }

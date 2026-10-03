@@ -139,6 +139,7 @@ export default function Blog({ profile, lang, setLang }) {
   const dialogRef = useRef(null)
   const albumTriggerRef = useRef(null)
   const activeMember = profile?.is_active === true
+  const readMemberLinks = !!slug && activeMember
   const post = article
   const content = settings.content && typeof settings.content === 'object' ? settings.content : {}
   const override = (key, fallback) => text(content[key]) || text(content.sections?.[key]) || fallback
@@ -181,12 +182,13 @@ export default function Blog({ profile, lang, setLang }) {
           const schedule = await supabase.rpc('blog_publish_due')
           if (schedule.error) throw schedule.error
           articles = await feed()
+          if (active) setLoading(false)
         }
         if (current) {
           const [pictures, publicLinks, memberLinks] = await Promise.all([
             allRows(() => supabase.from('blog_media').select('*').eq('post_id', current.id).order('position').order('id')),
             rows(supabase.from('blog_links').select('*').eq('post_id', current.id).eq('visibility', 'public').order('position')),
-            activeMember ? rows(supabase.from('blog_links').select('*').eq('post_id', current.id).eq('visibility', 'member').order('position')) : [],
+            readMemberLinks ? rows(supabase.from('blog_links').select('*').eq('post_id', current.id).eq('visibility', 'member').order('position')) : [],
           ])
           if (active) { setLinks([...publicLinks, ...memberLinks]); setMedia(pictures) }
         } else if (view === 'home') {
@@ -203,7 +205,7 @@ export default function Blog({ profile, lang, setLang }) {
     }
     load()
     return () => { active = false }
-  }, [slug, activeMember, view, searching])
+  }, [slug, readMemberLinks, view, searching])
 
 
   useEffect(() => {
