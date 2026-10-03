@@ -332,6 +332,8 @@ Deno.serve(async (request) => {
       .filter((result): result is PromiseRejectedResult => result.status === 'rejected')
       .map((result) => result.reason?.message || String(result.reason))
 
+    if (failed.length) console.error('[event-meeting-reminder] delivery failures', failed)
+
     return new Response(
       JSON.stringify({
         message: `成功建立 ${freshNotifications.length} 条活动/会议提醒，手机推送 ${sentCount} 条。`,
@@ -340,11 +342,12 @@ Deno.serve(async (request) => {
         push_sent: sentCount,
         push_skipped: skippedCount,
         push_failed: failed.length,
-        push_errors: failed.slice(0, 5),
+        push_errors: failed.length ? ['Some notifications could not be delivered.'] : [],
       }),
       { status: failed.length ? 207 : 200 },
     )
   } catch (error) {
-    return new Response(JSON.stringify({ error: error.message || String(error) }), { status: 500 })
+    console.error('[event-meeting-reminder] request failed', error instanceof Error ? error.message : String(error))
+    return Response.json({ error: 'Reminder service failed.' }, { status: 500 })
   }
 })

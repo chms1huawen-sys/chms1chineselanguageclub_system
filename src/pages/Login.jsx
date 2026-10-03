@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { supabase } from '../supabaseClient'
 import { MEMBER_PROFILE_FIELDS } from '../utils/memberProfile'
+import { authErrorMessage } from '../utils/authErrorMessage'
 import { Globe, ShieldAlert } from 'lucide-react'
 
 const LOGIN_PHOTOS = [
@@ -57,11 +58,7 @@ export default function Login({ onLoginSuccess }) {
       const { data, error } = await supabase.auth.signInWithPassword({ email, password })
 
       if (error) {
-        if (error.message === 'Invalid login credentials') {
-          setErrorMsg(t.invalidCreds)
-        } else {
-          setErrorMsg(error.message)
-        }
+        setErrorMsg(authErrorMessage(error, lang))
         setLoading(false)
         return
       }
@@ -88,7 +85,7 @@ export default function Login({ onLoginSuccess }) {
 
       onLoginSuccess(data.user, profile)
     } catch (err) {
-      setErrorMsg(err.message || 'An unexpected error occurred.')
+      setErrorMsg(authErrorMessage(err, lang))
       setLoading(false)
     }
   }

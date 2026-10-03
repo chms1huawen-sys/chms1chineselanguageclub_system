@@ -276,7 +276,7 @@ Deno.serve(async (request) => {
   const serviceRoleKey = Deno.env.get('SERVICE_ROLE_KEY') || Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
   if (!serviceRoleKey) {
     console.error('[task-deadline-reminder] missing SERVICE_ROLE_KEY')
-    return new Response(JSON.stringify({ error: 'Missing SERVICE_ROLE_KEY secret.' }), { status: 500 })
+    return Response.json({ error: 'Reminder service unavailable.' }, { status: 503 })
   }
 
   const supabase = createClient(
@@ -287,14 +287,14 @@ Deno.serve(async (request) => {
   const serviceAccountText = Deno.env.get('FIREBASE_SERVICE_ACCOUNT')
   if (!serviceAccountText) {
     console.error('[task-deadline-reminder] missing FIREBASE_SERVICE_ACCOUNT')
-    return new Response(JSON.stringify({ error: 'Missing FIREBASE_SERVICE_ACCOUNT secret.' }), { status: 500 })
+    return Response.json({ error: 'Reminder service unavailable.' }, { status: 503 })
   }
 
   const serviceAccount = JSON.parse(serviceAccountText) as ServiceAccount
   const firebaseProjectId = Deno.env.get('FIREBASE_PROJECT_ID') || serviceAccount.project_id
   if (!firebaseProjectId) {
     console.error('[task-deadline-reminder] missing FIREBASE_PROJECT_ID')
-    return new Response(JSON.stringify({ error: 'Missing FIREBASE_PROJECT_ID secret.' }), { status: 500 })
+    return Response.json({ error: 'Reminder service unavailable.' }, { status: 503 })
   }
 
   const todayKey = localDateKey(new Date())
@@ -309,7 +309,8 @@ Deno.serve(async (request) => {
     .not('due_date', 'is', null)
 
   if (error) {
-    return new Response(JSON.stringify({ error: error.message }), { status: 500 })
+    console.error('[task-deadline-reminder] task query failed', error.message)
+    return Response.json({ error: 'Reminder service failed.' }, { status: 500 })
   }
 
   const notifications: ReminderNotification[] = []
@@ -437,6 +438,8 @@ Deno.serve(async (request) => {
     .filter((result): result is PromiseRejectedResult => result.status === 'rejected')
     .map((result) => result.reason?.message || String(result.reason))
 
+  if (failed.length) console.error('[task-deadline-reminder] delivery failures', failed)
+
   return new Response(
     JSON.stringify({
       message: `成功建立 ${freshNotifications.length} 条任务提醒，手机推送 ${sentCount} 条。`,
@@ -444,7 +447,7 @@ Deno.serve(async (request) => {
       push_sent: sentCount,
       push_skipped: skippedCount,
       push_failed: failed.length,
-      push_errors: failed.slice(0, 5),
+      push_errors: failed.length ? ['Some notifications could not be delivered.'] : [],
     }),
     { status: failed.length ? 207 : 200 },
   )
