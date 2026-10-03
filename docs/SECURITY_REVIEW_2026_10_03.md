@@ -132,3 +132,14 @@ npm audit
 3. 核对 Auth 注册／验证码／限流配置，评估管理员服务端开户与关闭自助注册；不能直接关掉当前 signup，否则现有新增会员功能会失败。
 4. 平台费用上限／告警，及公开接口抗滥用策略。
 5. 完整角色与旧 RPC 回归、错误信息整理；确认是否采用服务器 Cookie/BFF 架构。
+
+### 用户验收后权限收尾（2026-10-03）
+
+本节更新此前两份 AFTER_DEPLOY SQL 尚未执行的状态。用户确认正常照片上传、关闭重开会员 PWA 后登录及双向切换均正常，并要求先完成可执行的权限工作。
+
+- 已在正式项目执行上传 gate：五类 bucket 的 authenticated 直接 INSERT/UPDATE 被两条 restrictive policy 禁止。新 secure-upload 服务端入口、原有读取与删除策略不变，没有删除或改写既有文件。
+- 已在正式项目执行 users 列权限收紧：authenticated 无 fcm_token SELECT 权限，姓名等业务列仍可读，service_role 仍可读取令牌用于推送。没有修改任何会员、令牌值或订阅记录。
+- 实时权限复核：upload_gates=2、member_can_read_push_token=false、member_can_read_name=true、push_server_can_read_token=true。
+- 只读运维检查：五项任务／活动／物品提醒与重试排程启用，最近一次 cron 执行 succeeded；延迟重复发布、任务通知、推送重试、未归档过期任务、缺失归档快照均为 0。cron 成功不等于所有手机实际送达，Android 单设备案例仍暂缓。
+- 文章照片 36 张，原图／预览缺失均为 0。安全测试集合 27 项通过。没有发送测试通知、创建测试会员或进行付费操作。
+- GitHub 推送及新版前端部署此前已完成，不再等待本机认证。仍须用户亲自完成 Vercel 2FA；域名、付费、备份目的地及管理员开户替代方案未作未经确认的变更。尚未宣称完整角色回归、SEO 上线或流量问题全部完成。
