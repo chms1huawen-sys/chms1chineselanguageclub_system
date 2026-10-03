@@ -9,7 +9,7 @@ import { safeBlogReturn } from './utils/blog'
 import { Loader } from 'lucide-react'
 import PageLoading from './components/PageLoading'
 import { showForegroundPush, withPushTimeout } from './utils/pushRuntime'
-import { navigatePublicLink } from './utils/publicNavigation'
+import { navigateMemberLink, navigatePublicLink } from './utils/publicNavigation'
 const MemberShell = lazy(() => import('./pages/MemberShell'))
 
 export default function App() {
@@ -22,7 +22,7 @@ export default function App() {
       setHash(window.location.hash)
     }
     const navigate = event => {
-      if (!navigatePublicLink(event, window)) return
+      if (!navigatePublicLink(event, window) && !navigateMemberLink(event, window)) return
       update()
       window.scrollTo({ top: 0, behavior: 'instant' })
     }
