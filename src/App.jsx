@@ -1,5 +1,6 @@
 import { lazy, Suspense, useState, useEffect, useRef, useEffectEvent } from 'react'
 import { supabase } from './supabaseClient'
+import { MEMBER_PROFILE_FIELDS } from './utils/memberProfile'
 const Login = lazy(() => import('./pages/Login'))
 import Blog from './pages/Blog'
 import BlogAnalyticsConsent from './components/BlogAnalyticsConsent'
@@ -119,11 +120,11 @@ export default function App() {
 
   async function fetchProfile(uid) {
     try {
-      const { data, error } = await supabase.from('users').select('*').eq('id', uid).single()
+      const { data, error } = await supabase.from('users').select(MEMBER_PROFILE_FIELDS).eq('id', uid).single()
 
       if (error || !data) {
         await new Promise(resolve => setTimeout(resolve, 800))
-        const { data: retryData, error: retryError } = await supabase.from('users').select('*').eq('id', uid).single()
+        const { data: retryData, error: retryError } = await supabase.from('users').select(MEMBER_PROFILE_FIELDS).eq('id', uid).single()
         if (retryError || !retryData) throw new Error('Profile could not be fetched.')
         if (!retryData.is_active) throw new Error('User deactivated.')
         setProfile(retryData)

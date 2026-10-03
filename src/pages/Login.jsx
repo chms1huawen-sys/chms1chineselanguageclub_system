@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { supabase } from '../supabaseClient'
+import { MEMBER_PROFILE_FIELDS } from '../utils/memberProfile'
 import { Globe, ShieldAlert } from 'lucide-react'
 
 const LOGIN_PHOTOS = [
@@ -67,13 +68,12 @@ export default function Login({ onLoginSuccess }) {
 
       const { data: profile, error: profileError } = await supabase
         .from('users')
-        .select('*')
+        .select(MEMBER_PROFILE_FIELDS)
         .eq('id', data.user.id)
         .single()
 
       if (profileError || !profile) {
-        const errorDetail = profileError ? ` (DB Error: ${profileError.message} [code ${profileError.code}])` : ' (No row matches UID in public.users)'
-        setErrorMsg((lang === 'zh' ? '未找到对应的成员档案，请联系管理员。' : 'Member profile not found. Please contact your convener/advisor teacher.') + errorDetail)
+        setErrorMsg(lang === 'zh' ? '未找到对应的成员档案，请联系管理员。' : 'Member profile not found. Please contact your convener/advisor teacher.')
         await supabase.auth.signOut()
         setLoading(false)
         return

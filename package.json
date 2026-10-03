@@ -7,7 +7,9 @@
     "dev": "vite",
     "build": "vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "security:scan": "node scripts/security-secrets.mjs",
+    "security:test": "node --test tests/securitySignup.test.mjs tests/securityTaskUpdate.test.mjs tests/securityRateLimit.test.mjs tests/securityPushInput.test.mjs tests/securityHeaders.test.mjs tests/securitySecrets.test.mjs tests/securityMemberProfile.test.mjs tests/blog.richtext.test.mjs tests/blog.api.test.mjs tests/pushRequestAuth.test.mjs tests/pushRecipientAuth.test.mjs tests/vercelRouting.test.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.106.1",
@@ -24,10 +26,15 @@
     "react": "^19.2.6",
     "react-dom": "^19.2.6",
     "react-image-crop": "^11.1.2",
-    "react-router-dom": "^7.15.1",
+    "react-router-dom": "^7.18.4",
     "simple-icons": "^16.32.0"
   },
+  "overrides": {
+    "@firebase/firestore": { "@grpc/grpc-js": "1.14.5" },
+    "websocket-driver": "0.7.5"
+  },
   "devDependencies": {
+    "@electric-sql/pglite": "^0.5.8",
     "@eslint/js": "^10.0.1",
     "@tailwindcss/vite": "^4.3.0",
     "@types/react": "^19.2.14",

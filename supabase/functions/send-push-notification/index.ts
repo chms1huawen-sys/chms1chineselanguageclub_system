@@ -3,6 +3,7 @@ import { isInvalidFcmTokenError } from './fcmErrors.js'
 import { fetchWithRetry } from './retry.js'
 import { authorizePushRequest } from './requestAuth.js'
 import { authorizeNotificationBatch } from './recipientAuth.js'
+import { pushCors, readPushPayload } from './input.js'
 
 type ServiceAccount = {
   client_email: string
@@ -50,12 +51,6 @@ type AnnouncementSyncInput = {
 }
 
 const announcementManagerRoles = ['convener_teacher', 'advisor_teacher', 'advisor', 'chairperson', 'vice_chairperson']
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS',
-}
 
 const textEncoder = new TextEncoder()
 
@@ -166,6 +161,10 @@ const sendFcmNotification = async (
 }
 
 Deno.serve(async (request) => {
+  const configuredSite = Deno.env.get('SITE_URL') || Deno.env.get('APP_URL') || 'https://chms1chineselanguageclubsystem.vercel.app'
+  const extraOrigins = [Deno.env.get('ALLOWED_ORIGINS'), configuredSite.replace(/\/+$/, '')].filter(Boolean).join(',')
+  const corsHeaders = pushCors(request.headers.get('origin'), extraOrigins)
+  if (!corsHeaders) return Response.json({ error: 'Origin not allowed.' }, { status: 403 })
   console.log('[send-push-notification] request received', {
     method: request.method,
     origin: request.headers.get('origin'),
@@ -179,7 +178,7 @@ Deno.serve(async (request) => {
   }
 
   try {
-    const body = await request.json().catch(() => ({}))
+    const body = await readPushPayload(request, extraOrigins)
     const announcementSync = body.announcement_sync as AnnouncementSyncInput | undefined
     let notificationIds = Array.isArray(body.notification_ids)
       ? [...new Set(body.notification_ids)].filter(Boolean)
@@ -188,7 +187,7 @@ Deno.serve(async (request) => {
       ? (body.notifications as NotificationInput[]).filter((item) => item?.user_id && item?.type && item?.title && item?.body)
       : []
     const url = typeof body.url === 'string' && body.url ? body.url : '/'
-    const origin = request.headers.get('origin') || Deno.env.get('SITE_URL') || Deno.env.get('APP_URL') || ''
+    const origin = request.headers.get('origin') || configuredSite
     const linkUrl = url.startsWith('http')
       ? url
       : origin
@@ -216,6 +215,12 @@ Deno.serve(async (request) => {
     const authStatus = await authorizePushRequest(supabase, requesterJwt, serviceRoleKey)
     if (authStatus !== 200) {
       return new Response(JSON.stringify({ error: authStatus === 401 ? 'Unauthorized.' : 'Forbidden.' }), { status: authStatus, headers: corsHeaders })
+    }
+    if (requesterJwt !== serviceRoleKey) {
+      const requester = await supabase.auth.getUser(requesterJwt)
+      const limit = await supabase.rpc('consume_push_rate_limit', { p_actor: requester.data.user?.id })
+      if (limit.error) return Response.json({ error: 'Notification service temporarily unavailable.' }, { status: 503, headers: corsHeaders })
+      if (limit.data !== true) return Response.json({ error: 'Too many requests. Please retry later.' }, { status: 429, headers: { ...corsHeaders, 'Retry-After': '60' } })
     }
     const retrySubscription = typeof body.retry_subscription_id === 'string' ? body.retry_subscription_id : ''
     if (retrySubscription && request.headers.get('Authorization') !== `Bearer ${serviceRoleKey}`) {
@@ -269,7 +274,7 @@ Deno.serve(async (request) => {
 
         if (deleteError) {
           console.error('[send-push-notification] delete announcement notifications failed', deleteError.message)
-          return new Response(JSON.stringify({ error: deleteError.message }), { status: 500, headers: corsHeaders })
+          return new Response(JSON.stringify({ error: 'Notification update failed.' }), { status: 500, headers: corsHeaders })
         }
 
         return new Response(JSON.stringify({ message: 'Announcement notifications deleted.' }), { status: 200, headers: corsHeaders })
@@ -298,7 +303,7 @@ Deno.serve(async (request) => {
 
         if (deleteError) {
           console.error('[send-push-notification] replace announcement notifications failed', deleteError.message)
-          return new Response(JSON.stringify({ error: deleteError.message }), { status: 500, headers: corsHeaders })
+          return new Response(JSON.stringify({ error: 'Notification update failed.' }), { status: 500, headers: corsHeaders })
         }
 
         if (recipientIds.length === 0) {
@@ -319,7 +324,7 @@ Deno.serve(async (request) => {
 
         if (insertError) {
           console.error('[send-push-notification] recreate announcement notifications failed', insertError.message)
-          return new Response(JSON.stringify({ error: insertError.message }), { status: 500, headers: corsHeaders })
+          return new Response(JSON.stringify({ error: 'Notification update failed.' }), { status: 500, headers: corsHeaders })
         }
 
         return new Response(JSON.stringify({ message: 'Announcement notifications updated.', notifications: rows.length }), { status: 200, headers: corsHeaders })
@@ -336,7 +341,7 @@ Deno.serve(async (request) => {
 
       if (insertError) {
         console.error('[send-push-notification] insert notifications failed', insertError.message)
-        return new Response(JSON.stringify({ error: insertError.message }), { status: 500, headers: corsHeaders })
+        return new Response(JSON.stringify({ error: 'Notification creation failed.' }), { status: 500, headers: corsHeaders })
       }
 
       notificationIds = [
@@ -368,7 +373,7 @@ Deno.serve(async (request) => {
 
     if (notificationsError) {
       console.error('[send-push-notification] fetch notifications failed', notificationsError.message)
-      return new Response(JSON.stringify({ error: notificationsError.message }), { status: 500, headers: corsHeaders })
+      return new Response(JSON.stringify({ error: 'Notification lookup failed.' }), { status: 500, headers: corsHeaders })
     }
 
     if (!notifications || notifications.length === 0) {
@@ -384,7 +389,7 @@ Deno.serve(async (request) => {
 
     if (usersError) {
       console.error('[send-push-notification] fetch users failed', usersError.message)
-      return new Response(JSON.stringify({ error: usersError.message }), { status: 500, headers: corsHeaders })
+      return new Response(JSON.stringify({ error: 'Notification lookup failed.' }), { status: 500, headers: corsHeaders })
     }
 
     const { data: subscriptions, error: subscriptionsError } = await supabase
@@ -395,7 +400,7 @@ Deno.serve(async (request) => {
 
     if (subscriptionsError) {
       console.error('[send-push-notification] fetch push subscriptions failed', subscriptionsError.message)
-      return new Response(JSON.stringify({ error: subscriptionsError.message }), { status: 500, headers: corsHeaders })
+      return new Response(JSON.stringify({ error: 'Notification lookup failed.' }), { status: 500, headers: corsHeaders })
     }
 
     const usersById = new Map(((users || []) as UserPushSetting[]).map((user) => [user.id, user]))
@@ -483,10 +488,11 @@ Deno.serve(async (request) => {
       push_sent: sentCount,
       push_skipped: skippedCount,
       push_failed: failed.length,
-      push_errors: failed.slice(0, 5),
+      push_errors: failed.length ? ['Some devices could not receive the notification.'] : [],
     }), { status: 200, headers: corsHeaders })
   } catch (error) {
     console.error('[send-push-notification] unhandled error', error.message || String(error))
-    return new Response(JSON.stringify({ error: error.message || String(error) }), { status: 500, headers: corsHeaders })
+    const status = [400, 413].includes(error.status) ? error.status : 500
+    return new Response(JSON.stringify({ error: status === 500 ? 'Notification service failed. Please retry later.' : error.message }), { status, headers: corsHeaders })
   }
 })

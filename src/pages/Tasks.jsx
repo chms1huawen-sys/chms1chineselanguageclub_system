@@ -1,5 +1,6 @@
 ﻿import { useState, useEffect, useEffectEvent } from 'react'
 import { supabase } from '../supabaseClient'
+import { MEMBER_PROFILE_FIELDS } from '../utils/memberProfile'
 import { createNotificationsAndPush } from '../utils/pushNotifications'
 import { taskPerformance } from '../utils/taskPerformance'
 import { savedTaskDelivery } from '../utils/savedTaskDelivery'
@@ -191,7 +192,7 @@ export default function Tasks({ currentUserProfile, lang, notify, comparisonOnly
       // 2. Fetch users to assign tasks
       const { data: usersData, error: usersError } = await supabase
         .from('users')
-        .select('*')
+        .select(MEMBER_PROFILE_FIELDS)
         .eq('is_active', true)
         .order('name', { ascending: true })
 

@@ -3,20 +3,20 @@
 // Legacy cron endpoint: archive expired tasks without deleting performance history.
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { authorizeCronRequest } from '../cronAuth.js'
 
 const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Content-Type': 'application/json',
+  'Cache-Control': 'no-store',
 }
 
 Deno.serve(async (req) => {
-  if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders })
-  }
+  const authStatus = authorizeCronRequest(req, Deno.env.get('SERVICE_ROLE_KEY') || Deno.env.get('SUPABASE_SERVICE_ROLE_KEY'), Deno.env.get('INVENTORY_CRON_SECRET'))
+  if (authStatus !== 200) return Response.json({ error: authStatus === 405 ? 'Method not allowed.' : 'Unauthorized.' }, { status: authStatus })
 
   try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')
-    const serviceRoleKey = Deno.env.get('SERVICE_ROLE_KEY')
+    const serviceRoleKey = Deno.env.get('SERVICE_ROLE_KEY') || Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
 
     if (!supabaseUrl || !serviceRoleKey) {
       return new Response(
@@ -43,7 +43,7 @@ Deno.serve(async (req) => {
     )
   } catch (err) {
     return new Response(
-      JSON.stringify({ error: err instanceof Error ? err.message : String(err) }),
+      JSON.stringify({ error: 'Task archival failed. Check function logs.' }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
     )
   }

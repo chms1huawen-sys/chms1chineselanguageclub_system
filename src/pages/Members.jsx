@@ -246,7 +246,9 @@ export default function Members({ currentUserProfile, lang, notify }) {
       if (data?.user?.id) {
         const { error: profileError } = await supabase
           .from('users')
-          .update({ birthday: formData.birthday || null, ...getPermissionPayload() })
+          .update({ role: formData.role, is_active: true,
+            custom_role_label: formData.role === 'custom' ? formData.custom_role_label.trim() : null,
+            birthday: formData.birthday || null, ...getPermissionPayload() })
           .eq('id', data.user.id)
         if (profileError) throw profileError
       }

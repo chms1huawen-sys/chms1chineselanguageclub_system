@@ -3,6 +3,7 @@
 // Schedule: run hourly or daily. Notification dedupe keys prevent repeated reminders.
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { authorizeCronRequest } from '../cronAuth.js'
 
 type ServiceAccount = {
   client_email: string
@@ -195,7 +196,9 @@ const sendFcmNotification = async (
 const isInvalidFcmTokenError = (message: string) =>
   /UNREGISTERED|registration-token-not-registered|INVALID_ARGUMENT|Requested entity was not found/i.test(message)
 
-Deno.serve(async () => {
+Deno.serve(async (request) => {
+  const authStatus = authorizeCronRequest(request, Deno.env.get('SERVICE_ROLE_KEY') || Deno.env.get('SUPABASE_SERVICE_ROLE_KEY'), Deno.env.get('INVENTORY_CRON_SECRET'))
+  if (authStatus !== 200) return Response.json({ error: authStatus === 405 ? 'Method not allowed.' : 'Unauthorized.' }, { status: authStatus })
   try {
     const serviceRoleKey = Deno.env.get('SERVICE_ROLE_KEY') || Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
     if (!serviceRoleKey) {

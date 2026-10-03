@@ -1,5 +1,6 @@
 ﻿import { useState, useEffect, useEffectEvent } from 'react'
 import { supabase } from '../supabaseClient'
+import { MEMBER_PROFILE_FIELDS } from '../utils/memberProfile'
 import { hasPermission } from '../utils/permissions'
 import {
   FolderGit,
@@ -158,7 +159,7 @@ export default function Committees({ currentUserProfile, lang, notify }) {
     try {
       const { data, error } = await supabase
         .from('users')
-        .select('*')
+        .select(MEMBER_PROFILE_FIELDS)
         .eq('is_active', true)
         .order('name', { ascending: true })
       if (error) throw error
