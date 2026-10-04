@@ -15,7 +15,7 @@ const selectStyle = {
   border: '1.5px solid #95CBFF',
   color: '#1a1a1a',
   borderRadius: 16,
-  fontFamily: "'Nunito', sans-serif",
+  fontFamily: "'Outfit', 'Noto Sans SC', system-ui, sans-serif",
   fontWeight: 700,
   padding: '10px 14px',
   cursor: 'pointer'
@@ -143,7 +143,7 @@ export default function HistoricalMembers({ lang }) {
   }
 
   return (
-    <div className="space-y-6 text-left animate-[fadeIn_0.3s_ease]" style={{ fontFamily: "'Nunito', sans-serif" }}>
+    <div className="space-y-6 text-left animate-[fadeIn_0.3s_ease]" style={{ fontFamily: "'Outfit', 'Noto Sans SC', system-ui, sans-serif" }}>
       <div className="pb-5 border-b-1.5 border-[#e0f1ff]">
         <h1 className="text-2xl font-black flex items-center gap-2" style={{ color: '#1a1a1a' }}>
           <Users style={{ color: '#95CBFF' }} />
@@ -217,7 +217,7 @@ export default function HistoricalMembers({ lang }) {
                 </div>
               ) : (
                 <div className="overflow-hidden rounded-2xl bg-white border border-[#e0f1ff]" style={{ boxShadow: '0 4px 16px rgba(149,203,255,0.04)' }}>
-                  <div className="hidden md:grid grid-cols-[64px_1.1fr_1.6fr_1fr] gap-4 px-4 py-3 text-[10px] font-black uppercase tracking-wider" style={{ background: '#95CBFF', color: 'white' }}>
+                  <div className="hidden md:grid grid-cols-[64px_1.1fr_1.6fr_1fr] gap-4 px-4 py-3 text-xs font-bold" style={{ background: '#95CBFF', color: '#244c67' }}>
                     <span>{_('序', 'No.')}</span>
                     <span>{_('姓名', 'Name')}</span>
                     <span>{_('邮箱', 'Email')}</span>

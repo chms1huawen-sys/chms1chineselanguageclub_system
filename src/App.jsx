@@ -184,7 +184,7 @@ export default function App() {
   if (loading || (user && profile && hash.startsWith('#/login?') && new URLSearchParams(hash.split('?')[1]).has('return'))) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center gap-4"
-        style={{ background: 'linear-gradient(135deg, #e0f1ff 0%, #f0f7ff 100%)', fontFamily: "'Nunito', sans-serif" }}>
+        style={{ background: 'linear-gradient(135deg, #e0f1ff 0%, #f0f7ff 100%)', fontFamily: "'Outfit', 'Noto Sans SC', system-ui, sans-serif" }}>
         <div style={{ width: 56, height: 56, borderRadius: 18, background: '#95CBFF', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 20px rgba(149,203,255,0.4)' }}>
           <Loader size={28} color="white" style={{ animation: 'spin 1s linear infinite' }} />
         </div>

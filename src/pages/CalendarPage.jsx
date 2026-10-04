@@ -28,7 +28,7 @@ const inputStyle = {
   border: '1.5px solid #95CBFF',
   color: '#1a1a1a',
   borderRadius: 16,
-  fontFamily: "'Nunito', sans-serif",
+  fontFamily: "'Outfit', 'Noto Sans SC', system-ui, sans-serif",
   fontWeight: 700,
   padding: '10px 14px'
 }
@@ -313,7 +313,7 @@ export default function CalendarPage({ currentUserProfile, lang, notify }) {
   }
 
   return (
-    <div className="space-y-6 text-left animate-[fadeIn_0.3s_ease]" style={{ fontFamily: "'Nunito', sans-serif" }}>
+    <div className="space-y-6 text-left animate-[fadeIn_0.3s_ease]" style={{ fontFamily: "'Outfit', 'Noto Sans SC', system-ui, sans-serif" }}>
 
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-5 border-b-1.5 border-[#e0f1ff]">
@@ -353,7 +353,7 @@ export default function CalendarPage({ currentUserProfile, lang, notify }) {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
 
           {/* Monthly Calendar Core Grid (2 columns on large screen) */}
-          <div className="lg:col-span-2 p-6 rounded-3xl bg-white border border-[#e0f1ff]"
+          <div className="member-calendar-panel lg:col-span-2 p-6 rounded-3xl bg-white border border-[#e0f1ff]"
             style={{ boxShadow: '0 4px 20px rgba(149,203,255,0.06)' }}>
             
             {/* Calendar Controls */}
@@ -364,12 +364,14 @@ export default function CalendarPage({ currentUserProfile, lang, notify }) {
               <div className="flex gap-2">
                 <button
                   onClick={handlePrevMonth}
+                  aria-label={lang === 'zh' ? '上个月' : 'Previous month'}
                   className="p-2 rounded-xl border border-[#e0f1ff] hover:bg-[#f0f7ff] transition cursor-pointer text-gray-500"
                 >
                   <ChevronLeft size={16} />
                 </button>
                 <button
                   onClick={handleNextMonth}
+                  aria-label={lang === 'zh' ? '下个月' : 'Next month'}
                   className="p-2 rounded-xl border border-[#e0f1ff] hover:bg-[#f0f7ff] transition cursor-pointer text-gray-500"
                 >
                   <ChevronRight size={16} />
@@ -378,7 +380,7 @@ export default function CalendarPage({ currentUserProfile, lang, notify }) {
             </div>
 
             {/* Grid */}
-            <div className="grid grid-cols-7 gap-2">
+            <div className="member-calendar-grid grid grid-cols-7 gap-2">
               {/* Day Headers */}
               {WEEK_DAYS[lang].map(d => (
                 <div key={d} className="text-center py-2 text-xs font-black text-gray-400 select-none">{d}</div>
@@ -395,10 +397,14 @@ export default function CalendarPage({ currentUserProfile, lang, notify }) {
                 const { events: dayEvs, tasks: dayTsk } = getItemsForDate(day)
 
                 return (
-                  <div
+                  <button
+                    type="button"
                     key={`day-${day.getDate()}`}
+                    aria-label={day.toLocaleDateString(lang === 'zh' ? 'zh-CN' : 'en-GB', { year: 'numeric', month: 'long', day: 'numeric' })}
+                    aria-pressed={!!isSelected}
+                    aria-current={isToday ? 'date' : undefined}
                     onClick={() => setSelectedDate(day)}
-                    className="aspect-square rounded-2xl p-1.5 border transition cursor-pointer flex flex-col justify-between items-center hover:bg-[#f8fbff]"
+                    className="member-calendar-day aspect-square rounded-2xl p-1.5 border transition cursor-pointer flex flex-col justify-between items-center hover:bg-[#f8fbff]"
                     style={{
                       background: isSelected ? '#f0f7ff' : 'white',
                       borderColor: isSelected ? '#95CBFF' : isToday ? '#FFB3C6' : '#f0f7ff',
@@ -431,7 +437,7 @@ export default function CalendarPage({ currentUserProfile, lang, notify }) {
                         />
                       ))}
                     </div>
-                  </div>
+                  </button>
                 )
               })}
             </div>
@@ -473,7 +479,7 @@ export default function CalendarPage({ currentUserProfile, lang, notify }) {
                   <button
                     onClick={openCreateEventModal}
                     className="flex items-center gap-1 px-3 py-1.5 text-xs font-black rounded-xl text-white transition cursor-pointer"
-                    style={{ background: '#95CBFF' }}
+                    style={{ background: '#95CBFF', color: '#244c67' }}
                   >
                     <Plus size={12} /> {lang === 'zh' ? '添加活动' : 'Add Event'}
                   </button>
@@ -673,7 +679,7 @@ export default function CalendarPage({ currentUserProfile, lang, notify }) {
                 </button>
                 <button type="submit" disabled={formSubmitting}
                   className="px-4 py-2 rounded-2xl text-xs font-black text-white transition cursor-pointer"
-                  style={{ background: '#95CBFF', opacity: formSubmitting ? 0.7 : 1 }}
+                  style={{ background: '#95CBFF', color: '#244c67', opacity: formSubmitting ? 0.7 : 1 }}
                 >
                   {formSubmitting ? (lang === 'zh' ? '保存中...' : 'Saving...') : editingEvent ? (lang === 'zh' ? '保存修改' : 'Save Changes') : (lang === 'zh' ? '确认添加' : 'Add Event')}
                 </button>

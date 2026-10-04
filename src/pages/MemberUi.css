@@ -1,0 +1,38 @@
+.member-ui,
+.member-ui :is(.inventory-page, .finance-page) { font-family: var(--club-font) !important; }
+.member-ui * { letter-spacing: 0 !important; }
+.member-ui .rounded-xl { border-radius: var(--club-radius-control); }
+.member-ui .rounded-2xl { border-radius: 16px; }
+.member-ui .rounded-3xl { border-radius: var(--club-radius-card); }
+.member-ui button { min-height: 44px; min-width: 44px; touch-action: manipulation; }
+.member-ui .inventory-page button, .member-ui .inventory-page .inv-icon,
+.member-ui .finance-table button { min-height: 44px; min-width: 44px; }
+.member-ui .inventory-page .inv-icon { width: 44px; height: 44px; }
+.member-ui .inv-link { min-height: 44px; }
+.member-ui .bg-\[\#95CBFF\].text-white { color: var(--club-ink); }
+.member-ui th { color: var(--club-ink) !important; }
+.member-ui button:active:not(:disabled),
+.member-ui a:active { filter: brightness(.9); transition: none; }
+.member-ui :is(button, a, input, select, textarea, [role=button]):focus-visible {
+  outline: 3px solid var(--club-focus); outline-offset: 3px;
+}
+.member-ui :is(.text-gray-400, .text-gray-300) { color: var(--club-muted); }
+.member-ui :is(.text-\[9px\], .text-\[10px\], .text-\[11px\]) { font-size: .75rem; line-height: 1.5; }
+.member-ui .club-sidebar :is(h2, p, a, button) { color: var(--club-ink) !important; text-shadow: none !important; }
+.member-ui .club-sidebar svg { color: var(--club-ink); }
+.member-ui .member-mobile-header :is(span,button) { color: var(--club-ink) !important; text-shadow: none !important; }
+.member-ui [role=button] { touch-action: manipulation; }
+.member-ui [role=button]:active { filter: brightness(.94); transition: none; }
+.member-ui .member-calendar-grid { gap: 4px; }
+.member-ui .member-calendar-day { min-height: 44px; min-width: 0; width: 100%; }
+.member-ui .member-close { display: inline-grid; place-items: center; }
+.member-ui .member-notification-action { font-size: .8125rem; padding: 8px 12px; }
+@media (max-width: 700px) {
+  .member-ui :is(input:not([type=checkbox]):not([type=radio]), select, textarea) { font-size: 1rem !important; }
+  .member-ui .member-calendar-panel { padding: 12px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .member-ui *, .member-ui *::before, .member-ui *::after {
+    animation: none !important; transition: none !important; scroll-behavior: auto !important;
+  }
+}

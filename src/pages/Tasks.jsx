@@ -77,7 +77,7 @@ const inputStyle = {
   border: '1.5px solid #95CBFF',
   color: '#1a1a1a',
   borderRadius: 16,
-  fontFamily: "'Nunito', sans-serif",
+  fontFamily: "'Outfit', 'Noto Sans SC', system-ui, sans-serif",
   fontWeight: 700,
   padding: '10px 14px'
 }
@@ -701,7 +701,7 @@ export default function Tasks({ currentUserProfile, lang, notify, comparisonOnly
   if (comparisonOnly) return canViewPerformance ? <TaskPerformancePage rows={memberPerformance} teams={teams} activeTeam={activeTeam} onTeamChange={setActiveTeam} teamName={teamDisplayName} lang={lang} error={errorMsg} loading={loading} /> : <p>{_('没有查看权限', 'Access denied')}</p>
 
   return (
-    <div className="space-y-6" style={{ fontFamily: "'Nunito', sans-serif" }}>
+    <div className="space-y-6" style={{ fontFamily: "'Outfit', 'Noto Sans SC', system-ui, sans-serif" }}>
       
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-5 animate-[fadeIn_0.3s_ease]"
@@ -756,7 +756,7 @@ export default function Tasks({ currentUserProfile, lang, notify, comparisonOnly
             <button
               onClick={openCreateModal}
               className="flex items-center gap-2 px-4 py-2.5 rounded-2xl text-sm font-black transition cursor-pointer text-white"
-              style={{ background: '#95CBFF', boxShadow: '0 4px 16px rgba(149,203,255,0.4)' }}
+              style={{ background: '#95CBFF', color: '#244c67', boxShadow: '0 4px 16px rgba(149,203,255,0.4)' }}
             >
               <Plus size={16} />
               {_('发布任务', 'Create Task')}
@@ -858,7 +858,7 @@ export default function Tasks({ currentUserProfile, lang, notify, comparisonOnly
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex items-center gap-2 min-w-0">
                       <div className="w-9 h-9 rounded-full flex items-center justify-center font-black text-xs text-white shrink-0"
-                        style={{ background: '#95CBFF' }}>
+                        style={{ background: '#95CBFF', color: '#244c67' }}>
                         {item.user.name.slice(0, 2)}
                       </div>
                       <div className="min-w-0">
@@ -1165,7 +1165,7 @@ export default function Tasks({ currentUserProfile, lang, notify, comparisonOnly
                 </button>
                 <button type="submit" disabled={formSubmitting}
                   className="px-5 py-2.5 rounded-2xl text-sm font-black transition cursor-pointer text-white"
-                  style={{ background: '#95CBFF', opacity: formSubmitting ? 0.7 : 1 }}>
+                  style={{ background: '#95CBFF', color: '#244c67', opacity: formSubmitting ? 0.7 : 1 }}>
                   {formSubmitting ? _('保存中...', 'Saving...') : (isEditing ? _('确认更新', 'Update') : (formData.repeat_enabled ? (formData.repeat_immediate ? _('发布第一期并保存计划','Publish first & schedule') : _('保存发布计划','Save publication plan')) : _('立即发布任务', 'Publish task now')))}
                 </button>
               </div>
@@ -1337,7 +1337,7 @@ const selectStyle = {
   border: '1.5px solid #95CBFF',
   color: '#1a1a1a',
   borderRadius: 16,
-  fontFamily: "'Nunito', sans-serif",
+  fontFamily: "'Outfit', 'Noto Sans SC', system-ui, sans-serif",
   fontWeight: 700,
   padding: '10px 14px',
   cursor: 'pointer'

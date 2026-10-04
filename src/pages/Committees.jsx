@@ -38,7 +38,7 @@ const inputStyle = {
   border: '1.5px solid #95CBFF',
   color: '#1a1a1a',
   borderRadius: 16,
-  fontFamily: "'Nunito', sans-serif",
+  fontFamily: "'Outfit', 'Noto Sans SC', system-ui, sans-serif",
   fontWeight: 700,
   padding: '10px 14px'
 }
@@ -470,7 +470,7 @@ export default function Committees({ currentUserProfile, lang, notify }) {
   const currentTabComms = activeTab === 'active' ? activeCommittees : filteredArchivedCommittees
 
   return (
-    <div className="space-y-6" style={{ fontFamily: "'Nunito', sans-serif" }}>
+    <div className="space-y-6" style={{ fontFamily: "'Outfit', 'Noto Sans SC', system-ui, sans-serif" }}>
 
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-5 animate-[fadeIn_0.3s_ease]"
@@ -580,6 +580,9 @@ export default function Committees({ currentUserProfile, lang, notify }) {
               <div
                 key={comm.id}
                 onClick={() => setSelectedComm(comm)}
+                role="button"
+                tabIndex={0}
+                onKeyDown={event => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); setSelectedComm(comm) } }}
                 className="p-6 rounded-3xl bg-white border border-[#e0f1ff] transition-all hover:scale-[1.02] hover:shadow-md cursor-pointer flex flex-col justify-between gap-5 relative overflow-hidden text-left"
                 style={{ boxShadow: '0 4px 16px rgba(149,203,255,0.06)' }}
               >

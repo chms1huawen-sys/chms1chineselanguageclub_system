@@ -47,7 +47,7 @@ const inputStyle = {
   color: '#1a1a1a',
   fontSize: 14,
   fontWeight: 700,
-  fontFamily: "'Nunito', sans-serif",
+  fontFamily: "'Outfit', 'Noto Sans SC', system-ui, sans-serif",
   outline: 'none',
 }
 
@@ -432,7 +432,7 @@ export default function Settings({ currentUserProfile, lang = 'zh', onProfileUpd
   const avatarInitials = (profileDraft?.name || currentUserProfile?.name || (lang === 'zh' ? '会员' : 'ME')).slice(0, 2)
 
   return (
-    <div className="space-y-6 max-w-2xl animate-[fadeIn_0.4s_ease]" style={{ fontFamily: "'Nunito', sans-serif" }}>
+    <div className="space-y-6 max-w-2xl animate-[fadeIn_0.4s_ease]" style={{ fontFamily: "'Outfit', 'Noto Sans SC', system-ui, sans-serif" }}>
 
       {/* Page Title */}
       <div className="pb-4" style={{ borderBottom: '1.5px solid #e0f1ff' }}>
@@ -485,7 +485,7 @@ export default function Settings({ currentUserProfile, lang = 'zh', onProfileUpd
 
             <div className="flex flex-wrap gap-2">
               <label className="inline-flex items-center gap-2 px-4 py-2.5 rounded-2xl text-sm font-black cursor-pointer text-white"
-                style={{ background: avatarLoading ? '#b8deff' : '#95CBFF', boxShadow: '0 4px 16px rgba(149,203,255,0.25)' }}>
+                style={{ background: avatarLoading ? '#b8deff' : '#95CBFF', color: '#244c67', boxShadow: '0 4px 16px rgba(149,203,255,0.25)' }}>
                 {avatarLoading ? <Loader size={14} className="animate-spin" /> : <Camera size={14} />}
                 {avatarLoading ? (lang === 'zh' ? '上传中...' : 'Uploading...') : (lang === 'zh' ? '上传头像' : 'Upload Avatar')}
                 <input
@@ -594,7 +594,7 @@ export default function Settings({ currentUserProfile, lang = 'zh', onProfileUpd
             type="submit"
             disabled={pwLoading}
             className="flex items-center justify-center gap-2 px-6 py-2.5 rounded-2xl text-sm font-black transition cursor-pointer text-white"
-            style={{ background: pwLoading ? '#b8deff' : '#95CBFF' }}>
+            style={{ background: pwLoading ? '#b8deff' : '#95CBFF', color: '#244c67' }}>
             {pwLoading ? <><Loader size={14} className="animate-spin" /> {t.pw_btn_saving}</> : t.pw_btn_save}
           </button>
         </form>
@@ -631,7 +631,7 @@ export default function Settings({ currentUserProfile, lang = 'zh', onProfileUpd
             className="flex items-center gap-2 px-5 py-2.5 rounded-2xl text-sm font-black transition cursor-pointer text-white"
             style={{
               background: notifStatus === 'denied' ? '#f5f5f5' : '#95CBFF',
-              color: notifStatus === 'denied' ? '#9ca3af' : 'white',
+              color: notifStatus === 'denied' ? '#6b7280' : '#244c67',
               cursor: notifStatus === 'denied' ? 'not-allowed' : 'pointer',
             }}>
             {notifLoading

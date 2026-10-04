@@ -1,0 +1,10 @@
+:root {
+  --club-font: 'Outfit', 'Noto Sans SC', system-ui, -apple-system, sans-serif;
+  --club-ink: #244c67;
+  --club-muted: #526779;
+  --club-focus: #246580;
+  --club-radius-control: 12px;
+  --club-radius-field: 14px;
+  --club-radius-card: 20px;
+  --club-radius-dialog: 24px;
+}

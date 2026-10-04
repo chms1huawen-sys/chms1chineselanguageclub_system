@@ -3,7 +3,7 @@ import { signBlogImage } from '../utils/blogImages'
 import { requestWhenVisible } from '../utils/lazyImageRequest'
 import { richBody, galleryPreview, photoWidth } from '../utils/blogRichText'
 import { publicHomeUrl } from '../utils/pwaLaunch'
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useEffectEvent, useRef, useState } from 'react'
 import { ArrowRight, ArrowLeft, Download, Globe, Search, Menu, X, ChevronLeft, ChevronRight, LogIn, Settings, BookOpen, Camera, ExternalLink } from 'lucide-react'
 import { supabase } from '../supabaseClient'
 import { blogPath, blogLogin, canManageBlog, defaultBlogSettings } from '../utils/blog'
@@ -13,6 +13,7 @@ import './BlogHome.css'
 import './BlogHeroReference.css'
 import './BlogInterior.css'
 import '../components/BlogBodyTypography.css'
+import './BlogUi.css'
 import BookPurchase from '../components/BookPurchase'
 import BlogHero from '../components/BlogHero'
 import { readBlogBootstrap, readBlogArticleBootstrap } from '../utils/blogBootstrap'
@@ -42,13 +43,15 @@ export function BlogImage({ path, alt = '', crop, ...props }) {
   const direct = imageSource(path)
   const lazy = props.loading === 'lazy'
   const cropped = !!cropStyles(crop)
+  const reportUnavailable = useEffectEvent(() => props.onError?.())
   useEffect(() => {
-    if (direct || cropped || !storagePath(path)) return
+    if (direct || cropped) return
+    if (!storagePath(path)) { reportUnavailable(); return }
     let active = true
     const request = () => {
       signBlogImage(path)
-        .then(({ data }) => { if (active) setSigned({ path, url: webLink(data?.signedUrl) }) })
-        .catch(() => { if (active) setSigned({ path, url: '' }) })
+        .then(({ data }) => { if (active) { const url = webLink(data?.signedUrl); setSigned({ path, url }); if (!url) reportUnavailable() } })
+        .catch(() => { if (active) { setSigned({ path, url: '' }); reportUnavailable() } })
     }
     let stop = () => {}
     if (lazy) stop = requestWhenVisible(imageRef.current, request)
@@ -57,8 +60,8 @@ export function BlogImage({ path, alt = '', crop, ...props }) {
   }, [path, direct, lazy, cropped])
   const src = direct || (signed.path === path ? signed.url : '')
   const styles = cropStyles(crop)
-  if (styles) return <span className={props.className} style={{ ...styles.frame, ...props.style }}><BlogImage path={path} alt={alt} loading={props.loading} fetchPriority={props.fetchPriority} onLoad={props.onLoad} style={styles.image} /></span>
-  return src && failed !== src ? <img ref={imageRef} src={src} alt={alt} {...props} onError={() => setFailed(src)} /> : <div ref={imageRef} style={props.style} className={`blog-image-placeholder ${props.className || ''}`} role="img" aria-label={alt || '照片 / Photo'}><Camera aria-hidden="true" /></div>
+  if (styles) return <span className={props.className} style={{ ...styles.frame, ...props.style }}><BlogImage path={path} alt={alt} loading={props.loading} fetchPriority={props.fetchPriority} onLoad={props.onLoad} onError={props.onError} style={styles.image} /></span>
+  return src && failed !== src ? <img ref={imageRef} src={src} alt={alt} {...props} onError={event => { setFailed(src); props.onError?.(event) }} /> : <div ref={imageRef} style={props.style} className={`blog-image-placeholder ${props.className || ''}`} role="img" aria-label={alt || '照片 / Photo'}><Camera aria-hidden="true" /></div>
 }
 
 export function ArticleContent({ post, media = [], onPhoto, en = false, tagLibrary = [] }) {

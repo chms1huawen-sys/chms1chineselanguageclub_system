@@ -1,4 +1,4 @@
-.performance-page { color: #24435b; font-family: 'Nunito', sans-serif; min-width: 0; }
+.performance-page { color: #24435b; font-family: 'Outfit', 'Noto Sans SC', system-ui, sans-serif; min-width: 0; }
 .performance-back { display:inline-flex; gap:8px; align-items:center; min-height:44px; color:#256391; font-weight:700; }
 .performance-page header { display:flex; flex-wrap:wrap; justify-content:space-between; align-items:center; gap:16px; margin:16px 0; }
 .performance-page h1 { display:flex; gap:10px; align-items:center; font-size:24px; font-weight:800; }

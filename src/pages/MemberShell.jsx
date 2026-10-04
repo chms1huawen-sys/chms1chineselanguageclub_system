@@ -7,6 +7,7 @@ import TutorialModal from '../components/TutorialModal'
 import UserAvatar from '../components/UserAvatar'
 import PageLoading from '../components/PageLoading'
 import '../mobileNavigation.css'
+import './MemberUi.css'
 import {
   LayoutDashboard, Users, LogOut, Menu, X, Shield,
   Calendar, CheckSquare, FolderGit, CircleAlert,
@@ -154,7 +155,7 @@ function NotificationCenter({ profile, lang }) {
           <div className="px-4 py-3 flex items-center justify-between gap-3" style={{ borderBottom: '1px solid #f0f7ff' }}>
             <span className="text-xs font-black text-gray-800">{lang === 'zh' ? '站内通知' : 'In-app Notifications'}</span>
             {unreadCount > 0 && (
-              <button onClick={markAllRead} className="text-[10px] font-black text-blue-500 cursor-pointer">
+              <button onClick={markAllRead} className="member-notification-action font-black text-blue-700 cursor-pointer">
                 {lang === 'zh' ? '全部已读' : 'Mark all read'}
               </button>
             )}
@@ -287,7 +288,7 @@ function AppShell({ profile, onLogout, lang, setLang, onProfileUpdate }) {
   }
 
   return (
-    <div className={`min-h-screen flex flex-col md:flex-row overflow-x-hidden ${mobileMenuOpen ? 'club-mobile-menu-open' : ''}`} style={{ background: '#f0f7ff', fontFamily: "'Nunito', sans-serif" }}>
+    <div className={`member-ui min-h-screen flex flex-col md:flex-row overflow-x-hidden ${mobileMenuOpen ? 'club-mobile-menu-open' : ''}`} style={{ background: '#f0f7ff' }}>
       <ToastStack toasts={toasts} onDismiss={dismissToast} />
 
       {/* Tutorial Modal */}
@@ -296,7 +297,7 @@ function AppShell({ profile, onLogout, lang, setLang, onProfileUpdate }) {
       )}
 
       {/* Mobile Top Navbar */}
-      <div className="md:hidden flex items-center justify-between px-5 py-4 shrink-0"
+      <div className="member-mobile-header md:hidden flex items-center justify-between px-5 py-4 shrink-0"
         style={{ background: '#95CBFF', borderBottom: '1.5px solid #6db8ff' }}>
         <div className="flex items-center gap-2">
           <div className="w-9 h-9 rounded-full flex items-center justify-center overflow-hidden shrink-0"
@@ -313,7 +314,7 @@ function AppShell({ profile, onLogout, lang, setLang, onProfileUpdate }) {
             style={{ background: 'rgba(255,255,255,0.25)', color: 'white', textShadow: sidebarTextShadow }}>
             {lang === 'zh' ? '英文' : '中'}
           </button>
-          <button onClick={() => setMobileMenuOpen(!mobileMenuOpen)} style={{ color: 'white' }}>
+          <button aria-label={lang === 'zh' ? '导航菜单' : 'Navigation menu'} aria-expanded={mobileMenuOpen} onClick={() => setMobileMenuOpen(!mobileMenuOpen)} style={{ color: '#244c67' }}>
             {mobileMenuOpen ? <X size={22} /> : <Menu size={22} />}
           </button>
         </div>
@@ -365,17 +366,18 @@ function AppShell({ profile, onLogout, lang, setLang, onProfileUpdate }) {
                 <button
                   key={item.path}
                   onClick={() => handleNavClick(item.path)}
+                  aria-current={isActive ? 'page' : undefined}
                   className="w-full flex items-center gap-3.5 px-4 py-3 rounded-2xl text-sm font-bold transition cursor-pointer text-left"
                   style={{
                     background: isActive ? 'white' : 'transparent',
-                    color: isActive ? '#6db8ff' : 'white',
-                    textShadow: isActive ? 'none' : '0 1px 2px rgba(40, 96, 150, 0.8), 0 0 1px rgba(40, 96, 150, 0.85)',
+                    color: '#244c67',
+                    textShadow: 'none',
                     boxShadow: isActive ? '0 2px 12px rgba(149,203,255,0.2)' : 'none',
                     border: isActive ? 'none' : '1.5px solid transparent'
                   }}
                   onMouseEnter={e => { if (!isActive) e.currentTarget.style.background = 'rgba(255,255,255,0.18)' }}
                   onMouseLeave={e => { if (!isActive) e.currentTarget.style.background = 'transparent' }}>
-                  <span style={{ color: isActive ? '#95CBFF' : 'white', filter: isActive ? 'none' : 'drop-shadow(0 1px 2px rgba(40, 96, 150, 0.75))' }}>{item.icon}</span>
+                  <span style={{ color: '#244c67' }}>{item.icon}</span>
                   {item.name}
                 </button>
               )

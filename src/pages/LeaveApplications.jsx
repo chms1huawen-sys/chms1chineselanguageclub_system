@@ -16,6 +16,7 @@ import {
   Save,
   Search,
   User,
+  X,
 } from 'lucide-react'
 
 const DEFAULT_LEAVE_DRIVE_FOLDER_URL = import.meta.env.VITE_LEAVE_DRIVE_FOLDER_URL || ''
@@ -33,7 +34,7 @@ const inputStyle = {
   border: '1.5px solid #95CBFF',
   color: '#1a1a1a',
   borderRadius: 16,
-  fontFamily: "'Nunito', sans-serif",
+  fontFamily: "'Outfit', 'Noto Sans SC', system-ui, sans-serif",
   fontWeight: 700,
   padding: '10px 14px',
   outline: 'none',
@@ -319,7 +320,7 @@ export default function LeaveApplications({ currentUserProfile, lang = 'zh', not
   }, [applications, lang, searchTerm, typeFilter])
 
   return (
-    <div className="space-y-6" style={{ fontFamily: "'Nunito', sans-serif" }}>
+    <div className="space-y-6" style={{ fontFamily: "'Outfit', 'Noto Sans SC', system-ui, sans-serif" }}>
       <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 pb-5" style={{ borderBottom: '1.5px solid #e0f1ff' }}>
         <div>
           <h1 className="text-2xl font-black flex items-center gap-2" style={{ color: '#1a1a1a' }}>
@@ -490,7 +491,7 @@ export default function LeaveApplications({ currentUserProfile, lang = 'zh', not
             type="submit"
             disabled={submitting}
             className="w-full flex items-center justify-center gap-2 px-5 py-3 rounded-2xl text-sm font-black transition cursor-pointer"
-            style={{ background: submitting ? '#b8deff' : '#95CBFF', color: 'white' }}>
+            style={{ background: submitting ? '#b8deff' : '#95CBFF', color: '#244c67' }}>
             {submitting ? <><Loader size={15} className="animate-spin" /> {lang === 'zh' ? '提交中...' : 'Submitting...'}</> : lang === 'zh' ? '提交请假申请' : 'Submit Leave'}
           </button>
         </form>
@@ -518,7 +519,7 @@ export default function LeaveApplications({ currentUserProfile, lang = 'zh', not
                 target="_blank"
                 rel="noreferrer"
                 className="inline-flex items-center gap-2 px-4 py-2.5 rounded-2xl text-sm font-black transition"
-                style={{ background: '#95CBFF', color: 'white' }}>
+                style={{ background: '#95CBFF', color: '#244c67' }}>
                 <ExternalLink size={15} />
                 {lang === 'zh' ? '打开 Google Drive 上传文件' : 'Open Google Drive Folder'}
               </a>
@@ -548,7 +549,7 @@ export default function LeaveApplications({ currentUserProfile, lang = 'zh', not
                   onClick={handleSaveDriveFolderUrl}
                   disabled={settingsSaving}
                   className="inline-flex items-center gap-2 px-4 py-2 rounded-2xl text-xs font-black transition cursor-pointer"
-                  style={{ background: settingsSaving ? '#b8deff' : '#FFB3C6', color: 'white' }}>
+                  style={{ background: settingsSaving ? '#b8deff' : '#FFB3C6', color: '#244c67' }}>
                   {settingsSaving ? <Loader size={14} className="animate-spin" /> : <Save size={14} />}
                   {lang === 'zh' ? '保存链接' : 'Save Link'}
                 </button>
@@ -673,7 +674,7 @@ export default function LeaveApplications({ currentUserProfile, lang = 'zh', not
                 <CalendarDays size={18} style={{ color: '#95CBFF' }} />
                 {lang === 'zh' ? '请假详情' : 'Leave Details'}
               </h3>
-              <button onClick={() => setSelectedApplication(null)} className="text-lg transition cursor-pointer font-black" style={{ color: '#6b7280' }}>x</button>
+              <button type="button" aria-label={lang === 'zh' ? '关闭详情' : 'Close details'} onClick={() => setSelectedApplication(null)} className="member-close rounded-xl" style={{ color: '#526779' }}><X size={20} /></button>
             </div>
             <div className="p-6 space-y-4">
               {[
@@ -699,7 +700,7 @@ export default function LeaveApplications({ currentUserProfile, lang = 'zh', not
                   target="_blank"
                   rel="noreferrer"
                   className="inline-flex items-center gap-2 px-4 py-2.5 rounded-2xl text-sm font-black"
-                  style={{ background: '#95CBFF', color: 'white' }}>
+                  style={{ background: '#95CBFF', color: '#244c67' }}>
                   <ExternalLink size={15} />
                   {lang === 'zh' ? '打开请假信 Google Drive 文件夹' : 'Open Leave Letter Google Drive Folder'}
                 </a>
@@ -710,7 +711,7 @@ export default function LeaveApplications({ currentUserProfile, lang = 'zh', not
                   target="_blank"
                   rel="noreferrer"
                   className="inline-flex items-center gap-2 px-4 py-2.5 rounded-2xl text-sm font-black"
-                  style={{ background: '#FFB3C6', color: 'white' }}>
+                  style={{ background: '#FFB3C6', color: '#244c67' }}>
                   <ExternalLink size={15} />
                   {lang === 'zh' ? '打开此请假信文件' : 'Open This Leave Letter'}
                 </a>

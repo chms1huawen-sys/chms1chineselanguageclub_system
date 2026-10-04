@@ -67,7 +67,7 @@ const inputStyle = {
   border: '1.5px solid #95CBFF',
   color: '#1a1a1a',
   borderRadius: 16,
-  fontFamily: "'Nunito', sans-serif",
+  fontFamily: "'Outfit', 'Noto Sans SC', system-ui, sans-serif",
   fontWeight: 700,
   padding: '10px 14px',
   outline: 'none',
@@ -283,7 +283,7 @@ export default function Handover({ currentUserProfile, lang, notify }) {
   }
 
   return (
-    <div className="space-y-6 text-left" style={{ fontFamily: "'Nunito', sans-serif" }}>
+    <div className="space-y-6 text-left" style={{ fontFamily: "'Outfit', 'Noto Sans SC', system-ui, sans-serif" }}>
       <div className="pb-5" style={{ borderBottom: '1.5px solid #e0f1ff' }}>
         <h1 className="text-2xl font-black flex items-center gap-2" style={{ color: '#1a1a1a' }}>
           <ShieldAlert style={{ color: '#95CBFF' }} />
@@ -471,7 +471,7 @@ export default function Handover({ currentUserProfile, lang, notify }) {
               fetchHandoverData()
             }}
             className="px-6 py-2.5 rounded-2xl text-xs font-black text-white cursor-pointer transition"
-            style={{ background: '#95CBFF' }}>
+            style={{ background: '#95CBFF', color: '#244c67' }}>
             {_('返回学期切换面板', 'Back to Handover Panel')}
           </button>
         </div>

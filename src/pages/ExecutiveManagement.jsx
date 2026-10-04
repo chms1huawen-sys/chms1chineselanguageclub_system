@@ -154,7 +154,7 @@ const inputStyle = {
   border: '1.5px solid #95CBFF',
   color: '#1a1a1a',
   borderRadius: 16,
-  fontFamily: "'Nunito', sans-serif",
+  fontFamily: "'Outfit', 'Noto Sans SC', system-ui, sans-serif",
   fontWeight: 800,
   padding: '12px 14px',
   outline: 'none',
@@ -301,7 +301,7 @@ export default function ExecutiveManagement({ currentUserProfile, lang = 'zh', n
 
   if (!isExecutive) {
     return (
-      <div className="max-w-3xl mx-auto" style={{ fontFamily: "'Nunito', sans-serif" }}>
+      <div className="max-w-3xl mx-auto" style={{ fontFamily: "'Outfit', 'Noto Sans SC', system-ui, sans-serif" }}>
         <div className="p-6" style={cardStyle}>
           <div className="flex items-start gap-3">
             <AlertCircle size={22} style={{ color: '#FFB3C6' }} />
@@ -322,7 +322,7 @@ export default function ExecutiveManagement({ currentUserProfile, lang = 'zh', n
   }
 
   return (
-    <div className="space-y-6 animate-[fadeIn_0.4s_ease]" style={{ fontFamily: "'Nunito', sans-serif" }}>
+    <div className="space-y-6 animate-[fadeIn_0.4s_ease]" style={{ fontFamily: "'Outfit', 'Noto Sans SC', system-ui, sans-serif" }}>
       <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4 pb-4" style={{ borderBottom: '1.5px solid #e0f1ff' }}>
         <div>
           <div className="flex items-center gap-2 mb-2">
@@ -381,7 +381,7 @@ export default function ExecutiveManagement({ currentUserProfile, lang = 'zh', n
           <div className="flex items-start gap-4">
             <UserAvatar user={currentUserProfile} name={currentUserProfile?.name} size={58} rounded={22} />
             <div className="min-w-0 flex-1">
-              <p className="text-xs font-black uppercase tracking-wide" style={{ color: '#95CBFF' }}>
+              <p className="text-sm font-bold" style={{ color: '#244c67' }}>
                 {lang === 'zh' ? '我的岗位' : 'My Role'}
               </p>
               <h2 className="text-2xl font-black mt-1" style={{ color: '#1a1a1a' }}>
@@ -446,7 +446,7 @@ export default function ExecutiveManagement({ currentUserProfile, lang = 'zh', n
                 target="_blank"
                 rel="noreferrer"
                 className="inline-flex items-center justify-center gap-2 px-5 py-3 rounded-2xl text-sm font-black transition"
-                style={{ background: '#95CBFF', color: 'white', boxShadow: '0 8px 18px rgba(149,203,255,0.35)' }}>
+                style={{ background: '#95CBFF', color: '#244c67', boxShadow: '0 8px 18px rgba(149,203,255,0.35)' }}>
                 {lang === 'zh' ? '打开 Google Drive' : 'Open Google Drive'}
                 <ExternalLink size={15} />
               </a>
@@ -477,7 +477,7 @@ export default function ExecutiveManagement({ currentUserProfile, lang = 'zh', n
                   onClick={handleSaveDriveUrl}
                   disabled={saving}
                   className="inline-flex items-center gap-2 px-4 py-2.5 rounded-2xl text-sm font-black transition"
-                  style={{ background: saving ? '#b8deff' : '#FFB3C6', color: 'white' }}>
+                  style={{ background: saving ? '#b8deff' : '#FFB3C6', color: '#244c67' }}>
                   {saving ? <Loader size={14} className="animate-spin" /> : <Save size={14} />}
                   {lang === 'zh' ? '保存链接' : 'Save Link'}
                 </button>
@@ -501,7 +501,7 @@ export default function ExecutiveManagement({ currentUserProfile, lang = 'zh', n
             </p>
           </div>
           <span className="px-3 py-1 rounded-full text-xs font-black"
-            style={{ background: '#f0f7ff', color: '#6db8ff', border: '1.5px solid #b8deff' }}>
+            style={{ background: '#f0f7ff', color: '#244c67', border: '1.5px solid #b8deff' }}>
             {executiveMembers.length}
           </span>
         </div>

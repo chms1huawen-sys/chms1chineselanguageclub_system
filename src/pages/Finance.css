@@ -1,4 +1,4 @@
-.finance-page { font-family: 'Nunito', sans-serif; }
+.finance-page { font-family: 'Outfit', 'Noto Sans SC', system-ui, sans-serif; }
 .finance-period { display: flex; gap: 4px; padding: 4px; background: white; border: 1.5px solid #e0f1ff; border-radius: 18px; }
 .finance-period button { background: transparent; border-color: transparent; }
 .finance-period button[aria-pressed=true] { background: #95cbff; color: #173e61; }

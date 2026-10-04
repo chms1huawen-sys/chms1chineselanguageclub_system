@@ -88,7 +88,7 @@ const inputStyle = {
   border: '1.5px solid #95CBFF',
   color: '#1a1a1a',
   borderRadius: 16,
-  fontFamily: "'Nunito', sans-serif",
+  fontFamily: "'Outfit', 'Noto Sans SC', system-ui, sans-serif",
   fontWeight: 700,
   padding: '10px 14px',
   outline: 'none',
@@ -115,10 +115,11 @@ function CountUpNumber({ value }) {
     const start = displayedValue.current
     const startTime = performance.now()
     const duration = 450
+    const motion = matchMedia('(prefers-reduced-motion: reduce)')
     let frame = 0
 
     const tick = (now) => {
-      const progress = Math.min((now - startTime) / duration, 1)
+      const progress = motion.matches ? 1 : Math.min((now - startTime) / duration, 1)
       displayedValue.current = Math.round(start + (target - start) * progress)
       setDisplay(displayedValue.current)
       if (progress < 1) frame = requestAnimationFrame(tick)
@@ -579,8 +580,8 @@ export default function Dashboard({ currentUserProfile, lang = 'zh', onShowTutor
   }
 
   return (
-    <div className="space-y-4 sm:space-y-6 max-w-full overflow-x-hidden" style={{ fontFamily: "'Nunito', sans-serif" }}>
-      <section className="relative overflow-hidden p-4 sm:p-6 md:p-8 rounded-3xl" style={{ background: '#95CBFF', boxShadow: '0 4px 24px rgba(149,203,255,0.35)' }}>
+    <div className="space-y-4 sm:space-y-6 max-w-full overflow-x-hidden" style={{ fontFamily: "'Outfit', 'Noto Sans SC', system-ui, sans-serif" }}>
+      <section className="relative overflow-hidden p-4 sm:p-6 md:p-8 rounded-3xl" style={{ background: '#95CBFF', color: '#244c67', boxShadow: '0 4px 24px rgba(149,203,255,0.35)' }}>
         <img
           src="/cls-cartoon.png"
           alt=""
@@ -673,7 +674,7 @@ export default function Dashboard({ currentUserProfile, lang = 'zh', onShowTutor
               <TabButton active={activeTab === 'activity'} onClick={() => setActiveTab('activity')}>{lang === 'zh' ? '动态' : 'Activity'}</TabButton>
             </div>
             {canPublishAnnouncements && (
-              <button onClick={openNewAnnouncementModal} className="px-3 py-2 rounded-2xl text-xs font-black inline-flex items-center gap-1 self-start sm:self-auto" style={{ background: '#FFB3C6', color: 'white' }}>
+              <button onClick={openNewAnnouncementModal} className="px-3 py-2 rounded-2xl text-xs font-black inline-flex items-center gap-1 self-start sm:self-auto" style={{ background: '#FFB3C6', color: '#70243e' }}>
                 <Plus size={13} /> {lang === 'zh' ? '发布' : 'Post'}
               </button>
             )}
@@ -784,7 +785,7 @@ export default function Dashboard({ currentUserProfile, lang = 'zh', onShowTutor
                         type="button"
                         onClick={() => openBirthdayWish(user, true)}
                         className="px-4 py-2 rounded-2xl text-xs font-black shrink-0"
-                        style={{ background: '#FFB3C6', color: 'white', boxShadow: '0 8px 18px rgba(255,179,198,0.34)' }}>
+                        style={{ background: '#FFB3C6', color: '#70243e', boxShadow: '0 8px 18px rgba(255,179,198,0.34)' }}>
                         {lang === 'zh' ? '马上写祝福' : 'Send Wish'}
                       </button>
                     )}
@@ -812,7 +813,7 @@ export default function Dashboard({ currentUserProfile, lang = 'zh', onShowTutor
                         type="button"
                         onClick={() => openBirthdayWish(user, isToday)}
                         className="px-3 py-1.5 rounded-2xl text-[10px] font-black shrink-0 ml-auto"
-                        style={{ background: isToday ? '#FFB3C6' : '#95CBFF', color: 'white' }}>
+                        style={{ background: isToday ? '#FFB3C6' : '#95CBFF', color: '#244c67' }}>
                         {lang === 'zh' ? '写祝福' : 'Send Wish'}
                       </button>
                     )}
@@ -882,7 +883,7 @@ export default function Dashboard({ currentUserProfile, lang = 'zh', onShowTutor
             </label>
             <div className="flex justify-end gap-3">
               <button type="button" onClick={resetAnnouncementModal} className="px-4 py-2 rounded-2xl text-sm font-bold" style={{ background: '#f0f7ff', color: '#6b7280' }}>{lang === 'zh' ? '取消' : 'Cancel'}</button>
-              <button disabled={announcementSubmitting} className="px-4 py-2 rounded-2xl text-sm font-black flex items-center gap-2" style={{ background: '#95CBFF', color: 'white' }}>
+              <button disabled={announcementSubmitting} className="px-4 py-2 rounded-2xl text-sm font-black flex items-center gap-2" style={{ background: '#95CBFF', color: '#244c67' }}>
                 {announcementSubmitting ? <Loader size={14} className="animate-spin" /> : <Send size={14} />} {editingAnnouncement ? (lang === 'zh' ? '保存修改' : 'Save') : (lang === 'zh' ? '发布' : 'Post')}
               </button>
             </div>
@@ -918,7 +919,7 @@ export default function Dashboard({ currentUserProfile, lang = 'zh', onShowTutor
                 type="button"
                 onClick={markBirthdayWishesRead}
                 className="px-5 py-2.5 rounded-2xl text-sm font-black"
-                style={{ background: '#95CBFF', color: 'white' }}>
+                style={{ background: '#95CBFF', color: '#244c67' }}>
                 {lang === 'zh' ? '谢谢，我看到了' : 'Thanks, I saw them'}
               </button>
             </div>
@@ -954,7 +955,7 @@ export default function Dashboard({ currentUserProfile, lang = 'zh', onShowTutor
                     openBirthdayWish(birthdayWishCandidate, true)
                   }}
                   className="px-4 py-2 rounded-2xl text-sm font-black flex items-center justify-center gap-2"
-                  style={{ background: '#FFB3C6', color: 'white' }}>
+                  style={{ background: '#FFB3C6', color: '#70243e' }}>
                   <Send size={14} /> {lang === 'zh' ? '写祝福' : 'Send Wish'}
                 </button>
               )}
@@ -995,7 +996,7 @@ export default function Dashboard({ currentUserProfile, lang = 'zh', onShowTutor
             </p>
             <div className="flex justify-end gap-3">
               <button type="button" onClick={() => setBirthdayWishTarget(null)} className="px-4 py-2 rounded-2xl text-sm font-bold" style={{ background: '#f0f7ff', color: '#6b7280' }}>{lang === 'zh' ? '取消' : 'Cancel'}</button>
-              <button disabled={birthdayWishSubmitting} className="px-4 py-2 rounded-2xl text-sm font-black flex items-center gap-2" style={{ background: '#95CBFF', color: 'white' }}>
+              <button disabled={birthdayWishSubmitting} className="px-4 py-2 rounded-2xl text-sm font-black flex items-center gap-2" style={{ background: '#95CBFF', color: '#244c67' }}>
                 {birthdayWishSubmitting ? <Loader size={14} className="animate-spin" /> : <Send size={14} />} {lang === 'zh' ? '发送祝福' : 'Send Wish'}
               </button>
             </div>
@@ -1020,7 +1021,7 @@ function EmptyText({ text }) {
 
 function TabButton({ active, onClick, children }) {
   return (
-    <button onClick={onClick} className="px-3 py-2 rounded-2xl text-xs font-black" style={{ background: active ? '#95CBFF' : '#f0f7ff', color: active ? 'white' : '#6b7280' }}>
+    <button onClick={onClick} className="px-3 py-2 rounded-2xl text-xs font-black" style={{ background: active ? '#95CBFF' : '#f0f7ff', color: '#244c67' }}>
       {children}
     </button>
   )

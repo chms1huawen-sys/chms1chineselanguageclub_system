@@ -1,6 +1,7 @@
 @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Noto+Sans+SC:wght@300;400;500;700&display=swap');
 
 @import "tailwindcss";
+@import "./uiTokens.css";
 
 
 :root {
@@ -139,7 +140,15 @@ body {
 .login-photo-pan {
   transform: scale(1.03);
   transform-origin: center;
-  will-change: object-position;
+  will-change: transform;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .login-symbol, .login-dot, .login-photo-pan,
+  .login-carousel-slide, .login-carousel-dot { animation: none !important; will-change: auto; }
+  .login-photo-pan { transform: none; }
+  .login-carousel-slide-1 { opacity: 1; }
+  .login-carousel-slide-2 { opacity: 0; }
 }
 
 .login-carousel-slide {
@@ -193,45 +202,45 @@ body {
 
 @keyframes login-photo-first-pan {
   0% {
-    object-position: left center;
+    transform: scale(1.08) translateX(-2%);
   }
 
   24.5% {
-    object-position: right center;
+    transform: scale(1.08) translateX(2%);
   }
 
   25%,
   74.9% {
-    object-position: right center;
+    transform: scale(1.08) translateX(2%);
   }
 
   99.5%,
   100% {
-    object-position: left center;
+    transform: scale(1.08) translateX(-2%);
   }
 }
 
 @keyframes login-photo-second-pan {
   0%,
   24.9% {
-    object-position: right center;
+    transform: scale(1.08) translateX(2%);
   }
 
   25% {
-    object-position: right center;
+    transform: scale(1.08) translateX(2%);
   }
 
   49.5% {
-    object-position: left center;
+    transform: scale(1.08) translateX(-2%);
   }
 
   50% {
-    object-position: left center;
+    transform: scale(1.08) translateX(-2%);
   }
 
   74.5%,
   100% {
-    object-position: right center;
+    transform: scale(1.08) translateX(2%);
   }
 }
 

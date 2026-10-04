@@ -1,4 +1,4 @@
-.club-blog,.blog-admin{font-family:'Nunito','Noto Sans SC',sans-serif;color:#202e3b;letter-spacing:0;background:#f8fcff;min-height:100vh}
+.club-blog,.blog-admin{font-family:var(--club-font);color:#202e3b;letter-spacing:0;background:#f8fcff;min-height:100vh}
 .club-blog *,.blog-admin *{box-sizing:border-box;letter-spacing:0}
 .club-blog button,.blog-admin button,.blog-admin-heading a,.blog-editor-toolbar a{display:inline-flex;align-items:center;justify-content:center;gap:8px;border:1px solid #c8dfef;background:white;border-radius:8px;padding:10px 14px;cursor:pointer;color:#244d67;font-weight:800;touch-action:manipulation}
 .club-blog button:disabled,.blog-admin button:disabled{opacity:.5;cursor:not-allowed}

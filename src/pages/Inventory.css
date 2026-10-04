@@ -1,4 +1,4 @@
-.inventory-page { color: #1a1a1a; max-width: 1400px; margin: auto; padding: 12px; font-family: 'Nunito', sans-serif; }
+.inventory-page { color: #1a1a1a; max-width: 1400px; margin: auto; padding: 12px; font-family: 'Outfit', 'Noto Sans SC', system-ui, sans-serif; }
 .inv-link { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 40px; padding: 8px 13px; background: #e7f3ff; border: 1px solid #95cbff; border-radius: 8px; color: #254e70; font-weight: 800; text-decoration: none; }
 .inv-header { flex-wrap: wrap; }
 .inventory-page * { box-sizing: border-box; letter-spacing: 0; }

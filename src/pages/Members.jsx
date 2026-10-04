@@ -105,7 +105,7 @@ const inputStyle = {
   border: '1.5px solid #95CBFF',
   color: '#1a1a1a',
   borderRadius: 16,
-  fontFamily: "'Nunito', sans-serif",
+  fontFamily: "'Outfit', 'Noto Sans SC', system-ui, sans-serif",
   fontWeight: 700
 }
 
@@ -114,7 +114,7 @@ const selectStyle = {
   border: '1.5px solid #95CBFF',
   color: '#1a1a1a',
   borderRadius: 16,
-  fontFamily: "'Nunito', sans-serif",
+  fontFamily: "'Outfit', 'Noto Sans SC', system-ui, sans-serif",
   fontWeight: 700
 }
 
@@ -308,7 +308,7 @@ export default function Members({ currentUserProfile, lang, notify }) {
   const modalCard = { background: 'white', border: '1.5px solid #e0f1ff', borderRadius: 24, width: '100%', maxWidth: 520, maxHeight: 'calc(100vh - 32px)', overflow: 'auto', boxShadow: '0 8px 40px rgba(149,203,255,0.3)' }
 
   return (
-    <div className="space-y-6" style={{ fontFamily: "'Nunito', sans-serif" }}>
+    <div className="space-y-6" style={{ fontFamily: "'Outfit', 'Noto Sans SC', system-ui, sans-serif" }}>
 
       {/* Title Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-5"
@@ -326,7 +326,7 @@ export default function Members({ currentUserProfile, lang, notify }) {
           <button
             onClick={() => { resetAddForm(); setShowAddModal(true) }}
             className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-2xl text-sm font-black transition cursor-pointer"
-            style={{ background: '#95CBFF', color: 'white', boxShadow: '0 4px 16px rgba(149,203,255,0.4)' }}>
+            style={{ background: '#95CBFF', color: '#244c67', boxShadow: '0 4px 16px rgba(149,203,255,0.4)' }}>
             <UserPlus size={16} />
             {_('添加账号', 'Add Account')}
           </button>
@@ -400,7 +400,7 @@ export default function Members({ currentUserProfile, lang, notify }) {
           <div className="hidden lg:block overflow-x-auto rounded-2xl" style={{ border: '1.5px solid #e0f1ff' }}>
             <table className="w-full text-left text-sm border-collapse">
               <thead>
-                <tr style={{ background: '#95CBFF' }}>
+                <tr style={{ background: '#95CBFF', color: '#244c67' }}>
                   {[_('姓名', 'Name'), _('邮箱', 'Email'), _('职务', 'Role'), _('状态', 'Status'), ...(canManageAccounts ? [_('操作', 'Actions')] : [])].map(h => (
                     <th key={h} className="py-4 px-5 font-black" style={{ color: 'white' }}>{h}</th>
                   ))}
@@ -586,7 +586,7 @@ export default function Members({ currentUserProfile, lang, notify }) {
                   style={{ background: '#f0f7ff', border: '1.5px solid #e0f1ff', color: '#6b7280' }}>取消</button>
                 <button type="submit" disabled={formSubmitting}
                   className="px-4 py-2 rounded-2xl text-sm font-black transition cursor-pointer"
-                  style={{ background: '#95CBFF', color: 'white', opacity: formSubmitting ? 0.7 : 1 }}>
+                  style={{ background: '#95CBFF', color: '#244c67', opacity: formSubmitting ? 0.7 : 1 }}>
                   {formSubmitting ? _('保存中...', 'Saving...') : _('确认创建', 'Create')}
                 </button>
               </div>
@@ -651,7 +651,7 @@ export default function Members({ currentUserProfile, lang, notify }) {
                   style={{ background: '#f0f7ff', border: '1.5px solid #e0f1ff', color: '#6b7280' }}>{_('取消', 'Cancel')}</button>
                 <button type="submit" disabled={formSubmitting}
                   className="px-4 py-2 rounded-2xl text-sm font-black transition cursor-pointer"
-                  style={{ background: '#95CBFF', color: 'white', opacity: formSubmitting ? 0.7 : 1 }}>
+                  style={{ background: '#95CBFF', color: '#244c67', opacity: formSubmitting ? 0.7 : 1 }}>
                   {formSubmitting ? _('保存中...', 'Saving...') : _('确认更新', 'Update')}
                 </button>
               </div>

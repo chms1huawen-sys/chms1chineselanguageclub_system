@@ -37,7 +37,7 @@ const selectStyle = {
   color: '#1a1a1a',
   fontSize: 14,
   fontWeight: 700,
-  fontFamily: "'Nunito', sans-serif",
+  fontFamily: "'Outfit', 'Noto Sans SC', system-ui, sans-serif",
   outline: 'none',
 }
 

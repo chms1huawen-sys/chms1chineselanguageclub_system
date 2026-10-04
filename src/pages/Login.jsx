@@ -3,6 +3,7 @@ import { supabase } from '../supabaseClient'
 import { MEMBER_PROFILE_FIELDS } from '../utils/memberProfile'
 import { authErrorMessage } from '../utils/authErrorMessage'
 import { Globe, ShieldAlert } from 'lucide-react'
+import './MemberUi.css'
 
 const LOGIN_PHOTOS = [
   { src: '/login-group-2026.jpeg', label: { zh: '一中华文学会 · 2026', en: 'CHMS1 Chinese Language Club · 2026' } },
@@ -94,8 +95,8 @@ export default function Login({ onLoginSuccess }) {
 
   return (
     <div
-      className="relative min-h-screen flex items-center justify-center px-4 py-8 overflow-hidden"
-      style={{ background: '#e0f1ff', fontFamily: "'Nunito', sans-serif" }}>
+      className="member-ui relative min-h-screen flex items-center justify-center px-4 py-8 overflow-hidden"
+      style={{ background: '#e0f1ff', fontFamily: "'Outfit', 'Noto Sans SC', system-ui, sans-serif" }}>
       <div className="absolute inset-0" style={{ background: 'linear-gradient(135deg, rgba(224, 241, 255, 0.90) 0%, rgba(240, 247, 255, 0.78) 48%, rgba(255, 233, 240, 0.78) 100%)' }} />
       <div className="absolute inset-0" style={{ background: 'radial-gradient(circle at 18% 18%, rgba(149,203,255,0.45), transparent 34%), radial-gradient(circle at 82% 80%, rgba(255,179,198,0.38), transparent 30%)' }} />
       <div className="login-symbol-field" aria-hidden="true">
@@ -144,7 +145,7 @@ export default function Login({ onLoginSuccess }) {
           <button
             onClick={toggleLanguage}
             className="absolute top-5 right-5 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-bold transition cursor-pointer"
-            style={{ background: '#f0f7ff', border: '1.5px solid #e0f1ff', color: '#6db8ff' }}>
+            style={{ background: '#f0f7ff', border: '1.5px solid #e0f1ff', color: '#244c67' }}>
             <Globe size={14} style={{ color: '#95CBFF' }} />
             {lang === 'zh' ? '英文' : '中文'}
           </button>
@@ -174,9 +175,11 @@ export default function Login({ onLoginSuccess }) {
 
           <form onSubmit={handleLogin} className="space-y-5">
             <div>
-              <label className="block text-xs font-black uppercase tracking-wider mb-2" style={{ color: '#6b7280' }}>{t.email}</label>
+              <label htmlFor="member-email" className="block text-xs font-black mb-2" style={{ color: '#526779' }}>{t.email}</label>
               <input
                 type="email"
+                id="member-email"
+                autoComplete="username"
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
@@ -189,9 +192,11 @@ export default function Login({ onLoginSuccess }) {
             </div>
 
             <div>
-              <label className="block text-xs font-black uppercase tracking-wider mb-2" style={{ color: '#6b7280' }}>{t.password}</label>
+              <label htmlFor="member-password" className="block text-xs font-black mb-2" style={{ color: '#526779' }}>{t.password}</label>
               <input
                 type="password"
+                id="member-password"
+                autoComplete="current-password"
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
@@ -209,6 +214,7 @@ export default function Login({ onLoginSuccess }) {
               className="w-full flex items-center justify-center gap-2 py-4 px-4 rounded-2xl text-white font-black text-base transition cursor-pointer mt-7"
               style={{
                 background: loading ? '#b8deff' : '#95CBFF',
+                color: '#244c67',
                 boxShadow: '0 10px 26px rgba(149, 203, 255, 0.38)',
                 opacity: loading ? 0.7 : 1
               }}>
@@ -221,7 +227,7 @@ export default function Login({ onLoginSuccess }) {
           </div>
 
           <div className="w-full h-px mt-7" style={{ background: '#e5e7eb' }} />
-          <div className="mt-5 text-center text-xs font-bold" style={{ color: '#95CBFF' }}>
+          <div className="mt-5 text-center text-xs font-bold" style={{ color: '#526779' }}>
             {t.footer}
           </div>
         </div>
