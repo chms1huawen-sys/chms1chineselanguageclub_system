@@ -11,12 +11,17 @@
 body {
   margin: 0;
   padding: 0;
-  background-color: #0b0f19; /* Premium dark background */
-  color: #f3f4f6;
+  background-color: #f0f7ff;
+  color: #244c67;
   min-height: 100vh;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
+
+.page-loading { display: flex; align-items: center; justify-content: center; gap: 12px; padding: 32px; min-height: 180px; color: #28566b; background: #f0f7ff; }
+.page-loading-full { min-height: 100svh; }
+.page-loading-icon { animation: spin 1s linear infinite; }
+@media (prefers-reduced-motion: reduce) { .page-loading-icon { animation: none; } }
 
 /* Custom styles for transitions and scrollbars */
 * {

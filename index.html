@@ -6,11 +6,17 @@
   <link rel="icon" type="image/png" href="/logo-192.png" />
   <link rel="manifest" href="/manifest.json">
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <style>
+    html, body { margin: 0; background: #f0f7ff; color: #244c67; }
+    #root { min-height: 100vh; }
+    html[data-member-launch] #root > .club-blog { display: none; }
+  </style>
+  <script src="/app-launch.js"></script>
   <title>CLC_sys</title>
   <meta name="description" content="一中华文学会系统 (CLC_sys)" />
 </head>
 
-<body class="bg-[#0b0f19]">
+<body>
   <div id="root"></div>
   <script type="module" src="/src/main.jsx"></script>
 </body>

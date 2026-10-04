@@ -1,4 +1,4 @@
-import { lazy, Suspense, useState, useEffect, useRef, useEffectEvent } from 'react'
+import { lazy, Suspense, useState, useEffect, useLayoutEffect, useRef, useEffectEvent } from 'react'
 import { supabase } from './supabaseClient'
 import { MEMBER_PROFILE_FIELDS } from './utils/memberProfile'
 const Login = lazy(() => import('./pages/Login'))
@@ -6,13 +6,15 @@ import Blog from './pages/Blog'
 import BlogAnalyticsConsent from './components/BlogAnalyticsConsent'
 const BlogAdminShell = lazy(() => import('./pages/BlogAdminShell'))
 import { safeBlogReturn } from './utils/blog'
-import { Loader } from 'lucide-react'
 import PageLoading from './components/PageLoading'
 import { showForegroundPush, withPushTimeout } from './utils/pushRuntime'
 import { navigateMemberLink, navigatePublicLink } from './utils/publicNavigation'
 const MemberShell = lazy(() => import('./pages/MemberShell'))
 
 export default function App() {
+  useLayoutEffect(() => {
+    document.documentElement.removeAttribute('data-member-launch')
+  }, [])
   const blogRedirecting = useRef(false)
   const [hash, setHash] = useState(window.location.hash)
   const [publicRoute, setPublicRoute] = useState(window.location.pathname + window.location.search)
@@ -178,25 +180,15 @@ export default function App() {
     setLoading(false)
   }
 
-  if (window.location.pathname === '/blog-admin' || hash === '#/blog-management') return <Suspense fallback={<PageLoading lang={lang} />}><BlogAdminShell profile={profile} loading={loading} lang={lang} setLang={setLang} /></Suspense>
+  if (window.location.pathname === '/blog-admin' || hash === '#/blog-management') return <Suspense fallback={<PageLoading lang={lang} fullPage />}><BlogAdminShell profile={profile} loading={loading} lang={lang} setLang={setLang} /></Suspense>
   if (!memberSurface) return <><Blog key={publicRoute} profile={profile} lang={lang} setLang={setLang} /><BlogAnalyticsConsent lang={lang} /></>
 
   if (loading || (user && profile && hash.startsWith('#/login?') && new URLSearchParams(hash.split('?')[1]).has('return'))) {
-    return (
-      <div className="min-h-screen flex flex-col items-center justify-center gap-4"
-        style={{ background: 'linear-gradient(135deg, #e0f1ff 0%, #f0f7ff 100%)', fontFamily: "'Outfit', 'Noto Sans SC', system-ui, sans-serif" }}>
-        <div style={{ width: 56, height: 56, borderRadius: 18, background: '#95CBFF', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 20px rgba(149,203,255,0.4)' }}>
-          <Loader size={28} color="white" style={{ animation: 'spin 1s linear infinite' }} />
-        </div>
-        <span className="text-sm font-black tracking-wide" style={{ color: '#6b7280' }}>
-          {lang === 'zh' ? '载入系统中...' : 'Loading System...'}
-        </span>
-      </div>
-    )
+    return <PageLoading lang={lang} fullPage />
   }
 
   return (
-    <Suspense fallback={<PageLoading lang={lang} />}>
+    <Suspense fallback={<PageLoading lang={lang} fullPage />}>
       {user && profile ? (
         <MemberShell profile={profile} onLogout={handleLogout} lang={lang} setLang={setLang} onProfileUpdate={setProfile} />
       ) : (
