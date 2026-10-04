@@ -13,6 +13,7 @@ import { useRef } from 'react'
 import { isExecutiveAccount, taskRosterOptions, taskRosterName } from '../utils/taskRosters'
 import UserAvatar from '../components/UserAvatar'
 import { canViewTaskPerformance, hasPermission } from '../utils/permissions'
+import { canModifyTask } from '../utils/taskOwnership'
 import {
   CheckSquare,
   Plus,
@@ -433,6 +434,10 @@ export default function Tasks({ currentUserProfile, lang, notify, comparisonOnly
   const handleCreateOrEditTask = async (e) => {
     e.preventDefault()
     if (!activeTeam || taskSaveLock.current) return
+    if (isEditing && !canModifyTask(selectedTask, currentUserProfile)) {
+      setErrorMsg(_('只有发布者可以修改任务详情。', 'Only the publisher can edit task details.'))
+      return
+    }
     taskSaveLock.current = true
     setFormSubmitting(true)
     setErrorMsg('')
@@ -441,6 +446,7 @@ export default function Tasks({ currentUserProfile, lang, notify, comparisonOnly
       const payload = buildTaskPayload(formData.due_date || null)
 
       if (isEditing && selectedTask) {
+        delete payload.created_by
         payload.completed_at = payload.status === 'completed'
           ? (selectedTask.status === 'completed' ? selectedTask.completed_at || null : new Date().toISOString())
           : null
@@ -448,6 +454,9 @@ export default function Tasks({ currentUserProfile, lang, notify, comparisonOnly
           .from('tasks')
           .update(payload)
           .eq('id', selectedTask.id)
+          .eq('created_by', currentUserProfile.id)
+          .select('id')
+          .single()
         
         if (error) throw error
         if (payload.status === 'completed' && selectedTask.status !== 'completed') {
@@ -506,6 +515,7 @@ export default function Tasks({ currentUserProfile, lang, notify, comparisonOnly
   }
 
   const openEditModal = (task) => {
+    if (!canModifyTask(task, currentUserProfile)) return
     setIsEditing(true)
     setSelectedTask(task)
     setFormData({
@@ -526,6 +536,11 @@ export default function Tasks({ currentUserProfile, lang, notify, comparisonOnly
   }
 
   const handleDeleteTask = async (taskId) => {
+    const task = tasks.find(item => item.id === taskId) || (selectedTask?.id === taskId ? selectedTask : null)
+    if (!canModifyTask(task, currentUserProfile)) {
+      setErrorMsg(_('只有发布者可以删除任务。', 'Only the publisher can delete a task.'))
+      return
+    }
     if (!window.confirm(_('确定要删除这个任务吗？此操作无法撤销。', 'Delete this task? This action cannot be undone.'))) return
     setErrorMsg('')
     setSuccessMsg('')
@@ -534,6 +549,9 @@ export default function Tasks({ currentUserProfile, lang, notify, comparisonOnly
         .from('tasks')
         .delete()
         .eq('id', taskId)
+        .eq('created_by', currentUserProfile.id)
+        .select('id')
+        .single()
 
       if (error) throw error
       setSuccessMsg(_('任务已成功删除', 'Task deleted.'))
@@ -1242,8 +1260,8 @@ export default function Tasks({ currentUserProfile, lang, notify, comparisonOnly
                 </p>
               </div>
 
-              {/* Action buttons for admins/creators */}
-              {isPowerUser && (
+              {/* Editing and deletion belong to the original publisher, not all task managers. */}
+              {canModifyTask(selectedTask, currentUserProfile) && (
                 <div className="flex gap-2 justify-end" style={{ borderBottom: '1.5px solid #f0f7ff', paddingBottom: '16px' }}>
                   <button
                     onClick={() => { openEditModal(selectedTask); setShowDetailModal(false); }}
