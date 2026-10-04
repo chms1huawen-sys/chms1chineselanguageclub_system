@@ -639,7 +639,7 @@ export default function Dashboard({ currentUserProfile, lang = 'zh', onShowTutor
             <h2 className="font-black text-base flex items-center gap-2" style={{ color: '#1a1a1a' }}>
               <Calendar size={18} color="#95CBFF" /> {lang === 'zh' ? '本周行事历' : 'This Week'}
             </h2>
-            <button onClick={() => navigate('/calendar')} className="text-xs font-black inline-flex items-center gap-1 self-start sm:self-auto" style={{ color: '#6db8ff' }}>
+            <button onClick={() => navigate('/calendar')} className="text-xs font-black inline-flex items-center gap-1 self-start sm:self-auto" style={{ color: 'var(--club-focus)' }}>
               {lang === 'zh' ? '查看完整行事历' : 'Full Calendar'} <ExternalLink size={12} />
             </button>
           </div>
@@ -687,12 +687,12 @@ export default function Dashboard({ currentUserProfile, lang = 'zh', onShowTutor
                     <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
                       <p className="text-sm font-black break-words min-w-0" style={{ color: '#1a1a1a' }}>{item.is_pinned ? '置顶 ' : ''}{item.title}</p>
                       <div className="flex flex-wrap items-center gap-2 shrink-0">
-                        <span className="px-2 py-1 rounded-full text-[10px] font-black" style={{ background: 'white', color: '#6db8ff', border: '1.5px solid #e0f1ff' }}>
+                        <span className="px-2 py-1 rounded-full text-[10px] font-black" style={{ background: 'white', color: 'var(--club-focus)', border: '1.5px solid #e0f1ff' }}>
                           {getAnnouncementTargetLabel(item)}
                         </span>
                         {canPublishAnnouncements && (
                           <div className="flex items-center gap-1">
-                            <button type="button" onClick={() => openEditAnnouncementModal(item)} className="p-1.5 rounded-full" style={{ background: 'white', color: '#6db8ff', border: '1.5px solid #e0f1ff' }} title={lang === 'zh' ? '修改公告' : 'Edit announcement'}>
+                            <button type="button" onClick={() => openEditAnnouncementModal(item)} className="p-1.5 rounded-full" style={{ background: 'white', color: 'var(--club-focus)', border: '1.5px solid #e0f1ff' }} title={lang === 'zh' ? '修改公告' : 'Edit announcement'}>
                               <Pencil size={12} />
                             </button>
                             <button type="button" onClick={() => handleDeleteAnnouncement(item)} className="p-1.5 rounded-full" style={{ background: 'white', color: '#ef4444', border: '1.5px solid #fee2e2' }} title={lang === 'zh' ? '删除公告' : 'Delete announcement'}>
@@ -703,7 +703,7 @@ export default function Dashboard({ currentUserProfile, lang = 'zh', onShowTutor
                       </div>
                     </div>
                     <p className="text-xs font-semibold mt-2 break-words whitespace-pre-wrap" style={{ color: '#6b7280' }}>{item.body}</p>
-                    <p className="text-[10px] font-bold mt-2" style={{ color: '#9ca3af' }}>{item.author?.name || '-'} · {new Date(item.created_at).toLocaleString()}</p>
+                    <p className="text-[10px] font-bold mt-2" style={{ color: 'var(--club-muted)' }}>{item.author?.name || '-'} · {new Date(item.created_at).toLocaleString()}</p>
                   </div>
                 ))}
               </MobileDashboardList>
@@ -716,7 +716,7 @@ export default function Dashboard({ currentUserProfile, lang = 'zh', onShowTutor
                     <Bell size={15} style={{ color: '#95CBFF', flexShrink: 0, marginTop: 2 }} />
                     <div>
                       <p className="text-xs font-black" style={{ color: '#1a1a1a' }}>{item.message}</p>
-                      <p className="text-[10px] font-bold mt-1" style={{ color: '#9ca3af' }}>{new Date(item.created_at).toLocaleString()}</p>
+                      <p className="text-[10px] font-bold mt-1" style={{ color: 'var(--club-muted)' }}>{new Date(item.created_at).toLocaleString()}</p>
                     </div>
                   </div>
                 ))}
@@ -749,7 +749,7 @@ export default function Dashboard({ currentUserProfile, lang = 'zh', onShowTutor
                           {status.zh}
                         </span>
                       </div>
-                      <button onClick={() => navigate('/leave')} className="mt-3 text-xs font-black" style={{ color: '#6db8ff' }}>
+                      <button onClick={() => navigate('/leave')} className="mt-3 text-xs font-black" style={{ color: 'var(--club-focus)' }}>
                         {lang === 'zh' ? '查看记录 →' : 'View record →'}
                       </button>
                     </div>
@@ -910,7 +910,7 @@ export default function Dashboard({ currentUserProfile, lang = 'zh', onShowTutor
                 <div key={wish.id} className="p-4 rounded-3xl" style={{ background: '#fff7fb', border: '1.5px solid #ffd5e1' }}>
                   <p className="text-xs font-black mb-1" style={{ color: '#ff6f9a' }}>{wish.title}</p>
                   <p className="text-sm font-bold leading-relaxed" style={{ color: '#1a1a1a' }}>{wish.body}</p>
-                  <p className="text-[11px] font-bold mt-2" style={{ color: '#9ca3af' }}>{formatDate(wish.sent_at, lang)}</p>
+                  <p className="text-[11px] font-bold mt-2" style={{ color: 'var(--club-muted)' }}>{formatDate(wish.sent_at, lang)}</p>
                 </div>
               ))}
             </div>
@@ -1016,7 +1016,7 @@ function SkeletonLines() {
 }
 
 function EmptyText({ text }) {
-  return <div className="py-10 text-center text-sm font-bold" style={{ color: '#9ca3af' }}>{text}</div>
+  return <div className="py-10 text-center text-sm font-bold" style={{ color: 'var(--club-muted)' }}>{text}</div>
 }
 
 function TabButton({ active, onClick, children }) {

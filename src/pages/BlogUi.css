@@ -1,6 +1,7 @@
 .club-blog, .blog-admin { font-family: var(--club-font); }
 .blog-public .blog-public-actions > :is(button, a[aria-label]) { width: 44px; min-width: 44px; height: 44px; flex-basis: 44px; }
 .blog-public .blog-footer a, .blog-public .blog-back { min-height: 44px; padding-block: 8px; }
+.blog-public .blog-download a { min-height: 44px; }
 .blog-public .blog-footer { font-size: .875rem; }
 .blog-public .blog-categories button { min-height: 44px; min-width: 44px; }
 .blog-public .blog-community-counts small { font-size: .875rem; line-height: 1.5; }
@@ -13,7 +14,7 @@
 .blog-home .blog-showcase-dots button,
 .blog-home .blog-showcase-dots button:first-child,
 .blog-home .blog-showcase-dots button:last-child { width: 44px; height: 44px; }
-.blog-home .blog-showcase-dots { max-width: calc(100% - 96px); }
+.blog-home .blog-showcase-dots { max-width: calc(100% - 16px); }
 @media (max-width: 700px) {
   .blog-public .blog-lightbox { grid-template-columns: 44px minmax(0,1fr) 44px; }
   .blog-interior .blog-section-heading h1, .blog-interior .blog-community-intro h1 { font-size: 1.75rem; }

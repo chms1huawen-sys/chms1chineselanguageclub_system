@@ -143,7 +143,7 @@ function NotificationCenter({ profile, lang }) {
         </span>
         {unreadCount > 0 && (
           <span className="min-w-5 h-5 px-1.5 rounded-full text-[10px] font-black flex items-center justify-center"
-            style={{ background: '#FFB3C6', color: 'white' }}>
+            style={{ background: '#FFB3C6', color: '#70243e' }}>
             {unreadCount > 9 ? '9+' : unreadCount}
           </span>
         )}

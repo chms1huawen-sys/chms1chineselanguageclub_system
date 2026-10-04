@@ -1141,15 +1141,16 @@ export default function Tasks({ currentUserProfile, lang, notify, comparisonOnly
                       <button
                         type="button"
                         key={u.id}
+                        aria-pressed={isChecked}
                         onClick={() => handleAssigneeToggle(u.id)}
                         className="px-2 py-1.5 text-left truncate text-xs rounded-xl font-bold flex items-center gap-1.5 transition select-none"
                         style={{
                           background: isChecked ? '#95CBFF' : 'white',
-                          color: isChecked ? 'white' : '#1a1a1a',
+                          color: isChecked ? 'var(--club-ink)' : '#1a1a1a',
                           border: '1.5px solid #e0f1ff'
                         }}
                       >
-                        <span className="w-2 h-2 rounded-full shrink-0" style={{ background: isChecked ? 'white' : '#6db8ff' }} />
+                        <span className="w-2 h-2 rounded-full shrink-0" style={{ background: isChecked ? 'var(--club-ink)' : '#6db8ff' }} />
                         {u.name}
                       </button>
                     )

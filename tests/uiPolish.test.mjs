@@ -34,3 +34,30 @@ test('Hero retains hover, waits for requested photos and uses a bounded preload'
   assert.match(read('src/pages/BlogHeroReference.css'), /hover: hover/)
   assert.match(read('src/pages/BlogHeroReference.css'), /focus-within/)
 })
+
+test('remaining small text and selected states use readable foregrounds', () => {
+  const tokens = read('src/uiTokens.css')
+  const color = name => tokens.match(new RegExp(`--club-${name}:\\s*#([0-9a-f]{6})`, 'i'))[1]
+  const contrast = (a, b) => (Math.max(luminance(a), luminance(b)) + .05) / (Math.min(luminance(a), luminance(b)) + .05)
+  for (const background of ['ffffff', 'f0f7ff', 'fff7fb']) {
+    assert.ok(contrast(color('focus'), background) >= 4.5)
+    assert.ok(contrast(color('muted'), background) >= 4.5)
+  }
+  assert.ok(contrast('70243e', 'ffb3c6') >= 4.5)
+  assert.ok(contrast('166534', 'dcfce7') >= 4.5)
+  const dashboard = read('src/pages/Dashboard.jsx')
+  assert.doesNotMatch(dashboard, /color: '#(?:6db8ff|9ca3af)'/)
+  assert.match(read('src/pages/Tasks.jsx'), /aria-pressed=\{isChecked\}/)
+  assert.match(read('src/pages/Tasks.jsx'), /color: isChecked \? 'var\(--club-ink\)'/)
+  assert.match(read('src/pages/MemberShell.jsx'), /background: '#FFB3C6', color: '#70243e'/)
+})
+
+test('admin actions and download links retain touch targets and success stays still', () => {
+  assert.match(read('src/pages/BlogStudio.css'), /\.bs-layout button\{[^}]*min-height:44px;min-width:44px/)
+  const publicCss = read('src/pages/BlogUi.css')
+  assert.match(publicCss, /\.blog-public \.blog-download a \{ min-height: 44px/)
+  assert.match(publicCss, /\.blog-home \.blog-showcase-dots \{ max-width: calc\(100% - 16px\)/)
+  const success = read('src/pages/Settings.jsx').split('{pwSuccess && (')[1].split('{pwError && (')[0]
+  assert.match(success, /role="status"/)
+  assert.doesNotMatch(success, /animate-pulse/)
+})

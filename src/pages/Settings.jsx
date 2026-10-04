@@ -549,8 +549,8 @@ export default function Settings({ currentUserProfile, lang = 'zh', onProfileUpd
         </h2>
 
         {pwSuccess && (
-          <div className="flex items-start gap-2.5 p-3.5 mb-4 rounded-2xl text-sm font-semibold animate-pulse"
-            style={{ background: '#dcfce7', border: '1.5px solid #86efac', color: '#16a34a' }}>
+          <div role="status" className="flex items-start gap-2.5 p-3.5 mb-4 rounded-2xl text-sm font-semibold"
+            style={{ background: '#dcfce7', border: '1.5px solid #86efac', color: '#166534' }}>
             <CheckCircle size={16} style={{ flexShrink: 0, marginTop: 2 }} />
             {pwSuccess}
           </div>

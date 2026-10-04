@@ -45,7 +45,7 @@
 .bs-heading{padding-bottom:24px;margin-bottom:28px;border-bottom:1px solid #e1ebf2}
 .bs-heading h1{font-size:27px;line-height:1.4;color:#284e69}
 .bs-heading>div>p{display:none}
-.bs-layout button{border-radius:var(--studio-radius)!important;min-height:42px;transition:background .18s,border-color .18s,box-shadow .18s}
+.bs-layout button{border-radius:var(--studio-radius)!important;min-height:44px;min-width:44px;touch-action:manipulation;transition:background .18s,border-color .18s,box-shadow .18s}
 .bs-layout button:active:not(:disabled){filter:brightness(.9);transition:none}
 .bs-layout .bs-primary{background:#cfe8ff!important;color:#215b82!important;border-color:#b2d7f4!important}
 .bs-layout .bs-primary:hover:not(:disabled){background:#bddfff!important;box-shadow:0 3px 10px #5b99c51a}
