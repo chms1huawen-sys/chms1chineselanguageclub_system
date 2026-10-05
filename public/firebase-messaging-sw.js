@@ -13,16 +13,17 @@ firebase.initializeApp({
 const messaging = firebase.messaging()
 
 const normalizeTargetUrl = (url = '/') => {
-  if (!url || url === '/') return '/#/'
+  if (!url || url === '/') return '/member#/'
   if (url.startsWith('http')) return url
-  if (url.startsWith('/#/')) return url
+  if (url.startsWith('/member#/')) return url
+  if (url.startsWith('/#/')) return '/member' + url.slice(1)
 
   const hashRoutes = {
-    '/tasks': '/#/tasks',
-    '/calendar': '/#/calendar',
-    '/leave': '/#/leave',
-    '/members': '/#/members',
-    '/settings': '/#/settings',
+    '/tasks': '/member#/tasks',
+    '/calendar': '/member#/calendar',
+    '/leave': '/member#/leave',
+    '/members': '/member#/members',
+    '/settings': '/member#/settings',
   }
 
   return hashRoutes[url] || url

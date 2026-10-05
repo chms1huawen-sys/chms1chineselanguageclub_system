@@ -16,8 +16,8 @@ export function memberNavigationTarget(href, origin) {
   try {
     const url = new URL(href, origin)
     // Only website entry links use this path; member deep links and admin routing stay unchanged.
-    if (url.origin !== origin || url.pathname !== '/' || url.search || !/^#\/(?:login(?:\?.*)?)?$/.test(url.hash)) return null
-    return url.pathname + url.hash
+    if (url.origin !== origin || !['/', '/member'].includes(url.pathname) || url.search || !/^#\/(?:login(?:\?.*)?)?$/.test(url.hash)) return null
+    return '/member' + url.hash
   } catch { return null }
 }
 

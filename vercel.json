@@ -1,7 +1,7 @@
 {
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
-  "functions": { "api/blog.js": { "includeFiles": "dist/index.html" } },
+  "functions": { "api/blog.js": { "includeFiles": "dist/{index.html,.vite/manifest.json}" } },
   "routes": [
     { "src": "^/.*$", "continue": true, "headers": {
       "X-Content-Type-Options": "nosniff",
@@ -11,7 +11,7 @@
       "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
       "Content-Security-Policy": "default-src 'self'; script-src 'self' https://www.gstatic.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' https: data: blob:; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://*.googleapis.com https://*.firebaseio.com wss://*.firebaseio.com; worker-src 'self' blob:; frame-src https://*.firebaseapp.com; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; upgrade-insecure-requests"
     } },
-    { "src": "^/blog-admin$", "dest": "/index.html", "headers": { "X-Robots-Tag": "noindex, nofollow" } },
+    { "src": "^/(blog-admin|member)/?$", "dest": "/index.html", "headers": { "X-Robots-Tag": "noindex, nofollow" } },
     { "src": "^/$", "dest": "/api/blog" },
     { "handle": "filesystem" },
     { "src": "^/(activities|literature|news|bookroom|about)/?$", "dest": "/api/blog?view=$1" },

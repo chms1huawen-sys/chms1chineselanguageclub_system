@@ -10,6 +10,11 @@ assert.equal(config.routes[root].dest, '/api/blog')
 const admin = config.routes.find(route => !route.continue && route.src && new RegExp(route.src).test('/blog-admin'))
 assert.equal(admin.dest, '/index.html')
 assert.equal(admin.headers['X-Robots-Tag'], 'noindex, nofollow')
+for (const path of ['/member', '/member/']) {
+  const route = config.routes.find(route => !route.continue && route.src && new RegExp(route.src).test(path))
+  assert.equal(route.dest, '/index.html')
+  assert.equal(route.headers['X-Robots-Tag'], 'noindex, nofollow')
+}
 for (const view of ['activities', 'literature', 'news', 'bookroom', 'about']) {
   const route = config.routes.find(route => !route.continue && route.src && new RegExp(route.src).test(`/${view}`))
   assert.equal(`/${view}`.replace(new RegExp(route.src), route.dest), `/api/blog?view=${view}`)

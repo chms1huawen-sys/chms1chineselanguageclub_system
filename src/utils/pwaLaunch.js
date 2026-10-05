@@ -2,9 +2,11 @@ export const isInstalledApp = () => window.matchMedia('(display-mode: standalone
 
 export function memberLaunchUrl(href, installed) {
   const url = new URL(href)
-  // Only repair the legacy root launch; deep links and explicit website visits keep their destination.
-  if (!installed || url.pathname !== '/' || url.hash || url.search) return null
-  url.hash = '/'
+  const legacy = url.pathname === '/' && (url.hash.startsWith('#/') || installed && !url.hash && !url.search)
+  const memberEntry = /^\/member\/?$/.test(url.pathname) && !url.hash
+  if (!legacy && !memberEntry) return null
+  url.pathname = '/member'
+  if (!url.hash) url.hash = '/'
   return url.href
 }
 

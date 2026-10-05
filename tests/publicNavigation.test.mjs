@@ -20,10 +20,10 @@ test('member home link clears hash with one soft navigation, including installed
 
 test('website and PWA home can enter members without a document reload', () => {
   for (const current of [{ pathname: '/blog/story', hash: '' }, { search: '?view=blog', hash: '' }, { hash: '' }]) {
-    assert.deepEqual(navigation('/#/', {}, navigateMemberLink, current), { handled: true, prevented: true, pushes: ['/#/'] })
+    assert.deepEqual(navigation('/#/', {}, navigateMemberLink, current), { handled: true, prevented: true, pushes: ['/member#/'] })
   }
   const login = '/#/login?return=%2Fblog%2Fstory'
-  assert.deepEqual(navigation(login, {}, navigateMemberLink, { hash: '' }), { handled: true, prevented: true, pushes: [login] })
+  assert.deepEqual(navigation(login, {}, navigateMemberLink, { hash: '' }), { handled: true, prevented: true, pushes: ['/member' + login.slice(1)] })
 })
 
 test('member navigation is limited to same-origin root and login entry links', () => {

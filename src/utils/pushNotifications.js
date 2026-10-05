@@ -1,20 +1,21 @@
 import { supabase } from '../supabaseClient'
 
 const HASH_ROUTE_MAP = {
-  '/finance': '/#/finance',
-  '/inventory': '/#/inventory',
-  '/tasks': '/#/tasks',
-  '/calendar': '/#/calendar',
-  '/leave': '/#/leave',
-  '/members': '/#/members',
-  '/settings': '/#/settings',
-  '/dashboard': '/#/dashboard',
+  '/finance': '/member#/finance',
+  '/inventory': '/member#/inventory',
+  '/tasks': '/member#/tasks',
+  '/calendar': '/member#/calendar',
+  '/leave': '/member#/leave',
+  '/members': '/member#/members',
+  '/settings': '/member#/settings',
+  '/dashboard': '/member#/dashboard',
 }
 
 const normalizeNotificationUrl = (url = '/') => {
-  if (!url || url === '/') return '/'
+  if (!url || url === '/') return '/member#/'
   if (url.startsWith('http')) return url
-  if (url.startsWith('/#/')) return url
+  if (url.startsWith('/member#/')) return url
+  if (url.startsWith('/#/')) return '/member' + url.slice(1)
   return HASH_ROUTE_MAP[url] || url
 }
 

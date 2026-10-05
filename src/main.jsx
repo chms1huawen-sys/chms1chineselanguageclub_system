@@ -6,6 +6,11 @@ import { prepareAppLaunch } from './utils/pwaLaunch'
 
 prepareAppLaunch()
 
+// Keep public SSR visible until its renderer is ready; member launches skip this download.
+if (!window.location.hash.startsWith('#/') && window.location.pathname !== '/blog-admin') {
+  await import('./pages/Blog')
+}
+
 createRoot(document.getElementById('root')).render(
   <StrictMode>
     <App />

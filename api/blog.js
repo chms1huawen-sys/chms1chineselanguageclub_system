@@ -3,6 +3,7 @@ import process from 'node:process'
 import { join } from 'node:path'
 import { createClient } from '@supabase/supabase-js'
 import { renderBlogHtml, siteOrigin } from '../server/blogSeo.js'
+import { withPublicStyles } from '../server/publicStyles.js'
 import { matchesPublicSearch } from '../src/utils/blogPresentation.js'
 import { postTags } from '../src/utils/blogContent.js'
 import { FEATURED_STORY_COUNT, MOMENT_COUNT } from '../src/utils/blogFeed.js'
@@ -13,7 +14,10 @@ export default async function handler(req, res) {
   res.setHeader('Cache-Control', 'no-store')
   if (!['GET', 'HEAD'].includes(req.method)) return res.status(405).end()
   try {
-    const template = readFileSync(join(process.cwd(), 'dist', 'index.html'), 'utf8')
+    const template = withPublicStyles(
+      readFileSync(join(process.cwd(), 'dist', 'index.html'), 'utf8'),
+      JSON.parse(readFileSync(join(process.cwd(), 'dist', '.vite', 'manifest.json'), 'utf8')),
+    )
     // Always use the anonymous key. Never forward the visitor session into SEO responses.
     const db = createClient(process.env.VITE_SUPABASE_URL, process.env.VITE_SUPABASE_ANON_KEY, { auth: { persistSession: false, autoRefreshToken: false } })
     const slug = String(req.query.slug || '')

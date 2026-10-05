@@ -2,18 +2,20 @@
     "name": "一中华文学会",
     "short_name": "CLC_sys",
     "description": "一中华文学会系统 (CLC_sys)",
-    "start_url": "/#/",
+    "id": "/",
+    "scope": "/",
+    "start_url": "/member#/",
     "display": "standalone",
     "background_color": "#ffffff",
     "theme_color": "#2563eb",
     "icons": [
         {
-            "src": "logo-192.png",
+            "src": "/logo-192.png",
             "sizes": "192x192",
             "type": "image/png"
         },
         {
-            "src": "logo-512.png",
+            "src": "/logo-512.png",
             "sizes": "512x512",
             "type": "image/png"
         }

@@ -1,21 +1,23 @@
 import { lazy, Suspense, useState, useEffect, useLayoutEffect, useRef, useEffectEvent } from 'react'
 import { supabase } from './supabaseClient'
 import { MEMBER_PROFILE_FIELDS } from './utils/memberProfile'
-const Login = lazy(() => import('./pages/Login'))
-import Blog from './pages/Blog'
+import { loadMemberShell, loadMemberLogin, preloadMemberEntry } from './utils/memberModules'
+const Login = lazy(loadMemberLogin)
+const Blog = lazy(() => import('./pages/Blog'))
 import BlogAnalyticsConsent from './components/BlogAnalyticsConsent'
 const BlogAdminShell = lazy(() => import('./pages/BlogAdminShell'))
 import { safeBlogReturn } from './utils/blog'
 import PageLoading from './components/PageLoading'
 import { showForegroundPush, withPushTimeout } from './utils/pushRuntime'
 import { navigateMemberLink, navigatePublicLink } from './utils/publicNavigation'
-const MemberShell = lazy(() => import('./pages/MemberShell'))
+const MemberShell = lazy(loadMemberShell)
 
 export default function App() {
   useLayoutEffect(() => {
     document.documentElement.removeAttribute('data-member-launch')
   }, [])
   const blogRedirecting = useRef(false)
+  const profileRequests = useRef(new Map())
   const [hash, setHash] = useState(window.location.hash)
   const [publicRoute, setPublicRoute] = useState(window.location.pathname + window.location.search)
   useEffect(() => {
@@ -91,6 +93,9 @@ export default function App() {
   const [lang, setLangState] = useState(() => localStorage.getItem('cls_lang') || 'zh')
   const memberSurface = hash.startsWith('#/')
   useEffect(() => {
+    if (memberSurface) preloadMemberEntry(hash).catch(error => console.warn('Member preload failed:', error.message))
+  }, [memberSurface, hash])
+  useEffect(() => {
     if (!memberSurface && window.location.pathname !== '/blog-admin') return
     const robots = document.createElement('meta')
     robots.name = 'robots'
@@ -140,7 +145,13 @@ export default function App() {
     }
   }
 
-  const syncFetchProfile = useEffectEvent((...args) => { return fetchProfile(...args) })
+  const syncFetchProfile = useEffectEvent(uid => {
+    if (!profileRequests.current.has(uid)) {
+      const request = fetchProfile(uid).finally(() => profileRequests.current.delete(uid))
+      profileRequests.current.set(uid, request)
+    }
+    return profileRequests.current.get(uid)
+  })
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -181,7 +192,7 @@ export default function App() {
   }
 
   if (window.location.pathname === '/blog-admin' || hash === '#/blog-management') return <Suspense fallback={<PageLoading lang={lang} fullPage />}><BlogAdminShell profile={profile} loading={loading} lang={lang} setLang={setLang} /></Suspense>
-  if (!memberSurface) return <><Blog key={publicRoute} profile={profile} lang={lang} setLang={setLang} /><BlogAnalyticsConsent lang={lang} /></>
+  if (!memberSurface) return <Suspense fallback={<PageLoading lang={lang} fullPage />}><Blog key={publicRoute} profile={profile} lang={lang} setLang={setLang} /><BlogAnalyticsConsent lang={lang} /></Suspense>
 
   if (loading || (user && profile && hash.startsWith('#/login?') && new URLSearchParams(hash.split('?')[1]).has('return'))) {
     return <PageLoading lang={lang} fullPage />

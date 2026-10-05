@@ -10,7 +10,7 @@ function launch(path, installed = false) {
   const attributes = new Map()
   runInNewContext(script, {
     URL,
-    window: { location: { href: 'https://club.example' + path }, navigator: {}, matchMedia: () => ({ matches: installed }) },
+    window: { location: { href: 'https://club.example' + path }, history: { replaceState() {} }, navigator: {}, matchMedia: () => ({ matches: installed }) },
     document: { documentElement: { setAttribute: (name, value) => attributes.set(name, value) } },
   })
   return attributes.has('data-member-launch')

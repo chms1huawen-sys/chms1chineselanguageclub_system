@@ -14,6 +14,6 @@ export async function showForegroundPush(payload, registration) {
     icon: '/logo-192.png',
     badge: '/logo-192.png',
     ...(data.notification_id ? { tag: data.notification_id } : {}),
-    data: { ...data, url: data.url || '/#/' },
+    data: { ...data, url: data.url || '/member#/' },
   })
 }
