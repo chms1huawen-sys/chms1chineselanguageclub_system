@@ -28,7 +28,7 @@ export default function BlogAnalyticsConsent({ lang = 'zh', disabled = false, al
     const timer = setTimeout(() => {
       if (document.visibilityState !== 'visible') return
       const payload = visitPayload(path)
-      if (payload) supabase.rpc('blog_record_visit', payload).then(() => {}).catch(() => {})
+      if (payload) supabase.functions.invoke('blog-visit', { body: payload }).then(() => {}).catch(() => {})
     }, 1200)
     return () => clearTimeout(timer)
   }, [choice, disabled, optedOut, path, allowLocal])
