@@ -14,7 +14,7 @@ revoke all on public.member_write_budget from public,anon,authenticated;
 
 create or replace function public.enforce_member_write_budget(p_scope text,p_units integer)
 returns void language plpgsql security definer set search_path='' as $$
-declare actor uuid:=auth.uid(); minute_now timestamptz; hour_now timestamptz;
+declare actor uuid:=auth.uid(); instant timestamptz; minute_now timestamptz; hour_now timestamptz;
   m integer; h integer; wait_seconds integer:=0;
 begin
   -- Cron/server writes have no end-user identity. Existing RLS still governs browser writes.
@@ -22,17 +22,18 @@ begin
   if p_scope is null or p_scope not in ('tasks','finance','inventory') or p_units is null or p_units<1 then
     raise exception 'MEMBER_WRITE_INPUT_INVALID';
   end if;
-  minute_now:=pg_catalog.date_trunc('minute',now());
-  hour_now:=pg_catalog.date_trunc('hour',now());
   perform pg_catalog.pg_advisory_xact_lock(pg_catalog.hashtextextended('member-write:'||actor::text||':'||p_scope,0));
+  instant:=pg_catalog.clock_timestamp();
+  minute_now:=pg_catalog.date_trunc('minute',instant);
+  hour_now:=pg_catalog.date_trunc('hour',instant);
   select case when minute_at=minute_now then minute_used else 0 end,
     case when hour_at=hour_now then hour_used else 0 end into m,h
     from public.member_write_budget where actor_id=actor and scope=p_scope;
   if coalesce(m,0)+p_units>60 then
-    wait_seconds:=greatest(1,ceil(extract(epoch from minute_now+interval '1 minute'-now()))::integer);
+    wait_seconds:=greatest(1,ceil(extract(epoch from minute_now+interval '1 minute'-instant))::integer);
   end if;
   if coalesce(h,0)+p_units>600 then
-    wait_seconds:=greatest(wait_seconds,ceil(extract(epoch from hour_now+interval '1 hour'-now()))::integer);
+    wait_seconds:=greatest(wait_seconds,ceil(extract(epoch from hour_now+interval '1 hour'-instant))::integer);
   end if;
   if wait_seconds>0 then
     raise exception 'MEMBER_WRITE_RATE_LIMIT' using errcode='PT429',
