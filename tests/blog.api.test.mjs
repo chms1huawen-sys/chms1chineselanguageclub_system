@@ -33,6 +33,13 @@ function response() {
   return { headers: {}, code: 200, body: '', setHeader(key, value) { this.headers[key] = value }, status(code) { this.code = code; return this }, send(body) { this.body = body; return this }, end() { return this }, redirect(code, target) { this.code = code; this.headers.Location = target; return this } }
 }
 try {
+  for (const path of [[], {}, ['10000000-0000-0000-0000-000000000001/20000000-0000-0000-0000-000000000001.jpg']]) {
+    const before = databaseRequests
+    const invalid = response()
+    await imageHandler({ method: 'GET', query: { path } }, invalid)
+    assert.equal(invalid.code, 400)
+    assert.equal(databaseRequests, before)
+  }
   for (const query of [{ q: ['a', 'b'] }, { q: 'a'.repeat(201) }, { slug: {} }]) {
     const before = databaseRequests
     const invalid = response()
