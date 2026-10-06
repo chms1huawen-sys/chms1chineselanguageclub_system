@@ -45,6 +45,8 @@ npx supabase db query --linked --project-ref xvzxewqeadppzsbczfak --file scripts
 
 上述为早期记录，安全修复与权限收尾已推进；最新实际状态见 [2026-10-06 上线收尾](LAUNCH_STATUS_2026_10_06.md)。不能把早期“暂缓”当成所有安全项目仍未执行。
 
+个别 Android 案例已按用户最新要求从待办移除；早期记录仅作历史，不再作为后续工作项。
+
 ## 线上快速检查
 
 ```powershell
