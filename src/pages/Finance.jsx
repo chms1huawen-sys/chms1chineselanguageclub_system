@@ -3,6 +3,7 @@ import { flushSync } from 'react-dom'
 import { Wallet, Plus, Settings, X, RefreshCw, Loader, ChevronLeft, ChevronRight, ExternalLink, Printer, Pencil } from 'lucide-react'
 import { supabase } from '../supabaseClient'
 import { secureUpload } from '../utils/secureUpload'
+import { memberWriteError } from '../utils/memberWriteError'
 import { hasPermission } from '../utils/permissions'
 import { sendPushForNotifications } from '../utils/pushNotifications'
 import './Inventory.css'
@@ -86,6 +87,8 @@ export default function Finance({ currentUserProfile: profile, lang = 'zh', noti
   const uploaded = useRef([])
 
   const explain = useCallback(err => {
+    const limited = memberWriteError(err, zh ? 'zh' : 'en')
+    if (limited) return limited
     const key = Object.keys(messages).find(key => err.message?.includes(key))
     if (key) return messages[key][zh ? 0 : 1]
     if (['42P01', 'PGRST200', 'PGRST202', 'PGRST205'].includes(err.code)) return zh ? '财政模块尚未安装，请先运行财政迁移 SQL。' : 'Finance setup is incomplete. Run the finance migration SQL.'

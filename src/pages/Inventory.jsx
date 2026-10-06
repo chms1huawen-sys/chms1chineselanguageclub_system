@@ -2,6 +2,7 @@ import { cloneElement, useCallback, useEffect, useId, useRef, useState } from 'r
 import { Package, Plus, Minus, ShoppingCart, Tag, Search, Pencil, X, RefreshCw, ChevronLeft, ChevronRight, Loader, ImagePlus, Settings } from 'lucide-react'
 import { supabase } from '../supabaseClient'
 import { secureUpload } from '../utils/secureUpload'
+import { memberWriteError } from '../utils/memberWriteError'
 import { hasPermission } from '../utils/permissions'
 import { sendPushForNotifications } from '../utils/pushNotifications'
 import './Inventory.css'
@@ -77,6 +78,8 @@ export default function Inventory({ currentUserProfile, lang = 'zh', notify, man
   const dialogRef = useRef(null)
 
   const explain = useCallback(err => {
+    const limited = memberWriteError(err, zh ? 'zh' : 'en')
+    if (limited) return limited
     const key = Object.keys(errors).find(key => err.message?.includes(key))
     if (key) return errors[key][zh ? 0 : 1]
     if (['42P01', 'PGRST200', 'PGRST202', 'PGRST205'].includes(err.code)) return zh ? '物品管理尚未安装或数据库结构未更新，请先运行物品管理迁移 SQL。' : 'Inventory setup is incomplete. Run the inventory migration SQL first.'

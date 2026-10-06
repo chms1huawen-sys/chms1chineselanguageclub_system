@@ -14,6 +14,7 @@ import { isExecutiveAccount, taskRosterOptions, taskRosterName } from '../utils/
 import UserAvatar from '../components/UserAvatar'
 import { canViewTaskPerformance, hasPermission } from '../utils/permissions'
 import { canModifyTask } from '../utils/taskOwnership'
+import { memberWriteError } from '../utils/memberWriteError'
 import {
   CheckSquare,
   Plus,
@@ -274,7 +275,7 @@ export default function Tasks({ currentUserProfile, lang, notify, comparisonOnly
       setSuccessMsg(_(`已根据账号管理建立 ${sessionLabel} 学会会员名单，共 ${rosterRows.length} 人。`, `${sessionLabel} club membership roster created (${rosterRows.length} members).`))
       fetchInitialData()
     } catch (err) {
-      setErrorMsg(err.message)
+      setErrorMsg(memberWriteError(err, lang) || err.message)
     } finally {
       setLoading(false)
     }
@@ -488,7 +489,7 @@ export default function Tasks({ currentUserProfile, lang, notify, comparisonOnly
       setShowCreateModal(false)
       fetchTasks(activeTeam.id)
     } catch (err) {
-      setErrorMsg(err.message)
+      setErrorMsg(memberWriteError(err, lang) || err.message)
     } finally {
       taskSaveLock.current = false
       setFormSubmitting(false)
@@ -558,7 +559,7 @@ export default function Tasks({ currentUserProfile, lang, notify, comparisonOnly
       setShowDetailModal(false)
       fetchTasks(activeTeam.id)
     } catch (err) {
-      setErrorMsg(err.message)
+      setErrorMsg(memberWriteError(err, lang) || err.message)
     }
   }
 
@@ -594,7 +595,7 @@ export default function Tasks({ currentUserProfile, lang, notify, comparisonOnly
         setSelectedTask(prev => ({ ...prev, ...statusPayload }))
       }
     } catch (err) {
-      setErrorMsg(err.message)
+      setErrorMsg(memberWriteError(err, lang) || err.message)
     }
   }
 
@@ -658,7 +659,7 @@ export default function Tasks({ currentUserProfile, lang, notify, comparisonOnly
       setNewCommentText('')
       fetchComments(selectedTask.id)
     } catch (err) {
-      setErrorMsg(err.message)
+      setErrorMsg(memberWriteError(err, lang) || err.message)
     } finally {
       setSubmittingComment(false)
     }
@@ -838,7 +839,7 @@ export default function Tasks({ currentUserProfile, lang, notify, comparisonOnly
             <button type="button" className="min-h-11 px-4 py-2 rounded-xl border border-red-200 text-red-800 text-sm font-bold self-start" onClick={async () => {
               if (!window.confirm(_('取消这个计划所有尚未发布的任务？已发布任务和表现记录会保留。','Cancel all future publications? Published tasks and performance records will remain.'))) return
               const result = await supabase.rpc('cancel_task_repeat_plan',{p_plan:plan.id})
-              if (result.error) setErrorMsg(result.error.message)
+              if (result.error) setErrorMsg(memberWriteError(result.error, lang) || result.error.message)
               else { setSuccessMsg(_('后续发布已取消。','Future publications cancelled.')); fetchTasks(activeTeam.id) }
             }}>{_('取消后续发布','Cancel future tasks')}</button>
           </div>

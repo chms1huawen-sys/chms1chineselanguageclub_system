@@ -2,6 +2,7 @@
 import { supabase } from '../supabaseClient'
 import { MEMBER_PROFILE_FIELDS } from '../utils/memberProfile'
 import { hasPermission } from '../utils/permissions'
+import { memberWriteError } from '../utils/memberWriteError'
 import {
   FolderGit,
   Plus,
@@ -440,7 +441,7 @@ export default function Committees({ currentUserProfile, lang, notify }) {
       fetchCommitteeDetails(selectedComm.id)
       fetchCommittees()
     } catch (err) {
-      setErrorMsg(err.message)
+      setErrorMsg(memberWriteError(err, lang) || err.message)
     } finally {
       setFormSubmitting(false)
     }
