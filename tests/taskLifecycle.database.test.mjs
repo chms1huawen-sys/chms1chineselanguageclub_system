@@ -1,6 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { readFile } from 'node:fs/promises'
+import { boundedRpcSQL } from './rpcInputBoundsFixture.mjs'
 const { PGlite }=await import(process.env.PGLITE_MODULE || '@electric-sql/pglite')
 test('scheduled publications, idempotency, cancellation, archival and access boundaries',async()=>{
   const db=new PGlite()
@@ -23,8 +24,12 @@ test('scheduled publications, idempotency, cancellation, archival and access bou
       select set_config('request.jwt.claim.sub','10000000-0000-0000-0000-000000000001',false);`)
     const sql=await readFile(new URL('../supabase_migration_2026_10_01_task_lifecycle.sql',import.meta.url),'utf8')
     await db.exec(sql);await db.exec(sql)
+    await db.exec(await boundedRpcSQL(['create_task_repeat_plan']))
     const create=`select create_task_repeat_plan('20000000-0000-0000-0000-000000000001','members','Weekly','Description',array['10000000-0000-0000-0000-000000000002'::uuid],'medium',now()+interval '1 hour',false,4,'20:00',2) as id`
     await db.exec('set role authenticated')
+    for (const invalid of [create.replace("'Weekly'", "repeat('x',301)"), create.replace("'Description'", "repeat('x',20001)"), create.replace('false,4', 'null,4'), create.replace("'20:00',2", "'20:00',13")]) {
+      await assert.rejects(db.query(invalid), /TASK_PLAN_INPUT_INVALID/)
+    }
     const plan=(await db.query(create)).rows[0].id
     await db.exec('reset role')
     assert.equal((await db.query('select count(*)::int n from tasks')).rows[0].n,0)

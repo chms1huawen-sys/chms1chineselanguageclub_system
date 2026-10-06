@@ -10,6 +10,7 @@
     "preview": "vite preview",
     "security:scan": "node scripts/security-secrets.mjs",
     "security:rpc-test": "node --test tests/securityRpcExposure.test.mjs tests/securityCommitteeHelpers.test.mjs",
+    "security:rpc-input-test": "node --test --test-concurrency=2 tests/finance.database.test.mjs tests/inventory.database.test.mjs tests/taskLifecycle.database.test.mjs tests/blog.culture.database.test.mjs",
     "security:upload-test": "node --test tests/securityUpload.test.mjs tests/securityUploadHandler.test.mjs tests/securityUploadPermissions.test.mjs",
     "security:test": "node --test tests/securitySignup.test.mjs tests/securityTaskUpdate.test.mjs tests/securityRateLimit.test.mjs tests/securityPushInput.test.mjs tests/securityHeaders.test.mjs tests/securitySecrets.test.mjs tests/securityMemberProfile.test.mjs tests/securityProfileRpc.test.mjs tests/securityAuthErrors.test.mjs tests/securityUpload.test.mjs tests/securityUploadPermissions.test.mjs tests/blog.richtext.test.mjs tests/blog.api.test.mjs tests/pushRequestAuth.test.mjs tests/pushRecipientAuth.test.mjs tests/vercelRouting.test.mjs"
   },

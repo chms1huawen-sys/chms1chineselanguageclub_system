@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict'
 import { readFile } from 'node:fs/promises'
+import { boundedRpcSQL } from './rpcInputBoundsFixture.mjs'
 const { PGlite } = await import(process.env.PGLITE_MODULE || '@electric-sql/pglite')
 const db = new PGlite()
 const teacher = '10000000-0000-0000-0000-000000000001'
@@ -47,18 +48,24 @@ try {
   const authorMigration = await sql('supabase_migration_2026_09_27_blog_authors.sql')
   await db.exec(authorMigration)
   await db.exec(authorMigration)
+  await db.exec(await boundedRpcSQL(['blog_save_post', 'blog_studio_save', 'blog_record_visit']))
   assert.deepEqual(await snapshot(), before, 'editor migration preserves existing records')
   assert.equal((await q('select count(*)::int as n from blog_albums'))[0].n, 2)
   assert.equal((await q('select count(*)::int as n from blog_media where album_id is not null'))[0].n, 0)
   assert.equal((await q('select post_id from blog_media where path=$1', [`${album.id}/picture.jpg`]))[0].post_id, album.id)
   assert.ok((await q('select related_ids from blog_posts where id=$1', [event.id]))[0].related_ids.includes(album.id))
   await as('anon')
+  assert.equal((await q('select blog_record_visit($1,$2,$3,$4,$5,$6) as accepted', [teacher, member, teacher, '/', '(direct)', null]))[0].accepted, false)
   assert.equal((await q('select id from blog_posts where id=$1', [hidden.id])).length, 0)
   assert.equal((await q("select * from storage.objects where name=$1", [`${hidden.id}/picture.jpg`])).length, 0)
   assert.equal((await q("select * from storage.objects where name=$1", [`${album.id}/picture.jpg`])).length, 1)
   await assert.rejects(q('select * from users'), /permission denied/)
   await as('authenticated', teacher)
   const tag = (await q("select * from blog_tags where name='Original'"))[0]
+  await assert.rejects(save({ title: 'Oversized', summary: 'x'.repeat(2097153) }), /RPC_INPUT_INVALID/)
+  await assert.rejects(save([]), /RPC_INPUT_INVALID/)
+  await assert.rejects(save({ title: 'Links' }, Array.from({ length: 31 }, () => ({ label: 'Link', url: 'https://example.test' }))), /RPC_INPUT_INVALID/)
+  await assert.rejects(q("select blog_save_post($1::jsonb,'')", [JSON.stringify({ title: 'Oversized', summary: 'x'.repeat(2097153) })]), /RPC_INPUT_INVALID/)
   assert.deepEqual((await q('select tag_ids from blog_posts where id=$1', [event.id]))[0].tag_ids, [tag.id])
   await q("update blog_tags set name='Renamed',icon='✍',color='#346789',position=2 where id=$1", [tag.id])
   const book = await save({ title: 'Book', slug: 'book', content_year: 2026, content_type: 'publication', status: 'published', tag_ids: [tag.id], book_details: { author: 'Author', price: 'RM 20', isbn: '123' } }, [{ label: 'Private album', url: 'https://example.test/private', visibility: 'member' }])

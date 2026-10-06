@@ -1,6 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { readFile } from 'node:fs/promises'
+import { boundedRpcSQL } from './rpcInputBoundsFixture.mjs'
 import { randomUUID } from 'node:crypto'
 const { PGlite } = await import(process.env.PGLITE_MODULE || '@electric-sql/pglite')
 
@@ -23,6 +24,8 @@ test('inventory transactions, role checks, privacy and stock conservation', asyn
     const sql = await readFile(new URL('../supabase_migration_2026_09_23_inventory.sql', import.meta.url), 'utf8')
     await db.exec(sql)
     await db.exec(sql)
+    await db.exec(await boundedRpcSQL(['inventory_mutate']))
+    await assert.rejects(db.query('select inventory_mutate($1,$2::jsonb)', ['item', JSON.stringify({ note: 'x'.repeat(262145) })]), /RPC_INPUT_INVALID/)
     const member = randomUUID(), other = randomUUID(), teacher = randomUUID(), president = randomUUID(), custom = randomUUID()
     for (const [id, name, role] of [[member,'Member','ordinary_member'],[other,'Other','ordinary_member'],[teacher,'Teacher','advisor_teacher'],[president,'President','chairperson'],[custom,'Custom','custom']]) {
       await db.query('insert into users(id,name,role) values($1,$2,$3)', [id,name,role])

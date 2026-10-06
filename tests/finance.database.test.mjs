@@ -2,6 +2,7 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { readFile } from 'node:fs/promises'
 import { randomUUID } from 'node:crypto'
+import { boundedRpcSQL } from './rpcInputBoundsFixture.mjs'
 const { PGlite } = await import(process.env.PGLITE_MODULE || '@electric-sql/pglite')
 
 test('finance approval stages, receipts privacy, decimal ledger and duplicate payments', async () => {
@@ -29,6 +30,8 @@ test('finance approval stages, receipts privacy, decimal ledger and duplicate pa
     await db.exec(formatSql); await db.exec(formatSql)
     const headingsSql = await readFile(new URL('../supabase_migration_2026_09_24_finance_report_headings.sql', import.meta.url), 'utf8')
     await db.exec(headingsSql); await db.exec(headingsSql)
+    await db.exec(await boundedRpcSQL(['finance_mutate', 'finance_record_income']))
+    await assert.rejects(db.query("select finance_mutate('submit',$1::jsonb)",[JSON.stringify({note:'x'.repeat(262145)})]), /RPC_INPUT_INVALID/)
     const [member,other,treasurer,president,teacher,custom] = Array.from({length:6},randomUUID)
     for (const [id,role] of [[member,'ordinary_member'],[other,'ordinary_member'],[treasurer,'treasurer'],[president,'chairperson'],[teacher,'advisor_teacher'],[custom,'custom']]) await db.query('insert into users(id,name,role) values($1,$2,$2)',[id,role])
     const as = async id => { await db.exec('reset role'); await db.query("select set_config('request.jwt.claim.sub',$1,false)",[id]); await db.exec('set role authenticated') }
