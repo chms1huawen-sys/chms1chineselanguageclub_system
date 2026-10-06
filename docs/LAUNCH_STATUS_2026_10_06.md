@@ -49,6 +49,8 @@
 
 Google Search Console 当前打开的是学校 Google 账号，未验证此网站；未擅自建立所有权绑定，等待确认管理账号。
 
+用户随后明确：Google 登记由用户手动完成，助手只提供说明；真实备份先跳过。这两项不再自动执行，也不标为已完成。
+
 ## 旧 RPC 权限收尾
 
 - 正式元数据审计读到 47 个 public SECURITY DEFINER 函数，均配置了 search_path。固定 search_path 不是完整权限正确性的证明。
