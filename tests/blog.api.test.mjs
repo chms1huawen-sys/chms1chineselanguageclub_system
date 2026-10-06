@@ -5,7 +5,9 @@ import sitemapHandler from '../api/sitemap.js'
 import imageHandler from '../api/blog-media.js'
 
 const post = { id: '1', slug: 'published', title: 'Published story', body: 'Real indexable article content.', summary: 'Summary', status: 'published', updated_at: '2026-09-25T00:00:00Z' }
+let databaseRequests = 0
 const mock = createServer((req, res) => {
+  databaseRequests++
   const url = new URL(req.url, 'http://localhost')
   assert.equal(req.headers.apikey, 'anonymous-test-key')
   res.setHeader('content-type', 'application/json')
@@ -31,6 +33,13 @@ function response() {
   return { headers: {}, code: 200, body: '', setHeader(key, value) { this.headers[key] = value }, status(code) { this.code = code; return this }, send(body) { this.body = body; return this }, end() { return this }, redirect(code, target) { this.code = code; this.headers.Location = target; return this } }
 }
 try {
+  for (const query of [{ q: ['a', 'b'] }, { q: 'a'.repeat(201) }, { slug: {} }]) {
+    const before = databaseRequests
+    const invalid = response()
+    await pageHandler({ method: 'GET', query }, invalid)
+    assert.equal(invalid.code, 400)
+    assert.equal(databaseRequests, before)
+  }
   let res = response()
   await pageHandler({ method: 'GET', query: { slug: 'published' } }, res)
   assert.equal(res.code, 200); assert.ok(res.body.includes('Real indexable article content.'))

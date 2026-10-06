@@ -31,3 +31,8 @@ dist-ssr
 !.env.example
 !.env.template
 test-results/
+
+# Database exports contain private member data and must never be published.
+backups/
+*.dump
+*.backup

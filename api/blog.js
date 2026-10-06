@@ -4,6 +4,7 @@ import { join } from 'node:path'
 import { createClient } from '@supabase/supabase-js'
 import { renderBlogHtml, siteOrigin } from '../server/blogSeo.js'
 import { withPublicStyles } from '../server/publicStyles.js'
+import { publicPageRequest } from '../server/publicRequest.js'
 import { matchesPublicSearch } from '../src/utils/blogPresentation.js'
 import { postTags } from '../src/utils/blogContent.js'
 import { FEATURED_STORY_COUNT, MOMENT_COUNT } from '../src/utils/blogFeed.js'
@@ -13,6 +14,15 @@ const feedFields = 'id,slug,title,author,summary,cover_path,featured,is_sticky,p
 export default async function handler(req, res) {
   res.setHeader('Cache-Control', 'no-store')
   if (!['GET', 'HEAD'].includes(req.method)) return res.status(405).end()
+  let request
+  try { request = publicPageRequest(req.query) }
+  catch {
+    res.setHeader('X-Robots-Tag', 'noindex')
+    return res.status(400).send('Invalid request')
+  }
+  const { slug, view, search } = request
+  if (!['home', 'activities', 'bookroom', 'about', 'literature', 'news'].includes(view)) return res.status(404).send('Not found')
+  if (slug && !/^[a-z0-9]+(-[a-z0-9]+)*$/.test(slug)) return res.status(404).send('Not found')
   try {
     const template = withPublicStyles(
       readFileSync(join(process.cwd(), 'dist', 'index.html'), 'utf8'),
@@ -20,11 +30,6 @@ export default async function handler(req, res) {
     )
     // Always use the anonymous key. Never forward the visitor session into SEO responses.
     const db = createClient(process.env.VITE_SUPABASE_URL, process.env.VITE_SUPABASE_ANON_KEY, { auth: { persistSession: false, autoRefreshToken: false } })
-    const slug = String(req.query.slug || '')
-    const search = !slug && (!req.query.view || ['blog', 'home'].includes(req.query.view)) ? String(req.query.q || '').trim().slice(0, 200) : ''
-    const view = req.query.view === 'blog' ? 'home' : String(req.query.view || 'home')
-    if (!['home', 'activities', 'bookroom', 'about', 'literature', 'news'].includes(view)) return res.status(404).send('Not found')
-    if (slug && !/^[a-z0-9]+(-[a-z0-9]+)*$/.test(slug)) return res.status(404).send('Not found')
     const started = performance.now()
     const publishDue = () => db.rpc('blog_publish_due').then(result => { if (result.error) throw result.error })
     const siteQuery = db.from('blog_settings').select('*').eq('id', 1).single()

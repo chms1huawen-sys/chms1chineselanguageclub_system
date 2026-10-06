@@ -42,3 +42,13 @@ npx supabase db query --linked --project-ref xvzxewqeadppzsbczfak --file scripts
 ## 尚未执行
 
 安全清单、个别 Android 手机排查、正式域名、Google Search Console 注册、备份恢复方案及后端迁移仍按此前要求暂缓。没有付费升级，也没有设置自动流量监测通知。
+
+上述为早期记录，安全修复与权限收尾已推进；最新实际状态见 [2026-10-06 上线收尾](LAUNCH_STATUS_2026_10_06.md)。不能把早期“暂缓”当成所有安全项目仍未执行。
+
+## 线上快速检查
+
+```powershell
+node scripts/check-production.mjs
+```
+
+这项检查只访问五个公开网址，不登录、不发推送、不修改会员数据。sitemap 和公开页面的既有逻辑可能发布已经到时的文章。退出码为零且每项 errors 为空代表这些有限检查通过，不代表完整安全审计、手机送达、自动告警或备份完成。
