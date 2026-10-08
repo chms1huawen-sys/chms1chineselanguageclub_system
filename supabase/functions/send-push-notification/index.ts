@@ -4,6 +4,7 @@ import { fetchWithRetry } from './retry.js'
 import { authorizePushRequest } from './requestAuth.js'
 import { authorizeNotificationBatch } from './recipientAuth.js'
 import { pushCors, readPushPayload } from './input.js'
+import { buildFcmMessage } from './message.js'
 
 type ServiceAccount = {
   client_email: string
@@ -129,29 +130,7 @@ const sendFcmNotification = async (
       Authorization: `Bearer ${accessToken}`,
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify({
-      message: {
-        token: fcmToken,
-        notification: {
-          title: notification.title,
-          body: notification.body,
-        },
-        data: {
-          type: notification.type,
-          notification_id: notification.id,
-          dedupe_key: notification.dedupe_key || '',
-          url,
-        },
-        webpush: {
-          fcm_options: { link: linkUrl },
-          notification: {
-            icon: '/logo-192.png',
-            badge: '/logo-192.png',
-            tag: notification.id,
-          },
-        },
-      },
-    }),
+    body: JSON.stringify(buildFcmMessage(notification, fcmToken, url, linkUrl)),
   })
 
   if (!response.ok) {
