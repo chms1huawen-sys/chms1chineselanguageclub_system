@@ -13,7 +13,7 @@ import { useRef } from 'react'
 import { isExecutiveAccount, taskRosterOptions, taskRosterName } from '../utils/taskRosters'
 import UserAvatar from '../components/UserAvatar'
 import { canViewTaskPerformance, hasPermission } from '../utils/permissions'
-import { canModifyTask } from '../utils/taskOwnership'
+import { canDeleteTask, canModifyTask, canSuperviseTasks, canUpdateTaskStatus } from '../utils/taskOwnership'
 import { memberWriteError } from '../utils/memberWriteError'
 import { taskCommentNotifications } from '../utils/taskCommentNotifications'
 import {
@@ -130,7 +130,7 @@ export default function Tasks({ currentUserProfile, lang, notify, comparisonOnly
   })
   const [formSubmitting, setFormSubmitting] = useState(false)
 
-  const isPowerUser = hasPermission(currentUserProfile, 'can_create_tasks')
+  const isPowerUser = hasPermission(currentUserProfile, 'can_create_tasks') || canSuperviseTasks(currentUserProfile)
   const canViewPerformance = canViewTaskPerformance(currentUserProfile)
 
   const notifySuccessMsg = useEffectEvent(() => {
@@ -438,7 +438,7 @@ export default function Tasks({ currentUserProfile, lang, notify, comparisonOnly
     e.preventDefault()
     if (!activeTeam || taskSaveLock.current) return
     if (isEditing && !canModifyTask(selectedTask, currentUserProfile)) {
-      setErrorMsg(_('只有发布者可以修改任务详情。', 'Only the publisher can edit task details.'))
+      setErrorMsg(_('只有发布者、主席及老师可以修改任务详情。', 'Only the publisher, chairperson and teachers can edit task details.'))
       return
     }
     taskSaveLock.current = true
@@ -457,7 +457,6 @@ export default function Tasks({ currentUserProfile, lang, notify, comparisonOnly
           .from('tasks')
           .update(payload)
           .eq('id', selectedTask.id)
-          .eq('created_by', currentUserProfile.id)
           .select('id')
           .single()
         
@@ -540,7 +539,7 @@ export default function Tasks({ currentUserProfile, lang, notify, comparisonOnly
 
   const handleDeleteTask = async (taskId) => {
     const task = tasks.find(item => item.id === taskId) || (selectedTask?.id === taskId ? selectedTask : null)
-    if (!canModifyTask(task, currentUserProfile)) {
+    if (!canDeleteTask(task, currentUserProfile)) {
       setErrorMsg(_('只有发布者可以删除任务。', 'Only the publisher can delete a task.'))
       return
     }
@@ -566,6 +565,7 @@ export default function Tasks({ currentUserProfile, lang, notify, comparisonOnly
   }
 
   const handleUpdateStatus = async (task, newStatus) => {
+    if (!canUpdateTaskStatus(task, currentUserProfile)) return
     if (task.status === newStatus) return
     setErrorMsg('')
     try {
@@ -659,14 +659,11 @@ export default function Tasks({ currentUserProfile, lang, notify, comparisonOnly
       setNewCommentText('')
       fetchComments(task.id)
       if (!await savedTaskDelivery(async () => {
-        const { data: conversation, error: audienceError } = await supabase
-          .from('task_comments').select('user_id').eq('task_id', task.id)
-        if (audienceError) throw audienceError
-        const rows = taskCommentNotifications(task, comment, currentUserProfile, lang, conversation || [])
-        if (!rows.length) return
         const { data: activeRecipients, error: recipientsError } = await supabase
-          .from('users').select('id').eq('is_active', true).in('id', rows.map(row => row.user_id))
+          .from('users').select('id,role,is_active').eq('is_active', true)
         if (recipientsError) throw recipientsError
+        const rows = taskCommentNotifications(task, comment, currentUserProfile, lang, activeRecipients || [])
+        if (!rows.length) return
         const activeIds = new Set((activeRecipients || []).map(user => user.id))
         return insertNotifications(rows.filter(row => activeIds.has(row.user_id)))
       })) {
@@ -1249,10 +1246,11 @@ export default function Tasks({ currentUserProfile, lang, notify, comparisonOnly
                 <div className="p-3.5 rounded-2xl bg-[#f0f7ff] border border-[#e0f1ff] space-y-1">
                   <span className="text-[10px] font-black text-gray-400 block uppercase">{_('状态', 'Status')}</span>
                   
-                  {/* Status Dropdown selector for everyone who has access */}
+                  {/* Reading a task does not grant permission to change its progress. */}
                   <div className="relative">
                     <select
                       value={selectedTask.status}
+                      disabled={!canUpdateTaskStatus(selectedTask, currentUserProfile)}
                       onChange={(e) => handleUpdateStatus(selectedTask, e.target.value)}
                       className="appearance-none pr-8 pl-0.5 py-0.5 text-xs font-black rounded-lg bg-transparent text-gray-800 transition outline-none cursor-pointer"
                     >
@@ -1276,7 +1274,7 @@ export default function Tasks({ currentUserProfile, lang, notify, comparisonOnly
                 </p>
               </div>
 
-              {/* Editing and deletion belong to the original publisher, not all task managers. */}
+              {/* Supervisors may edit; only the original publisher may delete. */}
               {canModifyTask(selectedTask, currentUserProfile) && (
                 <div className="flex gap-2 justify-end" style={{ borderBottom: '1.5px solid #f0f7ff', paddingBottom: '16px' }}>
                   <button
@@ -1286,13 +1284,13 @@ export default function Tasks({ currentUserProfile, lang, notify, comparisonOnly
                     <Edit2 size={12} />
                     {_('修改详情', 'Edit')}
                   </button>
-                  <button
+                  {canDeleteTask(selectedTask, currentUserProfile) && <button
                     onClick={() => handleDeleteTask(selectedTask.id)}
                     className="flex items-center gap-1 px-3.5 py-2 rounded-xl text-xs font-black border border-red-200 bg-red-50 text-red-600 hover:bg-red-100 transition cursor-pointer"
                   >
                     <Trash2 size={12} />
                     {_('删除任务', 'Delete')}
-                  </button>
+                  </button>}
                 </div>
               )}
 

@@ -1,4 +1,5 @@
 import { hasPermission } from '../../../src/utils/permissions.js'
+import { canSuperviseTasks } from '../../../src/utils/taskOwnership.js'
 
 const completionRoles = ['convener_teacher', 'advisor_teacher', 'chairperson', 'vice_chairperson']
 const boardRoles = ['convener_teacher', 'advisor_teacher', 'advisor', 'chairperson', 'vice_chairperson', 'secretary', 'vice_secretary', 'treasurer', 'vice_treasurer', 'general_affairs', 'vice_general_affairs', 'activity_lead', 'vice_activity_lead', 'activity_member', 'media_lead', 'vice_media_lead', 'social_media_editor']
@@ -37,15 +38,8 @@ export async function authorizeNotificationBatch(client, profile, notifications,
       const task = comment && await source('tasks', comment.task_id)
       if (!task || task.archived_at || comment.user_id !== profile.id || row.user_id === profile.id) return false
       const participants = [task.created_by, ...(task.assigned_to || [])]
-      if (!participants.includes(row.user_id)) {
-        const cacheKey = `task-commenters:${task.id}`
-        if (!sourceCache.has(cacheKey)) {
-          const result = await client.from('task_comments').select('user_id').eq('task_id', task.id)
-          sourceCache.set(cacheKey, result.error ? [] : result.data || [])
-        }
-        if (!sourceCache.get(cacheKey).some(item => item.user_id === row.user_id)) return false
-      }
-      if (!participants.includes(profile.id) && !hasPermission(profile, 'can_manage_accounts')) return false
+      if (!participants.includes(row.user_id) && !canSuperviseTasks(recipient)) return false
+      if (!participants.includes(profile.id) && !canSuperviseTasks(profile)) return false
       // Notification copy is derived from the saved comment, never trusted from the browser.
       row.title = `任务有新留言：${task.title}`.slice(0, 300)
       row.body = `${profile.name || '成员'}：${comment.content}`.slice(0, 4000)
@@ -53,7 +47,7 @@ export async function authorizeNotificationBatch(client, profile, notifications,
       const match = row.dedupe_key?.match(new RegExp(`^task-(?:assigned|completed|status)-(${uuid})-${row.user_id}(?:-\\d+)?$`, 'i'))
       const task = match && await source('tasks', match[1])
       if (!task) return false
-      const manages = hasPermission(profile, 'can_manage_accounts') || hasPermission(profile, 'can_create_tasks') && task.created_by === profile.id
+      const manages = canSuperviseTasks(profile) || hasPermission(profile, 'can_create_tasks') && task.created_by === profile.id
       if (row.type === 'task_assigned') {
         if (!manages || !task.assigned_to?.includes(row.user_id)) return false
       } else {

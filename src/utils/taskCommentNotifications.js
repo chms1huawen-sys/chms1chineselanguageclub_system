@@ -1,5 +1,7 @@
-export function taskCommentNotifications(task, comment, actor, lang = 'zh', conversation = []) {
-  const recipients = [...new Set([task.created_by, ...(task.assigned_to || []), ...conversation.map(row => row.user_id)])]
+import { canSuperviseTasks } from './taskOwnership.js'
+
+export function taskCommentNotifications(task, comment, actor, lang = 'zh', users = []) {
+  const recipients = [...new Set([task.created_by, ...(task.assigned_to || []), ...users.filter(canSuperviseTasks).map(user => user.id)])]
     .filter(id => id && id !== actor.id)
   return recipients.map(userId => ({
     user_id: userId,

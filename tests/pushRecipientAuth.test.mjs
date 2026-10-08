@@ -55,14 +55,23 @@ test('comment notifications require a saved comment by the caller and task parti
   assert.equal(await authorizeNotificationBatch(client({ ...tables, tasks: [{ id: sourceId, created_by: recipient, assigned_to: [actor] }] }), member, [row('task_commented', 'task-comment', other)], []), false)
 })
 
-test('comment replies may reach a real previous commenter but not an unrelated member', async () => {
+test('previous commenting alone does not grant membership in the new notification audience', async () => {
   const tables = { users, tasks: [{ id: sourceId, created_by: recipient, assigned_to: [actor] }], task_comments: [
     { id: sourceId, task_id: sourceId, user_id: actor, content: 'Reply' },
     { id: 'previous-comment', task_id: sourceId, user_id: other, content: 'Question' },
   ] }
-  assert.equal(await authorizeNotificationBatch(client(tables), member, [row('task_commented', 'task-comment', other)], []), true)
+  assert.equal(await authorizeNotificationBatch(client(tables), member, [row('task_commented', 'task-comment', other)], []), false)
   tables.task_comments[1].task_id = 'different-task'
   assert.equal(await authorizeNotificationBatch(client(tables), member, [row('task_commented', 'task-comment', other)], []), false)
+})
+
+test('comment audience includes active chairperson and teachers but not vice chairperson', async () => {
+  for (const role of ['chairperson', 'convener_teacher', 'advisor_teacher', 'advisor', 'vice_chairperson']) {
+    const tables = { users: [member, { id: recipient, role, is_active: true }], tasks: [{ id: sourceId, created_by: actor, assigned_to: [] }], task_comments: [{ id: sourceId, task_id: sourceId, user_id: actor, content: 'Saved' }] }
+    assert.equal(await authorizeNotificationBatch(client(tables), member, [row('task_commented', 'task-comment')], []), role !== 'vice_chairperson')
+    tables.tasks[0].created_by = other
+    assert.equal(await authorizeNotificationBatch(client(tables), { ...member, role }, [row('task_commented', 'task-comment')], []), role !== 'vice_chairperson')
+  }
 })
 
 test('leave notifications belong to the applicant and go only to leave reviewers', async () => {

@@ -12,9 +12,10 @@ test('comments notify the creator and other assignees, once each, excluding the 
   assert.equal(taskCommentNotifications({ created_by: 'creator' }, comment, { id: 'creator' }).length, 0)
 })
 
-test('replies also notify previous commenters, excluding the sender and duplicate participants', () => {
+test('all active chairpersons and teachers receive comments; vice chairpersons and unrelated commenters do not', () => {
   const task = { created_by: 'creator', assigned_to: ['a'], title: 'Task' }
-  const conversation = [{ user_id: 'previous-commenter' }, { user_id: 'previous-commenter' }, { user_id: 'a' }]
-  const rows = taskCommentNotifications(task, { id: 'new-comment', content: 'Reply' }, { id: 'a' }, 'zh', conversation)
-  assert.deepEqual(rows.map(row => row.user_id), ['creator', 'previous-commenter'])
+  const users = ['chairperson', 'convener_teacher', 'advisor_teacher', 'advisor', 'vice_chairperson', 'secretary'].map(role => ({ id: role, role, is_active: true }))
+  users.push({ id: 'inactive', role: 'chairperson', is_active: false }, { id: 'a', role: 'chairperson', is_active: true })
+  const rows = taskCommentNotifications(task, { id: 'new-comment', content: 'Reply' }, { id: 'a' }, 'zh', users)
+  assert.deepEqual(rows.map(row => row.user_id), ['creator', 'chairperson', 'convener_teacher', 'advisor_teacher', 'advisor'])
 })
