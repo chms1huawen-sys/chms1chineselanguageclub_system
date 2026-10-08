@@ -55,6 +55,16 @@ test('comment notifications require a saved comment by the caller and task parti
   assert.equal(await authorizeNotificationBatch(client({ ...tables, tasks: [{ id: sourceId, created_by: recipient, assigned_to: [actor] }] }), member, [row('task_commented', 'task-comment', other)], []), false)
 })
 
+test('comment replies may reach a real previous commenter but not an unrelated member', async () => {
+  const tables = { users, tasks: [{ id: sourceId, created_by: recipient, assigned_to: [actor] }], task_comments: [
+    { id: sourceId, task_id: sourceId, user_id: actor, content: 'Reply' },
+    { id: 'previous-comment', task_id: sourceId, user_id: other, content: 'Question' },
+  ] }
+  assert.equal(await authorizeNotificationBatch(client(tables), member, [row('task_commented', 'task-comment', other)], []), true)
+  tables.task_comments[1].task_id = 'different-task'
+  assert.equal(await authorizeNotificationBatch(client(tables), member, [row('task_commented', 'task-comment', other)], []), false)
+})
+
 test('leave notifications belong to the applicant and go only to leave reviewers', async () => {
   const db = client({ users, leave_applications: [{ id: sourceId, user_id: actor }] })
   assert.equal(await authorizeNotificationBatch(db, member, [row('leave_application_submitted', 'leave', other)], []), true)

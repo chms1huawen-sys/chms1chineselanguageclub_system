@@ -1,5 +1,5 @@
-export function taskCommentNotifications(task, comment, actor, lang = 'zh') {
-  const recipients = [...new Set([task.created_by, ...(task.assigned_to || [])])]
+export function taskCommentNotifications(task, comment, actor, lang = 'zh', conversation = []) {
+  const recipients = [...new Set([task.created_by, ...(task.assigned_to || []), ...conversation.map(row => row.user_id)])]
     .filter(id => id && id !== actor.id)
   return recipients.map(userId => ({
     user_id: userId,

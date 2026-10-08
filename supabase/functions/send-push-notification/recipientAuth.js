@@ -37,7 +37,14 @@ export async function authorizeNotificationBatch(client, profile, notifications,
       const task = comment && await source('tasks', comment.task_id)
       if (!task || task.archived_at || comment.user_id !== profile.id || row.user_id === profile.id) return false
       const participants = [task.created_by, ...(task.assigned_to || [])]
-      if (!participants.includes(row.user_id)) return false
+      if (!participants.includes(row.user_id)) {
+        const cacheKey = `task-commenters:${task.id}`
+        if (!sourceCache.has(cacheKey)) {
+          const result = await client.from('task_comments').select('user_id').eq('task_id', task.id)
+          sourceCache.set(cacheKey, result.error ? [] : result.data || [])
+        }
+        if (!sourceCache.get(cacheKey).some(item => item.user_id === row.user_id)) return false
+      }
       if (!participants.includes(profile.id) && !hasPermission(profile, 'can_manage_accounts')) return false
       // Notification copy is derived from the saved comment, never trusted from the browser.
       row.title = `任务有新留言：${task.title}`.slice(0, 300)

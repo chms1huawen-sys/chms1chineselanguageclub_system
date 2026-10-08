@@ -658,7 +658,18 @@ export default function Tasks({ currentUserProfile, lang, notify, comparisonOnly
       if (error) throw error
       setNewCommentText('')
       fetchComments(task.id)
-      if (!await savedTaskDelivery(() => insertNotifications(taskCommentNotifications(task, comment, currentUserProfile, lang)))) {
+      if (!await savedTaskDelivery(async () => {
+        const { data: conversation, error: audienceError } = await supabase
+          .from('task_comments').select('user_id').eq('task_id', task.id)
+        if (audienceError) throw audienceError
+        const rows = taskCommentNotifications(task, comment, currentUserProfile, lang, conversation || [])
+        if (!rows.length) return
+        const { data: activeRecipients, error: recipientsError } = await supabase
+          .from('users').select('id').eq('is_active', true).in('id', rows.map(row => row.user_id))
+        if (recipientsError) throw recipientsError
+        const activeIds = new Set((activeRecipients || []).map(user => user.id))
+        return insertNotifications(rows.filter(row => activeIds.has(row.user_id)))
+      })) {
         notify?.({ type: 'error', title: _('留言已保存', 'Comment saved'), message: _('通知发送未成功，请勿重复提交留言。', 'Notification delivery failed. Do not submit the comment again.') })
       }
     } catch (err) {
