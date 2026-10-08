@@ -692,11 +692,11 @@ export default function Dashboard({ currentUserProfile, lang = 'zh', onShowTutor
                         </span>
                         {canPublishAnnouncements && (
                           <div className="flex items-center gap-1">
-                            <button type="button" onClick={() => openEditAnnouncementModal(item)} className="p-1.5 rounded-full" style={{ background: 'white', color: 'var(--club-focus)', border: '1.5px solid #e0f1ff' }} title={lang === 'zh' ? '修改公告' : 'Edit announcement'}>
-                              <Pencil size={12} />
+                            <button type="button" onClick={() => openEditAnnouncementModal(item)} className="announcement-icon-action" aria-label={lang === 'zh' ? '修改公告' : 'Edit announcement'} title={lang === 'zh' ? '修改公告' : 'Edit announcement'}>
+                              <Pencil size={18} aria-hidden="true" />
                             </button>
-                            <button type="button" onClick={() => handleDeleteAnnouncement(item)} className="p-1.5 rounded-full" style={{ background: 'white', color: '#ef4444', border: '1.5px solid #fee2e2' }} title={lang === 'zh' ? '删除公告' : 'Delete announcement'}>
-                              <Trash2 size={12} />
+                            <button type="button" onClick={() => handleDeleteAnnouncement(item)} className="announcement-icon-action announcement-icon-danger" aria-label={lang === 'zh' ? '删除公告' : 'Delete announcement'} title={lang === 'zh' ? '删除公告' : 'Delete announcement'}>
+                              <Trash2 size={18} aria-hidden="true" />
                             </button>
                           </div>
                         )}

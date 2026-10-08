@@ -31,6 +31,17 @@ export async function authorizeNotificationBatch(client, profile, notifications,
         const result = await client.from('team_members').select('user_id').eq('team_id', announcement.target_team_id).eq('user_id', row.user_id).maybeSingle()
         if (result.error || !result.data) return false
       }
+    } else if (row.type === 'task_commented') {
+      const match = row.dedupe_key?.match(new RegExp(`^task-comment-(${uuid})-${row.user_id}$`, 'i'))
+      const comment = match && await source('task_comments', match[1])
+      const task = comment && await source('tasks', comment.task_id)
+      if (!task || task.archived_at || comment.user_id !== profile.id || row.user_id === profile.id) return false
+      const participants = [task.created_by, ...(task.assigned_to || [])]
+      if (!participants.includes(row.user_id)) return false
+      if (!participants.includes(profile.id) && !hasPermission(profile, 'can_manage_accounts')) return false
+      // Notification copy is derived from the saved comment, never trusted from the browser.
+      row.title = `任务有新留言：${task.title}`.slice(0, 300)
+      row.body = `${profile.name || '成员'}：${comment.content}`.slice(0, 4000)
     } else if (['task_assigned', 'task_completed', 'task_status_updated'].includes(row.type)) {
       const match = row.dedupe_key?.match(new RegExp(`^task-(?:assigned|completed|status)-(${uuid})-${row.user_id}(?:-\\d+)?$`, 'i'))
       const task = match && await source('tasks', match[1])

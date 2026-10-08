@@ -15,6 +15,7 @@ import UserAvatar from '../components/UserAvatar'
 import { canViewTaskPerformance, hasPermission } from '../utils/permissions'
 import { canModifyTask } from '../utils/taskOwnership'
 import { memberWriteError } from '../utils/memberWriteError'
+import { taskCommentNotifications } from '../utils/taskCommentNotifications'
 import {
   CheckSquare,
   Plus,
@@ -110,6 +111,7 @@ export default function Tasks({ currentUserProfile, lang, notify, comparisonOnly
   const [comments, setComments] = useState([])
   const [newCommentText, setNewCommentText] = useState('')
   const [submittingComment, setSubmittingComment] = useState(false)
+  const commentSubmitting = useRef(false)
 
   // Task form state
   const [formData, setFormData] = useState({
@@ -638,29 +640,31 @@ export default function Tasks({ currentUserProfile, lang, notify, comparisonOnly
 
   const handleAddComment = async (e) => {
     e.preventDefault()
-    if (!newCommentText.trim() || !selectedTask) return
+    if (!newCommentText.trim() || !selectedTask || commentSubmitting.current) return
+    commentSubmitting.current = true
     setSubmittingComment(true)
+    const task = selectedTask
     try {
-      const { error } = await supabase
+      const { data: comment, error } = await supabase
         .from('task_comments')
         .insert({
-          task_id: selectedTask.id,
+          task_id: task.id,
           user_id: currentUserProfile.id,
           content: newCommentText.trim()
         })
+        .select('id,content')
+        .single()
 
       if (error) throw error
-      await notifyTaskCreator(
-        selectedTask,
-        'task_commented',
-        _('任务有新留言：', 'New comment on: ') + selectedTask.title,
-        (currentUserProfile?.name || _('成员', 'Member')) + '：' + newCommentText.trim()
-      )
       setNewCommentText('')
-      fetchComments(selectedTask.id)
+      fetchComments(task.id)
+      if (!await savedTaskDelivery(() => insertNotifications(taskCommentNotifications(task, comment, currentUserProfile, lang)))) {
+        notify?.({ type: 'error', title: _('留言已保存', 'Comment saved'), message: _('通知发送未成功，请勿重复提交留言。', 'Notification delivery failed. Do not submit the comment again.') })
+      }
     } catch (err) {
       setErrorMsg(memberWriteError(err, lang) || err.message)
     } finally {
+      commentSubmitting.current = false
       setSubmittingComment(false)
     }
   }
@@ -1329,16 +1333,17 @@ export default function Tasks({ currentUserProfile, lang, notify, comparisonOnly
                     value={newCommentText}
                     onChange={(e) => setNewCommentText(e.target.value)}
                     placeholder={_('输入最新进展或提问，按下回车发送...', 'Type your update and press Enter to send...')}
-                    className="flex-1 px-4 py-2.5 text-xs outline-none transition"
+                    className="flex-1 min-w-0 px-4 py-2.5 text-xs outline-none transition"
                     style={{ ...inputStyle, borderRadius: 20 }}
                   />
                   <button
                     type="submit"
                     disabled={submittingComment || !newCommentText.trim()}
-                    className="px-4 rounded-full text-xs font-black bg-[#95CBFF] text-white flex items-center justify-center gap-1 transition cursor-pointer select-none"
-                    style={{ opacity: submittingComment ? 0.7 : 1 }}
+                    className="task-comment-send"
+                    aria-label={_('发送留言', 'Send comment')}
+                    title={_('发送留言', 'Send comment')}
                   >
-                    {_('发送', 'Send')} <ArrowRight size={12} />
+                    {submittingComment ? <Loader size={18} className="animate-spin" aria-hidden="true" /> : <ArrowRight size={18} aria-hidden="true" />}
                   </button>
                 </form>
               </div>

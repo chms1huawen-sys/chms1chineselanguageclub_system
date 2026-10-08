@@ -27,6 +27,18 @@
 .member-ui .member-calendar-day { min-height: 44px; min-width: 0; width: 100%; }
 .member-ui .member-close { display: inline-grid; place-items: center; }
 .member-ui .member-notification-action { font-size: .8125rem; padding: 8px 12px; }
+.member-ui :is(.announcement-icon-action, .task-comment-send) {
+  display: inline-grid; place-items: center; flex: 0 0 44px;
+  width: 44px; height: 44px; padding: 0; border-radius: 12px;
+  border: 1px solid #c7deed; background: #fff; color: #28566b; cursor: pointer;
+}
+.member-ui :is(.announcement-icon-action, .task-comment-send) svg { display: block; }
+.member-ui .announcement-icon-action:hover { background: #e8f4ff; border-color: #8fbbd7; }
+.member-ui .announcement-icon-danger { color: #b4233b; border-color: #f0ccd4; background: #fff8fa; }
+.member-ui .announcement-icon-danger:hover { background: #ffe7ed; border-color: #df9aaa; }
+.member-ui .task-comment-send { background: #95cbff; border-color: #95cbff; align-self: center; }
+.member-ui .task-comment-send:hover:not(:disabled) { background: #7dbcf8; }
+.member-ui .task-comment-send:disabled { opacity: .5; cursor: not-allowed; }
 @media (max-width: 700px) {
   .member-ui :is(input:not([type=checkbox]):not([type=radio]), select, textarea) { font-size: 1rem !important; }
   .member-ui .member-calendar-panel { padding: 12px; }

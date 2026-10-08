@@ -40,6 +40,21 @@ test('announcement audience cannot be expanded beyond its saved target', async (
   assert.equal(await authorizeNotificationBatch(db, member, [row('announcement', 'announcement')], []), false)
 })
 
+test('comment notifications require a saved comment by the caller and task participants', async () => {
+  const tables = { users, tasks: [{ id: sourceId, created_by: recipient, assigned_to: [actor, other] }], task_comments: [{ id: sourceId, task_id: sourceId, user_id: actor, content: 'Saved update' }] }
+  const notification = () => row('task_commented', 'task-comment')
+  const copy = notification()
+  assert.equal(await authorizeNotificationBatch(client(tables), member, [copy], []), true)
+  assert.match(copy.body, /Saved update/)
+  assert.equal(await authorizeNotificationBatch(client(tables), member, [row('task_commented', 'task-comment', other)], []), true)
+  assert.equal(await authorizeNotificationBatch(client(tables), member, [row('task_commented', 'task-comment', actor)], []), false)
+  assert.equal(await authorizeNotificationBatch(client(tables), { ...member, id: other }, [notification()], []), false)
+  assert.equal(await authorizeNotificationBatch(client({ ...tables, task_comments: [] }), member, [notification()], []), false)
+  assert.equal(await authorizeNotificationBatch(client({ ...tables, tasks: [{ id: sourceId, created_by: recipient, assigned_to: [actor], archived_at: '2026-10-01' }] }), member, [notification()], []), false)
+  assert.equal(await authorizeNotificationBatch(client({ ...tables, tasks: [{ id: sourceId, created_by: recipient, assigned_to: [] }] }), member, [notification()], []), false)
+  assert.equal(await authorizeNotificationBatch(client({ ...tables, tasks: [{ id: sourceId, created_by: recipient, assigned_to: [actor] }] }), member, [row('task_commented', 'task-comment', other)], []), false)
+})
+
 test('leave notifications belong to the applicant and go only to leave reviewers', async () => {
   const db = client({ users, leave_applications: [{ id: sourceId, user_id: actor }] })
   assert.equal(await authorizeNotificationBatch(db, member, [row('leave_application_submitted', 'leave', other)], []), true)
