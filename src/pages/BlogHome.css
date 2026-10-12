@@ -38,9 +38,9 @@
 .blog-home .blog-album > img,.blog-home .blog-album:nth-child(n) > img,.blog-home .blog-album > .blog-image-placeholder {
   width: 100%; height: auto; aspect-ratio: 3 / 2; object-fit: cover; border-radius: 20px;
 }
-.blog-home .blog-album > span { padding: 12px 2px 0; gap: 12px; }
+.blog-home .blog-album > span { padding: 12px 4px 14px; gap: 12px; }
 .blog-home .blog-album strong { font-size: 16px; line-height: 1.7; color: var(--home-ink); }
-.blog-home .blog-album small { font-size: 13px; color: var(--home-copy); }
+.blog-home .blog-album small { font-size: 13px; color: var(--home-copy); padding-inline-start: 8px; }
 .blog-home .blog-community { align-items: start; gap: 40px; margin-top: 48px; padding: 36px 0 0; }
 .blog-home .blog-community-intro h2 { font-size: 28px; margin-bottom: 12px; }
 .blog-home .blog-community-intro > p { font-size: 16px; line-height: 1.8; color: var(--home-copy); margin-bottom: 20px; }

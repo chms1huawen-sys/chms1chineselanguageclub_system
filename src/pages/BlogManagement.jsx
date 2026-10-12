@@ -1,7 +1,8 @@
 import { publicationYear } from '../utils/blogPresentation'
 import { publicHomeUrl } from '../utils/pwaLaunch'
 import { brandedSettings } from '../utils/siteBrand'
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useEffectEvent, useRef, useState } from 'react'
+import { adminTagIds } from '../utils/blogAdminTags'
 import { LayoutDashboard, Files, BookOpen, CalendarDays, Megaphone, Tags, Trash2, Settings, ChartColumn, Plus, Pencil, RotateCcw, Search, RefreshCw, Archive, LockKeyhole, Pin, ArrowLeft, ExternalLink } from 'lucide-react'
 import { supabase } from '../supabaseClient'
 import { canManageBlog, emptyArticle } from '../utils/blog'
@@ -30,7 +31,7 @@ export default function BlogManagement({ profile, lang = 'zh', onSiteChange }) {
   const t = (zh, english) => en ? english : zh
   const label = value => value === 'review' ? t('草稿', 'Draft') : en ? value : labels[value] || value
   const [tab, setTab] = useState('dashboard')
-  const [year, setYear] = useState(String(currentYear))
+  const [year, setYear] = useState('')
   const [data, setData] = useState({ posts: [], albums: [], categories: [], tags: [], years: [], site: null })
   const [editor, setEditor] = useState(null)
   const [dirty, setDirty] = useState(false)
@@ -54,7 +55,7 @@ export default function BlogManagement({ profile, lang = 'zh', onSiteChange }) {
     const tags = await allRows('blog_tags')
     const years = await allRows('blog_years', 'year')
     const site = await checked(supabase.from('blog_settings').select('*').eq('id', 1).single())
-    setData({ posts: posts.map(post => post.status === 'review' ? { ...post, status: 'draft' } : post), albums, categories, tags, years, site })
+    setData({ posts: posts.map(post => ({ ...post, status: post.status === 'review' ? 'draft' : post.status, tag_ids: adminTagIds(post, tags) })), albums, categories, tags, years, site })
     onSiteChange?.(site)
   }
   async function run(action, success = t('已保存。', 'Saved.')) {
@@ -70,6 +71,15 @@ export default function BlogManagement({ profile, lang = 'zh', onSiteChange }) {
     return () => clearTimeout(timer)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [allowed])
+  const refreshOnReturn = useEffectEvent(() => {
+    if (allowed && !loading && !dirty && !editor && !document.hidden) run(load, '')
+  })
+  useEffect(() => {
+    const refresh = () => refreshOnReturn()
+    window.addEventListener('focus', refresh)
+    document.addEventListener('visibilitychange', refresh)
+    return () => { window.removeEventListener('focus', refresh); document.removeEventListener('visibilitychange', refresh) }
+  }, [])
   useEffect(() => {
     if (!dirty) return
     const warn = e => { e.preventDefault(); e.returnValue = '' }
@@ -78,7 +88,7 @@ export default function BlogManagement({ profile, lang = 'zh', onSiteChange }) {
   }, [dirty])
   function discard() { return !dirty || window.confirm(t('放弃尚未保存的修改？', 'Discard unsaved changes?')) }
   function navigate(next) { if (busy || !discard()) return; setEditor(null); setDirty(false); setTab(next); setFilters({ search: '', category: '', status: '', tag: '', type: ({ literature: 'article', activities: 'event', books: 'publication', news: 'notice' })[next] || '', sort: 'updated', quick: 'all' }); setPage(1); setError(''); setMessage('') }
-  function filter(key, value) { setFilters(f => ({ ...f, [key]: value })); setPage(1) }
+  function filter(key, value) { if (key === 'status' && ['draft', 'scheduled'].includes(value)) setYear(''); setFilters(f => ({ ...f, [key]: value })); setPage(1) }
   async function open(row, kind = 'post') {
     if (!discard()) return
     await run(async () => {

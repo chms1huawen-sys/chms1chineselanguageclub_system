@@ -16,6 +16,8 @@ try {
   const select = page.getByRole('combobox', { name: '管理年份' })
   assert.deepEqual(await select.locator('option').allTextContents(), ['全部年份', '尚未发布', String(year)])
   assert.equal(await page.locator('tbody tr').first().locator('td').nth(3).textContent(), String(year))
+  assert.equal(await page.getByRole('button', { name: 'Unpublished book', exact: true }).count(), 1)
+  await select.selectOption(String(year))
   assert.equal(await page.getByRole('button', { name: 'Unpublished book', exact: true }).count(), 0)
   await select.selectOption('unpublished')
   await page.getByRole('button', { name: 'Unpublished book', exact: true }).waitFor()
