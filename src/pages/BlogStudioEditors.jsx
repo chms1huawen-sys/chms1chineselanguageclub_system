@@ -58,7 +58,7 @@ export function StudioPostEditor({ initial, data, busy, run, reload, setDirty, d
       if (archived(post.content_year)) throw new Error(t('不可保存至已归档年份。', 'Cannot save into an archived year.'))
       if (links.some(l => !l.label.trim() || !validUrl(l.url))) throw new Error(t('每个链接都需要名称及有效的 HTTP(S) 网址。', 'Every link needs a label and valid HTTP(S) URL.'))
       if (post.status === 'scheduled' && (!post.scheduled_at || new Date(post.scheduled_at) <= new Date())) throw new Error(t('请选择未来的发布时间。', 'Choose a future publication time.'))
-      if ((post.book_details?.purchase_links || []).some(link => !link.label?.trim() || !validUrl(link.url))) throw new Error(t('请填写购买联系名称及 HTTP(S) 网址。', 'Enter a contact name and HTTP(S) URL.'))
+      if ((post.book_details?.purchase_links || []).some(link => !link.label?.trim() || !safeSocialLink(link.url, link.platform))) throw new Error(t('请填写购买联系名称及有效的网址或邮箱地址。', 'Enter a contact name and valid URL or email address.'))
       const payload = { ...post, title: post.title.trim(), category_id: post.category_id || null, event_date: post.event_date || null, event_id: post.event_id || null, content_year: Number(post.content_year), scheduled_at: post.status === 'scheduled' ? new Date(post.scheduled_at).toISOString() : null, tags: [...new Set(post.tags || [])] }
       delete payload.kind
       const saved = await checked(supabase.rpc('blog_studio_save', { p_post: payload, p_links: links.map((l, position) => ({ ...(l.id ? { id: l.id } : {}), label: l.label.trim(), url: l.url.trim(), visibility: l.visibility, position, type: l.type || 'link' })), p_album_ids: [], p_media: media.map(({ id, caption, crop }, position) => ({ id, caption, position, crop: crop || null, width_percent: 100 })), p_version: post.version ?? null }))

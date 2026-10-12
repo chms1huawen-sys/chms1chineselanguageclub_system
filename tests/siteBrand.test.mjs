@@ -26,6 +26,17 @@ test('social email accepts plain addresses and rejects schemes and header inject
   assert.equal(safeSocialLink('test@gmail.com', 'website'), '')
   assert.equal(safeSocialLink('https://example.com', 'website'), 'https://example.com/')
 })
+
+test('book contact buttons support email alone and alongside social links', () => {
+  const email = { platform: 'email', label: 'Gmail', url: 'test@gmail.com' }
+  const book = { title: 'Book', content_type: 'publication', book_details: { purchase_label: '询问购买', purchase_links: [email] } }
+  let html = renderBlogHtml(template, site, [book], [], 'book', origin)
+  assert.ok(html.includes('class="blog-purchase-button" href="mailto:test@gmail.com" rel='))
+  book.book_details.purchase_links.push({ platform: 'instagram', label: 'Instagram', url: 'https://instagram.com/example/' })
+  html = renderBlogHtml(template, site, [book], [], 'book', origin)
+  assert.ok(html.includes('class="blog-purchase-options"'))
+  assert.ok(html.includes('href="mailto:test@gmail.com"'))
+})
 test('public pages use canonical titles and sharing name; homepage declares one WebSite', () => {
   for (const [view, label] of Object.entries({ home: '首页', literature: '文学角落', activities: '活动记录', bookroom: '书坊', news: '学会资讯', about: '关于我们' })) {
     const html = renderBlogHtml(template, site, [], [], '', origin, view)
