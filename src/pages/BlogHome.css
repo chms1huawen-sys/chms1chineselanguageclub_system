@@ -48,7 +48,6 @@
 .blog-home .blog-community-counts { margin-top: 20px; gap: 10px; }
 .blog-home .blog-community-counts > div { padding: 16px 8px; border-color: var(--home-line); }
 .blog-home .blog-community-counts dt,.blog-home .blog-community-counts small { font-size: 13px; color: var(--home-copy); }
-.blog-home .blog-community-counts > div:nth-child(3) dd { color: #3a7150; }
 .blog-home .blog-community-board { padding: 0; border: 0; border-radius: 0; box-shadow: none; background: transparent; }
 .blog-home .blog-community-board-heading { padding-bottom: 16px; border-bottom: 1px solid var(--home-line); }
 .blog-home .blog-community-board h3 { font-size: 19px; color: var(--home-ink); }

@@ -43,11 +43,11 @@ html:has(.blog-public), body:has(.blog-public) { background: #fbfdff; color-sche
 
 /* Editorial cards: photo, category, headline, excerpt, then date and reading link. */
 .blog-public .blog-post-grid { gap: 28px; }
-.blog-public .blog-post, .blog-public .blog-post:only-child { display: flex; flex-direction: column; grid-column: auto; gap: 0; padding: 0; border: 1px solid #dce6ed; border-radius: 22px; box-shadow: none; align-items: stretch; }
-.blog-public .blog-post>img, .blog-public .blog-post:only-child>img { display: block; width: 100%; height: auto; min-height: 0; max-height: none; aspect-ratio: 16/9; object-fit: cover; border-radius: 0; }
-.blog-public .blog-post>div.blog-post-copy, .blog-public .blog-post:only-child>div.blog-post-copy { display: flex; flex-direction: column; align-items: stretch; justify-content: flex-start; padding: 22px 24px 16px; flex: 1; }
+.blog-public .blog-post { display: flex; flex-direction: column; grid-column: auto; gap: 0; padding: 0; border: 1px solid #dce6ed; border-radius: 22px; box-shadow: none; align-items: stretch; }
+.blog-public .blog-post>img { display: block; width: 100%; height: auto; min-height: 0; max-height: none; aspect-ratio: 16/9; object-fit: cover; border-radius: 0; }
+.blog-public .blog-post>div.blog-post-copy { display: flex; flex-direction: column; align-items: stretch; justify-content: flex-start; padding: 22px 24px 16px; flex: 1; }
 .blog-public .blog-post .blog-eyebrow { display: block; align-self: flex-start; padding: 0; margin: 0 0 8px; background: none; border-radius: 0; color: #41728b; font-size: 13px; line-height: 1.7; font-weight: 600; }
-.blog-public .blog-post h3, .blog-public .blog-post:only-child h3 { font-size: 21px; line-height: 1.55; margin: 0 0 12px; max-width: none; color: #233e50; }
+.blog-public .blog-post h3 { font-size: 21px; line-height: 1.55; margin: 0 0 12px; max-width: none; color: #233e50; }
 .blog-public .blog-post p:not(.blog-eyebrow) { font-size: 15px; line-height: 1.9; margin: 0 0 18px; color: #546b79; -webkit-line-clamp: 2; max-width: none; }
 .blog-public .blog-post-meta { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; padding-top: 14px; border-top: 1px solid #edf1f4; margin-top: auto; }
 .blog-public .blog-post-meta time { font-size: 12px; color: #526b7c; }
@@ -96,9 +96,9 @@ html:has(.blog-public), body:has(.blog-public) { background: #fbfdff; color-sche
   .blog-showcase-controls>span { font-size: 11px; padding: 4px 6px; }
   .blog-public .blog-footer { padding: 16px 20px; }
   .blog-public .blog-post-grid { grid-template-columns: minmax(0,1fr); gap: 26px; }
-  .blog-public .blog-post, .blog-public .blog-post:only-child { border-radius: 20px; }
-  .blog-public .blog-post>div.blog-post-copy, .blog-public .blog-post:only-child>div.blog-post-copy { padding: 20px 22px 16px; }
-  .blog-public .blog-post h3, .blog-public .blog-post:only-child h3 { font-size: 22px; line-height: 1.6; }
+  .blog-public .blog-post { border-radius: 20px; }
+  .blog-public .blog-post>div.blog-post-copy { padding: 20px 22px 16px; }
+  .blog-public .blog-post h3 { font-size: 22px; line-height: 1.6; }
   .blog-public .blog-post p:not(.blog-eyebrow) { font-size: 16px; }
   .blog-public .blog-article h1 { font-size: 28px; }
   .blog-public .blog-summary { font-size: 17px; }

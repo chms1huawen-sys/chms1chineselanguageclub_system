@@ -32,7 +32,8 @@ test('Hero retains hover, waits for requested photos and uses a bounded preload'
   assert.match(hero, /ready.current.has\(photoKey/)
   assert.match(hero, /i === \(active \+ 1\) % slides.length/)
   assert.match(read('src/pages/BlogHeroReference.css'), /hover: hover/)
-  assert.match(read('src/pages/BlogHeroReference.css'), /focus-within/)
+  assert.match(read('src/pages/BlogHeroReference.css'), /:has\(:focus-visible\)/)
+  assert.doesNotMatch(read('src/pages/BlogHeroReference.css'), /focus-within/)
 })
 
 test('remaining small text and selected states use readable foregrounds', () => {
