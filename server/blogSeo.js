@@ -48,7 +48,9 @@ export function renderBlogHtml(template, site, posts, media, slug, origin, view 
     return valid.length === 1 ? `<a class="blog-purchase-button" href="${e(safeSocialLink(valid[0].url, valid[0].platform))}"${valid[0].platform === 'email' ? '' : ' target="_blank"'} rel="noopener noreferrer">${label}</a>` : `<details class="blog-purchase"><summary class="blog-purchase-button">${label}</summary><div class="blog-purchase-options">${socials(valid)}</div></details>`
   }
   const book = post?.content_type === 'publication' ? `<section class="blog-book-details"><dl>${[['author','作者'],['price','价格'],['published_on','出版日期'],['pages','页数'],['isbn','ISBN']].filter(([key]) => post.book_details?.[key]).map(([key,label]) => `<div><dt>${label}</dt><dd>${e(post.book_details[key])}</dd></div>`).join('')}</dl>${purchase(post.book_details)}${post.book_details?.author_bio ? `<h2>作者介绍</h2><p>${e(post.book_details.author_bio)}</p>` : ''}</section>` : ''
-  const about = `<section class="blog-about"><h2>${e(site.content?.about_title || '关于华文学会')}</h2><div>${site.content?.about_image ? picture(site.content.about_image, site.title) : ''}${paragraphs(view === 'about' ? site.about : (site.content?.about_notes ?? site.about))}</div></section>`
+  const contactLinks = socials(site.content?.social_links)
+  const contacts = view === 'about' && contactLinks ? `<section class="blog-about-contact" aria-label="联系我们"><h2>联系我们</h2><div class="blog-social-links">${contactLinks}</div></section>` : ''
+  const about = `<section class="blog-about"><h2>${e(site.content?.about_title || '关于华文学会')}</h2><div>${site.content?.about_image ? picture(site.content.about_image, site.title) : ''}${paragraphs(view === 'about' ? site.about : (site.content?.about_notes ?? site.about))}${contacts}</div></section>`
   let body
   if (post) {
     const gallery = galleryPreview(media, post.cover_path)

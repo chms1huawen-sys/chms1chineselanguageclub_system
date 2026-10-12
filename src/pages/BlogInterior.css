@@ -8,6 +8,13 @@
 .blog-interior .blog-community-board li p { font-size: 17px; line-height: 1.9; }
 .blog-interior .blog-community-board ol { gap: 22px; }
 .blog-interior .blog-note-number { display: none; }
+.blog-about-contact { margin-top: 32px; padding-top: 24px; border-top: 1px solid #dce7ed; }
+.blog-about-contact h2 { margin: 0 0 16px; font-size: 21px; line-height: 1.4; }
+.blog-public .blog-about-contact .blog-social-links { display: flex; flex-wrap: wrap; gap: 12px; }
+.blog-public .blog-about-contact a { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; max-width: 100%; padding: 10px 14px; border: 1px solid #c8dce9; border-radius: 12px; color: #244c67; background: #f4f9fd; overflow-wrap: anywhere; }
+.blog-about-contact a svg { flex-shrink: 0; }
+.blog-about-contact a:focus-visible { outline: 3px solid #287b9c; outline-offset: 3px; }
+@media (hover: hover) { .blog-public .blog-about-contact a:hover { background: #e3f1fb; border-color: #8db5ce; } }
 .blog-public .blog-article-author { margin: 12px 0 16px; }
 .blog-public .blog-article-summary { margin: 20px 0; padding: 18px 22px; border: 0; border-radius: 16px; }
 .blog-article-dates { display: flex; flex-wrap: wrap; gap: 8px 20px; font-size: 14px; line-height: 1.7; color: #526b7c; }

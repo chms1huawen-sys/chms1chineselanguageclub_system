@@ -18,6 +18,7 @@ import BookPurchase from '../components/BookPurchase'
 import BlogHero from '../components/BlogHero'
 import { readBlogBootstrap, readBlogArticleBootstrap, publicBlogSettings } from '../utils/blogBootstrap'
 import { SITE_NAME, MEMBER_NAME, pageTitle } from '../utils/siteBrand'
+import { safeSocialLink } from '../utils/socialLink'
 import { compareStories, featuredStories, HOME_STORY_COUNT, STORY_PAGE_SIZE, MOMENT_COUNT } from '../utils/blogFeed'
 import { clubStatistics, matchesPublicSearch, submissionNote, publicationYear } from '../utils/blogPresentation'
 import BlogNavigation, { SocialLinks } from '../components/BlogNavigation'
@@ -271,6 +272,7 @@ export default function Blog({ profile, lang, setLang }) {
   const aboutNotes = text(view === 'about' ? (settings.about || settings.intro) : (content.about_notes ?? settings.about ?? settings.intro)).split(/\n\s*\n/).map(note => note.trim()).filter(Boolean)
   const statistics = clubStatistics(content, posts.length, en)
   const AboutHeading = view === 'about' ? 'h1' : 'h2'
+  const aboutContacts = (Array.isArray(content.social_links) ? content.social_links : []).filter(link => link && link.enabled !== false && link.label?.trim() && safeSocialLink(link.url, link.platform))
   const ListHeading = view === 'home' && !searching ? 'h2' : 'h1'
   const about = <section className="blog-community" id="about">
     <div className="blog-community-intro"><AboutHeading>{override('about_title', settings.title)}</AboutHeading><p>{settings.intro}</p>
@@ -279,6 +281,7 @@ export default function Blog({ profile, lang, setLang }) {
     </div>
     <div className="blog-community-board"><div className="blog-community-board-heading"><BookOpen size={19} aria-hidden="true" /><h3>{override('about_board_title', t('关于我们的故事', 'Our story'))}</h3></div>
       <ol>{aboutNotes.map((note, index) => <li key={index}><span className="blog-note-number" aria-hidden="true">{String(index + 1).padStart(2, '0')}</span><p>{note}</p></li>)}</ol>
+      {view === 'about' && aboutContacts.length > 0 && <section className="blog-about-contact" aria-label={t('联系我们', 'Contact us')}><h2>{t('联系我们', 'Contact us')}</h2><SocialLinks links={aboutContacts} /></section>}
       {view !== 'about' && <a href="/about">{t('认识我们', 'Meet our club')} <ArrowRight size={16} /></a>}
     </div>
   </section>
