@@ -22,7 +22,7 @@ test('member deep links hide public SSR before application startup', () => {
 
 test('public SEO pages stay visible and explicit blog installs stay public', () => {
   for (const path of ['/', '/literature', '/blog/story', '/?view=blog', '/?app=blog']) assert.equal(launch(path), false)
-  assert.equal(launch('/', true), true)
+  assert.equal(launch('/', true), false)
   assert.equal(launch('/?app=blog', true), false)
   assert.equal(launch('/literature', true), false)
 })

@@ -12,7 +12,7 @@ test('early launch changes only member URLs, without another document request', 
     ['/#/login?return=%2Fliterature', false, '/member#/login?return=%2Fliterature'],
     ['/#/tasks?id=123', false, '/member#/tasks?id=123'],
     ['/member', false, '/member#/'], ['/member/', false, '/member#/'],
-    ['/', true, '/member#/'], ['/', false, null], ['/?app=blog', true, null],
+    ['/', true, null], ['/', false, null], ['/?app=blog', true, null],
     ['/?view=blog', true, null], ['/#access_token=test', false, null],
   ]) {
     let replacement = null

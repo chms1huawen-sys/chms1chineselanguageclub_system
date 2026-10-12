@@ -1,8 +1,8 @@
 export const isInstalledApp = () => window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true
 
-export function memberLaunchUrl(href, installed) {
+export function memberLaunchUrl(href) {
   const url = new URL(href)
-  const legacy = url.pathname === '/' && (url.hash.startsWith('#/') || installed && !url.hash && !url.search)
+  const legacy = url.pathname === '/' && url.hash.startsWith('#/')
   const memberEntry = /^\/member\/?$/.test(url.pathname) && !url.hash
   if (!legacy && !memberEntry) return null
   url.pathname = '/member'
@@ -13,7 +13,7 @@ export function memberLaunchUrl(href, installed) {
 export const publicHomeUrl = () => isInstalledApp() ? '/?view=blog' : '/'
 
 export function prepareAppLaunch() {
-  const destination = memberLaunchUrl(window.location.href, isInstalledApp())
+  const destination = memberLaunchUrl(window.location.href)
   if (destination) window.history.replaceState(window.history.state, '', destination)
   if (new URLSearchParams(window.location.search).get('app') === 'blog') {
     document.querySelector('link[rel="manifest"]')?.setAttribute('href', '/manifest-blog.json')

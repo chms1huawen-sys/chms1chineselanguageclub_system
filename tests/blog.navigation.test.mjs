@@ -59,6 +59,9 @@ try {
   assert.ok(requestedModules.includes('/src/pages/MemberShell.jsx'))
   if (process.env.TEST_INSTALLED === 'true') {
     await page.goto(root)
+    await page.locator('.blog-nav').waitFor()
+    assert.equal(new URL(page.url()).hash, '')
+    await page.goto(root + '/member#/')
     await page.locator('.club-sidebar').waitFor()
     assert.equal(new URL(page.url()).hash, '#/')
     await page.locator('.club-sidebar').getByRole('link', { name: '学会网站首页', exact: true }).click()
