@@ -53,24 +53,24 @@
   .blog-home .blog-showcase-slide::before { content: ''; position: absolute; inset: 0; z-index: 1; pointer-events: none; background: linear-gradient(90deg,#f5faffeb 0%,#f5faffb8 26%,#f5faff40 52%,transparent 72%); opacity: 1; transition: opacity .3s ease; }
   .blog-home .blog-showcase-slide::after { opacity: 0; transition: opacity .3s ease; }
   .blog-home .blog-showcase:hover .blog-showcase-slide::before,
-  .blog-home .blog-showcase:focus-within .blog-showcase-slide::before { opacity: 0; }
+  .blog-home .blog-showcase:has(:focus-visible) .blog-showcase-slide::before { opacity: 0; }
   .blog-home .blog-showcase-slide .blog-showcase-caption h1,
   .blog-home .blog-showcase-slide .blog-showcase-caption p { color: #173b50; transition: color .3s ease; }
   .blog-home .blog-showcase:hover .blog-showcase-slide::after,
-  .blog-home .blog-showcase:focus-within .blog-showcase-slide::after { opacity: 1; }
+  .blog-home .blog-showcase:has(:focus-visible) .blog-showcase-slide::after { opacity: 1; }
   .blog-home .blog-showcase:hover .blog-showcase-caption h1,
   .blog-home .blog-showcase:hover .blog-showcase-caption p,
-  .blog-home .blog-showcase:focus-within .blog-showcase-caption h1,
-  .blog-home .blog-showcase:focus-within .blog-showcase-caption p { color: #fff; }
+  .blog-home .blog-showcase:has(:focus-visible) .blog-showcase-caption h1,
+  .blog-home .blog-showcase:has(:focus-visible) .blog-showcase-caption p { color: #fff; }
   .blog-home .blog-showcase-controls > button { color: #173b50; background: #f5faffe6; border-color: #d4e3eb; transition: color .3s ease, background .3s ease; }
   .blog-home .blog-showcase:hover .blog-showcase-controls > button,
-  .blog-home .blog-showcase:focus-within .blog-showcase-controls > button { color: #fff; background: #10233080; border-color: #ffffff80; }
+  .blog-home .blog-showcase:has(:focus-visible) .blog-showcase-controls > button { color: #fff; background: #10233080; border-color: #ffffff80; }
   .blog-home .blog-showcase-dots button::after { background: #42677f80; }
   .blog-home .blog-showcase-dots button[aria-pressed=true]::after { background: #173b50; }
   .blog-home .blog-showcase:hover .blog-showcase-dots button::after,
-  .blog-home .blog-showcase:focus-within .blog-showcase-dots button::after { background: #ffffff80; }
+  .blog-home .blog-showcase:has(:focus-visible) .blog-showcase-dots button::after { background: #ffffff80; }
   .blog-home .blog-showcase:hover .blog-showcase-dots button[aria-pressed=true]::after,
-  .blog-home .blog-showcase:focus-within .blog-showcase-dots button[aria-pressed=true]::after { background: #fff; }
+  .blog-home .blog-showcase:has(:focus-visible) .blog-showcase-dots button[aria-pressed=true]::after { background: #fff; }
 }
 @media (max-width: 360px) {
   .blog-home .blog-showcase-slide .blog-showcase-caption h1 { font-size: 18px; }

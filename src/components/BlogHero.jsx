@@ -36,6 +36,7 @@ export default function BlogHero({ site, Image, en }) {
   const ready = useRef(new Set())
   const [reducedMotion, setReducedMotion] = useState(() => matchMedia('(prefers-reduced-motion: reduce)').matches)
   const [hovered, setHovered] = useState(false)
+  const [keyboardFocused, setKeyboardFocused] = useState(false)
   const active = index % slides.length
   const interval = Math.max(3, Math.min(60, Number(site.content?.hero_interval) || 7)) * 1000
   const t = (zh, english) => en ? english : zh
@@ -52,11 +53,11 @@ export default function BlogHero({ site, Image, en }) {
     return () => query.removeEventListener('change', change)
   }, [])
   useEffect(() => {
-    if (hovered || slides.length < 2 || reducedMotion || requested !== active) return
+    if (hovered || keyboardFocused || slides.length < 2 || reducedMotion || requested !== active) return
     const timer = setInterval(() => { if (!document.hidden) advanceSlide() }, interval)
     return () => clearInterval(timer)
-  }, [hovered, slides.length, interval, active, requested, reducedMotion])
-  return <section className="blog-showcase" aria-label={t('学会故事', 'Club stories')} aria-roledescription="carousel" onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)} onFocusCapture={() => setHovered(true)} onBlurCapture={event => { if (!event.currentTarget.contains(event.relatedTarget)) setHovered(false) }}>
+  }, [hovered, keyboardFocused, slides.length, interval, active, requested, reducedMotion])
+  return <section className="blog-showcase" aria-label={t('学会故事', 'Club stories')} aria-roledescription="carousel" onPointerEnter={event => { if (event.pointerType === 'mouse') setHovered(true) }} onPointerLeave={() => setHovered(false)} onPointerDownCapture={() => setKeyboardFocused(false)} onKeyDownCapture={() => setKeyboardFocused(true)} onFocusCapture={event => setKeyboardFocused(event.target.matches(':focus-visible'))} onBlurCapture={event => { if (!event.currentTarget.contains(event.relatedTarget)) setKeyboardFocused(false) }}>
     <div className="blog-showcase-slides">
       {slides.map((slide, i) => <div key={`${i}-${slide.path}`} data-position={slide.position === 'right' ? 'right' : 'left'} data-tone={slide.tone === 'dark' ? 'dark' : 'light'} className={`blog-showcase-slide${i === active ? ' is-active' : ''}`} inert={i !== active} aria-hidden={i !== active}>
         {/* Keep the current photo while the requested one loads; preload only its neighbor. */}

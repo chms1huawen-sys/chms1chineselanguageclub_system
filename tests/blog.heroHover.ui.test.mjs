@@ -43,6 +43,7 @@ try {
       await page.mouse.move(0, 0)
       await page.waitForTimeout(400)
       assert.equal(await title.evaluate(el => getComputedStyle(el).color), 'rgb(23, 59, 80)')
+      await page.keyboard.press('Tab')
       await cta.focus()
       await page.waitForTimeout(400)
       assert.equal(await title.evaluate(el => getComputedStyle(el).color), 'rgb(255, 255, 255)')
