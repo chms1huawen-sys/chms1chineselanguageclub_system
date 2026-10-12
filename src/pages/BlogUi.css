@@ -31,6 +31,10 @@
   .blog-public .blog-nav nav > :is(a, .blog-menu-item) { flex-shrink: 0; white-space: nowrap; }
 }
 @media (max-width: 700px) {
+  .blog-public .blog-brand > span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .blog-public .blog-public-actions { flex-wrap: nowrap; }
+  .blog-public .blog-public-actions .blog-primary { white-space: nowrap; }
+  .blog-public .blog-public-actions .blog-primary svg { display: none; }
   .blog-public .blog-lightbox { grid-template-columns: 44px minmax(0,1fr) 44px; }
   .blog-interior .blog-section-heading h1, .blog-interior .blog-community-intro h1 { font-size: 1.75rem; }
   .blog-home .blog-showcase-slide .blog-showcase-caption h1 { font-size: 1.5rem; }
@@ -41,6 +45,12 @@
 }
 @media (max-width: 360px) {
   .blog-home .blog-showcase-slide .blog-showcase-caption h1 { font-size: 1.375rem; }
+}
+@media (max-width: 340px) {
+  .blog-public .blog-nav { padding-inline: 8px; gap: 4px; }
+  .blog-public .blog-public-actions { gap: 0; }
+  .blog-public .blog-brand { font-size: 12px; gap: 6px; }
+  .blog-public .blog-brand img { width: 28px; height: 28px; }
 }
 @media (prefers-reduced-motion: reduce) {
   .blog-public *, .blog-public *::before, .blog-public *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
