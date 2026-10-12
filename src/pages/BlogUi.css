@@ -15,6 +15,21 @@
 .blog-home .blog-showcase-dots button:first-child,
 .blog-home .blog-showcase-dots button:last-child { width: 44px; height: 44px; }
 .blog-home .blog-showcase-dots { max-width: calc(100% - 16px); }
+@media (min-width: 701px) {
+  .blog-public .blog-nav { display: grid; grid-template-columns: minmax(0,1fr) minmax(160px,190px) max-content; gap: 12px; }
+  .blog-public .blog-nav nav { grid-column: 1 / -1; grid-row: 2; width: 100%; flex-wrap: nowrap; }
+  .blog-public .blog-global-search { width: 100%; min-width: 0; margin-left: 0; }
+  .blog-public .blog-public-actions { flex-wrap: nowrap; gap: 6px; margin-left: 0; }
+  .blog-public .blog-public-actions .blog-primary { white-space: nowrap; }
+  .blog-public .blog-public-actions > :is(button, a[aria-label]) { display: grid; place-items: center; padding: 0; }
+  .blog-public .blog-public-actions > button.blog-home-menu-toggle,
+  .blog-public .blog-public-actions > button.blog-home-search-toggle { display: none; }
+}
+@media (min-width: 1201px) {
+  .blog-public .blog-nav { grid-template-columns: minmax(150px,190px) minmax(0,1fr) minmax(150px,190px) max-content; }
+  .blog-public .blog-nav nav { grid-column: 2; grid-row: 1; width: auto; gap: 12px; }
+  .blog-public .blog-nav nav > :is(a, .blog-menu-item) { flex-shrink: 0; white-space: nowrap; }
+}
 @media (max-width: 700px) {
   .blog-public .blog-lightbox { grid-template-columns: 44px minmax(0,1fr) 44px; }
   .blog-interior .blog-section-heading h1, .blog-interior .blog-community-intro h1 { font-size: 1.75rem; }
