@@ -216,8 +216,8 @@ export default function Blog({ profile, lang, setLang }) {
   useEffect(() => {
     if (slug && loading) return
     const heading = slug ? (post?.title || (en ? 'Article unavailable' : '文章不存在或尚未公开')) : searching ? (en ? 'Search results' : '搜索结果') : en ? section.en : section.zh
-    setPageTitle(siteReady ? pageTitle(heading) : SITE_NAME)
-  }, [settings.title, siteReady, slug, post?.title, loading, searching, section.en, section.zh, en])
+    setPageTitle(siteReady ? pageTitle(heading, settings) : SITE_NAME)
+  }, [settings, siteReady, slug, post?.title, loading, searching, section.en, section.zh, en])
   useEffect(() => () => { setPageTitle(MEMBER_NAME) }, [])
 
   const lightboxOpen = lightbox !== null

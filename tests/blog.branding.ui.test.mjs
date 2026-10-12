@@ -1,5 +1,4 @@
 import assert from 'node:assert/strict'
-import { SITE_NAME } from '../src/utils/siteBrand.js'
 const { chromium } = await import(process.env.PLAYWRIGHT_MODULE || 'playwright')
 const browser = await chromium.launch({ channel: 'msedge', headless: true })
 const root = 'http://127.0.0.1:5173'
@@ -35,7 +34,7 @@ try {
   holdSettings = false
   releaseSettings()
   await page.locator('.blog-brand').filter({ hasText: site.title }).waitFor()
-  assert.ok((await page.title()).includes(SITE_NAME))
+  assert.ok((await page.title()).includes(site.title))
   assert.equal(await page.evaluate(() => window.staleBrandSeen), false)
   // Production HTML carries fresh public settings, avoiding a fallback between SSR and React.
   await page.route(root + '/', async route => {
@@ -51,11 +50,26 @@ try {
   await page.locator('.blog-admin-shell .blog-brand').filter({ hasText: site.title }).waitFor()
   await page.getByRole('button', { name: '网站设置', exact: true }).click()
   await page.getByLabel(/网站标题/).fill('更新后的学会名称')
+  await page.getByLabel('网站全名（搜索与分享）').fill('完整学会名称')
+  const social = page.locator('.bs-section').filter({ has: page.getByRole('heading', { name: '社交媒体链接', exact: true }) })
+  await social.getByRole('button', { name: '新增', exact: true }).click()
+  await social.getByLabel('平台图标').selectOption('email')
+  await social.getByLabel('名称', { exact: true }).fill('Gmail')
+  await social.getByLabel('邮箱地址').fill('test@example.com')
   await page.getByRole('button', { name: '保存网站设置', exact: true }).click()
   await page.getByRole('status').filter({ hasText: '已保存' }).waitFor()
   await page.locator('.blog-brand').filter({ hasText: '更新后的学会名称' }).waitFor()
   assert.ok((await page.locator('.bs-sidebar-title').textContent()).includes('更新后的学会名称'))
-  assert.ok((await page.title()).includes(SITE_NAME))
+  assert.ok((await page.title()).includes('完整学会名称'))
+  assert.equal(site.content.social_links[0].url, 'test@example.com')
+  for (const width of [390, 1280]) {
+    await page.setViewportSize({ width, height: 900 })
+    assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false)
+    await page.screenshot({ path: `${process.env.TEMP}/blog-settings-${width}.png`, fullPage: true })
+  }
+  await page.goto(root)
+  await page.getByRole('link', { name: 'Gmail', exact: true }).waitFor()
+  assert.equal(await page.getByRole('link', { name: 'Gmail', exact: true }).getAttribute('href'), 'mailto:test@example.com')
   assert.equal(await page.evaluate(() => window.staleBrandSeen), false)
   console.log('Delayed settings, production bootstrap and admin save: no old-brand flash; header/sidebar/tab titles stay synchronized.')
 } finally { await browser.close() }

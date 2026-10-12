@@ -1,14 +1,15 @@
 import { useRef, useState } from 'react'
-import { ChevronDown, Globe } from 'lucide-react'
+import { ChevronDown, Globe, Mail } from 'lucide-react'
+import { safeSocialLink } from '../utils/socialLink'
 import { siInstagram, siFacebook, siWhatsapp } from 'simple-icons'
 import { publicHomeUrl } from '../utils/pwaLaunch'
-import { sections, publicCategories, safePublicLink, safeColor } from '../utils/blogContent'
+import { sections, publicCategories, safeColor } from '../utils/blogContent'
 
 export function SocialLinks({ links = [] }) {
   const icons = { instagram: siInstagram, facebook: siFacebook, whatsapp: siWhatsapp }
-  return <div className="blog-social-links">{(Array.isArray(links) ? links : []).filter(link => link && link.enabled !== false && link.label && safePublicLink(link.url)).map((link, i) => {
+  return <div className="blog-social-links">{(Array.isArray(links) ? links : []).filter(link => link && link.enabled !== false && link.label && safeSocialLink(link.url, link.platform)).map((link, i) => {
     const icon = icons[link.platform]
-    return <a key={i} href={safePublicLink(link.url)} target="_blank" rel="noopener noreferrer" aria-label={link.label} title={link.label}>{icon ? <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d={icon.path} /></svg> : <Globe size={20} />}<span>{link.label}</span></a>
+    return <a key={i} href={safeSocialLink(link.url, link.platform)} target={link.platform === 'email' ? undefined : '_blank'} rel="noopener noreferrer" aria-label={link.label} title={link.label}>{icon ? <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d={icon.path} /></svg> : link.platform === 'email' ? <Mail size={20} /> : <Globe size={20} />}<span>{link.label}</span></a>
   })}</div>
 }
 

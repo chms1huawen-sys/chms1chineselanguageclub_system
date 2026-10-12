@@ -4,14 +4,14 @@ import { Plus, Trash2, Pencil, ArrowUp, ArrowDown, Save } from 'lucide-react'
 import { supabase } from '../supabaseClient'
 import { ordered, safeColor, sections } from '../utils/blogContent'
 
-export function SocialEditor({ value = [], onChange, en }) {
+export function SocialEditor({ value = [], onChange, en, allowEmail = false }) {
   const t = (zh, english) => en ? english : zh
   const update = (index, key, next) => onChange(value.map((link, i) => i === index ? { ...link, [key]: next } : link))
   const move = (index, direction) => { const next = [...value]; [next[index], next[index + direction]] = [next[index + direction], next[index]]; onChange(next) }
   return <section className="bs-section"><div className="bs-section-heading"><h3>{t('社交媒体链接', 'Social links')}</h3><button type="button" onClick={() => onChange([...value, { platform: 'instagram', label: 'Instagram', url: '', enabled: true }])}><Plus size={16} />{t('新增', 'Add')}</button></div>{value.map((link, index) => <div className="bs-link-row" key={index}>
     <ValidatedField>{t('名称', 'Label')}<input required value={link.label} onChange={e => update(index, 'label', e.target.value)} /></ValidatedField>
-    <ValidatedField>{t('网址', 'URL')}<input type="url" required value={link.url} onChange={e => update(index, 'url', e.target.value)} /></ValidatedField>
-    <ValidatedField>{t('平台图标', 'Platform icon')}<select value={link.platform} onChange={e => update(index, 'platform', e.target.value)}>{['instagram', 'facebook', 'whatsapp', 'website'].map(v => <option key={v} value={v}>{v === 'website' ? t('其他网站', 'Other website') : v}</option>)}</select></ValidatedField>
+    <ValidatedField>{link.platform === 'email' ? t('邮箱地址', 'Email address') : t('网址', 'URL')}<input type={link.platform === 'email' ? 'email' : 'url'} required placeholder={link.platform === 'email' ? 'name@gmail.com' : 'https://'} value={link.platform === 'email' ? (link.url || '').replace(/^mailto:/i, '') : link.url} onChange={e => update(index, 'url', e.target.value)} /></ValidatedField>
+    <ValidatedField>{t('平台图标', 'Platform icon')}<select value={link.platform} onChange={e => update(index, 'platform', e.target.value)}>{['instagram', 'facebook', 'whatsapp', 'website', ...(allowEmail ? ['email'] : [])].map(v => <option key={v} value={v}>{v === 'email' ? t('电子邮箱 / Gmail', 'Email / Gmail') : v === 'website' ? t('其他网站', 'Other website') : v}</option>)}</select></ValidatedField>
     <ValidatedField className="bs-checks"><input type="checkbox" checked={link.enabled !== false} onChange={e => update(index, 'enabled', e.target.checked)} />{t('显示', 'Visible')}</ValidatedField>
     <div className="bs-actions"><button type="button" title={t('前移', 'Move up')} disabled={!index} onClick={() => move(index, -1)}><ArrowUp size={16} /></button><button type="button" title={t('后移', 'Move down')} disabled={index === value.length - 1} onClick={() => move(index, 1)}><ArrowDown size={16} /></button><button type="button" title={t('移除', 'Remove')} onClick={() => onChange(value.filter((_, i) => i !== index))}><Trash2 size={16} /></button></div>
   </div>)}</section>
