@@ -6,6 +6,7 @@ import { Globe, ArrowLeft, LogIn } from 'lucide-react'
 import BlogManagement from './BlogManagement'
 import { blogLogin, canManageBlog } from '../utils/blog'
 import './Blog.css'
+import { brandedSettings, pageTitle, SITE_NAME } from '../utils/siteBrand'
 
 export default function BlogAdminShell({ profile, loading, lang, setLang }) {
   const en = lang === 'en'
@@ -14,12 +15,12 @@ export default function BlogAdminShell({ profile, loading, lang, setLang }) {
   useEffect(() => {
     let active = true
     supabase.from('blog_settings').select('title,subtitle').eq('id', 1).single()
-      .then(({ data, error }) => { if (active) { if (error) setFailed(true); else setSite(data) } })
+      .then(({ data, error }) => { if (active) { if (error) setFailed(true); else setSite(brandedSettings(data)) } })
       .catch(() => { if (active) setFailed(true) })
     return () => { active = false }
   }, [])
   useEffect(() => {
-    document.title = site?.title ? `${en ? 'Blog administration' : '文章后台'} | ${site.title}` : 'CLC_sys'
+    document.title = site?.title ? pageTitle(en ? 'Blog administration' : '文章后台') : SITE_NAME
   }, [site?.title, en])
   return <div className="club-blog blog-admin-shell">
     <header className="blog-nav">

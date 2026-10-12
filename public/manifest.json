@@ -1,7 +1,7 @@
 {
-    "name": "一中华文学会",
-    "short_name": "CLC_sys",
-    "description": "一中华文学会系统 (CLC_sys)",
+    "name": "古晋一中华文学会会员系统",
+    "short_name": "一中华文学会",
+    "description": "古晋中华第一中学 · 一中华文学会会员系统",
     "id": "/",
     "scope": "/",
     "start_url": "/member#/",

@@ -1,8 +1,8 @@
 {
   "id": "/?app=blog",
-  "name": "一中华文学会网站",
-  "short_name": "学会网站",
-  "description": "一中华文学会活动与文章",
+  "name": "古晋一中华文学会",
+  "short_name": "一中华文学会",
+  "description": "古晋中华第一中学 · 一中华文学会活动与文章",
   "start_url": "/?app=blog",
   "scope": "/",
   "display": "standalone",

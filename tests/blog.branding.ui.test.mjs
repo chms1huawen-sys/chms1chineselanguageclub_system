@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict'
+import { SITE_NAME } from '../src/utils/siteBrand.js'
 const { chromium } = await import(process.env.PLAYWRIGHT_MODULE || 'playwright')
 const browser = await chromium.launch({ channel: 'msedge', headless: true })
 const root = 'http://127.0.0.1:5173'
@@ -34,7 +35,7 @@ try {
   holdSettings = false
   releaseSettings()
   await page.locator('.blog-brand').filter({ hasText: site.title }).waitFor()
-  assert.ok((await page.title()).includes(site.title))
+  assert.ok((await page.title()).includes(SITE_NAME))
   assert.equal(await page.evaluate(() => window.staleBrandSeen), false)
   // Production HTML carries fresh public settings, avoiding a fallback between SSR and React.
   await page.route(root + '/', async route => {
@@ -54,7 +55,7 @@ try {
   await page.getByRole('status').filter({ hasText: '已保存' }).waitFor()
   await page.locator('.blog-brand').filter({ hasText: '更新后的学会名称' }).waitFor()
   assert.ok((await page.locator('.bs-sidebar-title').textContent()).includes('更新后的学会名称'))
-  assert.ok((await page.title()).includes('更新后的学会名称'))
+  assert.ok((await page.title()).includes(SITE_NAME))
   assert.equal(await page.evaluate(() => window.staleBrandSeen), false)
   console.log('Delayed settings, production bootstrap and admin save: no old-brand flash; header/sidebar/tab titles stay synchronized.')
 } finally { await browser.close() }

@@ -6,17 +6,19 @@ import { heroSlides, submissionNote, publicationYear } from '../src/utils/blogPr
 import { safePublicLink } from '../src/utils/blogContent.js'
 import { publicBlogSettings, publicBlogArticle } from '../src/utils/blogBootstrap.js'
 import { compareStories, featuredStories, HOME_STORY_COUNT, STORY_PAGE_SIZE } from '../src/utils/blogFeed.js'
+import { SITE_NAME, SITE_SHORT_NAME, brandedSettings, pageTitle } from '../src/utils/siteBrand.js'
 export const escapeHtml = value => String(value ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]))
 export const siteOrigin = env => new URL(env.BLOG_SITE_URL || 'https://chms1chineselanguageclubsystem.vercel.app').origin
 const safeHref = url => typeof url === 'string' && /^https?:\/\//.test(url) ? url : ''
 
 export function renderBlogHtml(template, site, posts, media, slug, origin, view = 'home', links = [], search = '', browseAll = false, homeContent = {}) {
+  site = brandedSettings(site)
   const searching = !!search || browseAll
   const e = escapeHtml
   const bootstrap = '<script id="blog-site-settings" type="application/json">' + JSON.stringify(publicBlogSettings(site)).replace(/</g, '\\u003c') + '</script>'
   const post = slug ? posts[0] : null
   const names = { home: '首页', literature: '文学角落', activities: '活动记录', bookroom: '书坊', news: '学会资讯', about: '关于我们' }
-  const title = searching ? `${search ? `搜索结果: ${search}` : '全部内容'} | ${site.title}` : slug ? (post ? `${post.title} | ${site.title}` : `文章不存在 | ${site.title}`) : `${names[view]} | ${site.title}`
+  const title = pageTitle(searching ? (search ? `搜索结果: ${search}` : '全部内容') : slug ? (post?.title || '文章不存在') : names[view])
   const description = (post?.summary || site.intro || '').slice(0, 300)
   const canonical = origin + (slug ? `/blog/${encodeURIComponent(slug)}` : view === 'home' ? '/' : `/${view}`)
   const photoUrl = path => safeHref(path) || (path?.startsWith('/') && !path.startsWith('//') ? origin + path : `${origin}/api/blog-media?path=${encodeURIComponent(path || '')}`)
@@ -25,7 +27,8 @@ export function renderBlogHtml(template, site, posts, media, slug, origin, view 
   const image = cover ? `<meta property="og:image" content="${e(photoUrl(cover))}">` : ''
   const structured = post
     ? { '@context': 'https://schema.org', '@type': post.content_type === 'publication' ? 'Book' : 'BlogPosting', ...(post.content_type === 'publication' ? { name: post.title, isbn: post.book_details?.isbn || undefined } : {}), headline: post.title, description, datePublished: post.published_at, dateModified: post.updated_at, mainEntityOfPage: canonical, image: cover ? photoUrl(cover) : undefined, author: { '@type': (post.author || post.book_details?.author) ? 'Person' : 'Organization', name: post.author || post.book_details?.author || site.title } }
-    : { '@context': 'https://schema.org', '@type': 'Organization', name: site.title, url: origin, description }
+    : { '@context': 'https://schema.org', '@type': 'Organization', name: SITE_NAME, alternateName: SITE_SHORT_NAME, url: origin + '/', description }
+  const website = view === 'home' && !slug ? `<script type="application/ld+json">${JSON.stringify({ '@context': 'https://schema.org', '@type': 'WebSite', name: SITE_NAME, alternateName: SITE_SHORT_NAME, url: origin + '/' }).replace(/</g, '\\u003c')}</script>` : ''
   const metadata = `${searching ? '<meta name="robots" content="noindex,follow">' : ''}<title>${e(title)}</title><meta name="description" content="${e(description)}"><link rel="canonical" href="${e(canonical)}"><meta property="og:title" content="${e(title)}"><meta property="og:description" content="${e(description)}"><meta property="og:url" content="${e(canonical)}"><meta property="og:type" content="${post ? 'article' : 'website'}">${image}<script type="application/ld+json">${JSON.stringify(structured).replace(/</g, '\\u003c')}</script>`
   const nav = `<header class="blog-nav"><a class="blog-brand" href="/"><img src="/logo-192.png" alt=""><span>${e(site.title)}<small>${e(site.subtitle)}</small></span></a><nav>${Object.entries(names).map(([key, name]) => `<a href="${key === 'home' ? '/' : '/' + key}">${name}</a>`).join('')}<a href="/member#/login">会员登入</a></nav><form class="blog-global-search" role="search" action="/" method="get"><input name="q" type="search" maxlength="200" required aria-label="搜索公开文章和书籍" value="${e(search)}" placeholder="搜索文章、书籍"><button type="submit">搜索</button></form></header>`
   const paragraphs = text => String(text || '').split(/\n\s*\n/).map(p => `<p>${e(p)}</p>`).join('')
@@ -78,6 +81,6 @@ export function renderBlogHtml(template, site, posts, media, slug, origin, view 
     body = `${hero}<main class="blog-main"><section class="blog-public-section" id="articles"><h${level}>${e(searching ? (search ? `搜索结果: ${search}` : '全部内容') : home ? (site.content?.latest_title || '最新活动') : names[view])}</h${level}>${view === 'literature' ? `<p class="blog-submission-note">${e(site.content?.submission_note ?? submissionNote(false))}</p>` : ''}<div class="blog-post-grid">${visible.map(card).join('')}</div></section>${home && featured.length ? `<section class="blog-public-section"><h2>${e(site.content?.featured_title || '精选内容')}</h2><div class="blog-post-grid">${featured.map(card).join('')}</div></section>` : ''}${home ? `<section class="blog-public-section blog-album-section" id="albums"><h2>${e(site.content?.albums_title || '活动影像')}</h2><div class="blog-album-grid">${moments.map(item => `<a class="blog-album" href="/blog/${e(item.slug)}">${picture(item.moment_path, item.title)}<span><strong>${e(item.title)}</strong><small>${e(publicationYear(item))}</small></span></a>`).join('')}</div></section>${about}` : ''}</main>`
   }
   return template.replace(/<title>[\s\S]*?<\/title>/, '').replace(/<meta name="description"[^>]*>/, '')
-    .replace('</head>', () => metadata + bootstrap + (post ? '<script id="blog-article-data" type="application/json">' + JSON.stringify(publicBlogArticle(post, media, links)).replace(/</g, '\\u003c') + '</script>' : '') + '</head>')
+    .replace('</head>', () => metadata + website + `<meta property="og:site_name" content="${e(SITE_NAME)}">` + bootstrap + (post ? '<script id="blog-article-data" type="application/json">' + JSON.stringify(publicBlogArticle(post, media, links)).replace(/</g, '\\u003c') + '</script>' : '') + '</head>')
     .replace('<div id="root"></div>', () => `<div id="root"><div class="club-blog blog-public${view === 'home' && !slug && !searching ? ' blog-home' : ''}">${nav}${body}<footer class="blog-footer">${e(site.contact)} ${socials(site.content?.social_links)}</footer></div></div>`)
 }

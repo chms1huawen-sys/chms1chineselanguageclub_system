@@ -1,6 +1,7 @@
+import { brandedSettings } from './siteBrand.js'
 // Only public settings are embedded. Never include profiles, sessions or member links.
 export function publicBlogSettings(site) {
-  return Object.fromEntries(['title', 'subtitle', 'intro', 'about', 'contact', 'hero_path', 'content'].map(key => [key, site[key]]))
+  return brandedSettings(Object.fromEntries(['title', 'subtitle', 'intro', 'about', 'contact', 'hero_path', 'content'].map(key => [key, site[key]])))
 }
 
 export function readBlogBootstrap() {

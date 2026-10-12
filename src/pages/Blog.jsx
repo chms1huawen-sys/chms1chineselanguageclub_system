@@ -16,7 +16,8 @@ import '../components/BlogBodyTypography.css'
 import './BlogUi.css'
 import BookPurchase from '../components/BookPurchase'
 import BlogHero from '../components/BlogHero'
-import { readBlogBootstrap, readBlogArticleBootstrap } from '../utils/blogBootstrap'
+import { readBlogBootstrap, readBlogArticleBootstrap, publicBlogSettings } from '../utils/blogBootstrap'
+import { SITE_NAME, MEMBER_NAME, pageTitle } from '../utils/siteBrand'
 import { compareStories, featuredStories, HOME_STORY_COUNT, STORY_PAGE_SIZE, MOMENT_COUNT } from '../utils/blogFeed'
 import { clubStatistics, matchesPublicSearch, submissionNote, publicationYear } from '../utils/blogPresentation'
 import BlogNavigation, { SocialLinks } from '../components/BlogNavigation'
@@ -35,6 +36,7 @@ const storagePath = path => typeof path === 'string' && !!path && !/[:\\?#\s]/.t
 const text = value => typeof value === 'string' ? value : ''
 const yearOf = publicationYear
 const dateOf = post => post.published_at || ''
+const setPageTitle = value => { document.title = value }
 
 export function BlogImage({ path, alt = '', crop, ...props }) {
   const imageRef = useRef(null)
@@ -154,7 +156,7 @@ export default function Blog({ profile, lang, setLang }) {
         const metadata = Promise.all([
           supabase.from('blog_settings').select('*').eq('id', 1).single().then(site => {
             if (site.error) throw site.error
-            if (active) setSettings({ ...defaultBlogSettings, ...site.data })
+            if (active) setSettings(publicBlogSettings({ ...defaultBlogSettings, ...site.data }))
           }),
           rows(supabase.from('blog_categories').select('*').order('name')).then(cats => { if (active) setCategories(cats) }),
           rows(supabase.from('blog_tags').select('*').order('name')).then(library => { if (active) setTagLibrary(library) }),
@@ -214,9 +216,9 @@ export default function Blog({ profile, lang, setLang }) {
   useEffect(() => {
     if (slug && loading) return
     const heading = slug ? (post?.title || (en ? 'Article unavailable' : '文章不存在或尚未公开')) : searching ? (en ? 'Search results' : '搜索结果') : en ? section.en : section.zh
-    document.title = siteReady ? `${heading} | ${settings.title}` : 'CLC_sys'
+    setPageTitle(siteReady ? pageTitle(heading) : SITE_NAME)
   }, [settings.title, siteReady, slug, post?.title, loading, searching, section.en, section.zh, en])
-  useEffect(() => () => { document.title = 'CLC_sys' }, [])
+  useEffect(() => () => { setPageTitle(MEMBER_NAME) }, [])
 
   const lightboxOpen = lightbox !== null
   useEffect(() => {

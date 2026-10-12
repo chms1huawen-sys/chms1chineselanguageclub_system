@@ -12,7 +12,7 @@ const LOGIN_PHOTOS = [
 
 const TRANSLATIONS = {
   zh: {
-    title: '一中华文学会系统',
+    title: '古晋一中华文学会会员系统',
     subtitle: '华文学会内部管理平台',
     email: '电子邮箱',
     emailPlaceholder: '请输入电子邮箱',
@@ -23,7 +23,7 @@ const TRANSLATIONS = {
     errorTitle: '登录失败',
     invalidCreds: '邮箱或密码不正确，请重新输入。',
     installNotice: '请依据主席及老师给予的账号及密码登入。',
-    footer: '一中华文学会系统'
+    footer: '古晋一中华文学会会员系统'
   },
   en: {
     title: 'CLC_sys',
@@ -123,7 +123,7 @@ export default function Login({ onLoginSuccess }) {
                 <div className="absolute left-6 right-6 bottom-6 z-20 flex items-end justify-between gap-4">
                   <div>
                     <p className="text-xs font-black uppercase tracking-[0.18em]" style={{ color: 'white', textShadow: '0 2px 8px rgba(34,91,145,0.88)' }}>
-                      {lang === 'zh' ? '一中华文学会系统' : 'CLC_sys'}
+                      {lang === 'zh' ? '古晋一中华文学会会员系统' : 'CLC_sys'}
                     </p>
                     <p className="text-2xl font-black mt-1 leading-tight" style={{ color: 'white', textShadow: '0 2px 12px rgba(34,91,145,0.88)' }}>
                       {photo.label[lang]}
@@ -156,7 +156,7 @@ export default function Login({ onLoginSuccess }) {
               style={{ boxShadow: '0 8px 24px rgba(149, 203, 255, 0.28)' }}>
               <img src="/logo-192.png" alt="CLC_sys" className="w-full h-full object-cover rounded-full" />
             </div>
-            <h1 className="text-2xl md:text-3xl font-black mb-2" style={{ color: '#1a1a1a' }}>{t.title}</h1>
+            <h1 className="text-2xl font-black mb-2" style={{ color: '#1a1a1a', textWrap: 'balance' }}>{t.title}</h1>
             <p className="text-sm md:text-base font-semibold" style={{ color: '#7b8498' }}>{t.subtitle}</p>
             <div className="w-full h-px mt-7" style={{ background: '#e5e7eb' }} />
           </div>
