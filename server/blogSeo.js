@@ -20,7 +20,7 @@ export function renderBlogHtml(template, site, posts, media, slug, origin, view 
   const bootstrap = '<script id="blog-site-settings" type="application/json">' + JSON.stringify(publicBlogSettings(site)).replace(/</g, '\\u003c') + '</script>'
   const post = slug ? posts[0] : null
   const names = { home: '首页', literature: '文学角落', activities: '活动记录', bookroom: '书坊', news: '学会资讯', about: '关于我们' }
-  const title = pageTitle(searching ? (search ? `搜索结果: ${search}` : '全部内容') : slug ? (post?.title || '文章不存在') : names[view], site)
+  const title = view === 'home' && !slug && !searching ? name : pageTitle(searching ? (search ? `搜索结果: ${search}` : '全部内容') : slug ? (post?.title || '文章不存在') : names[view], site)
   const description = (post?.summary || site.intro || '').slice(0, 300)
   const canonical = origin + (slug ? `/blog/${encodeURIComponent(slug)}` : view === 'home' ? '/' : `/${view}`)
   const photoUrl = path => safeHref(path) || (path?.startsWith('/') && !path.startsWith('//') ? origin + path : `${origin}/api/blog-media?path=${encodeURIComponent(path || '')}`)

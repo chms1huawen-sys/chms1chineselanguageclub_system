@@ -17,7 +17,8 @@ import './BlogUi.css'
 import BookPurchase from '../components/BookPurchase'
 import BlogHero from '../components/BlogHero'
 import { readBlogBootstrap, readBlogArticleBootstrap, publicBlogSettings } from '../utils/blogBootstrap'
-import { SITE_NAME, MEMBER_NAME, pageTitle } from '../utils/siteBrand'
+import { SITE_NAME, MEMBER_NAME, siteName, pageTitle } from '../utils/siteBrand'
+import { observeBlogReveals } from '../utils/blogReveal'
 import { safeSocialLink } from '../utils/socialLink'
 import { compareStories, featuredStories, HOME_STORY_COUNT, STORY_PAGE_SIZE, MOMENT_COUNT } from '../utils/blogFeed'
 import { clubStatistics, matchesPublicSearch, submissionNote, publicationYear } from '../utils/blogPresentation'
@@ -217,9 +218,14 @@ export default function Blog({ profile, lang, setLang }) {
   useEffect(() => {
     if (slug && loading) return
     const heading = slug ? (post?.title || (en ? 'Article unavailable' : '文章不存在或尚未公开')) : searching ? (en ? 'Search results' : '搜索结果') : en ? section.en : section.zh
-    setPageTitle(siteReady ? pageTitle(heading, settings) : SITE_NAME)
-  }, [settings, siteReady, slug, post?.title, loading, searching, section.en, section.zh, en])
+    setPageTitle(siteReady ? (view === 'home' && !slug && !searching ? siteName(settings) : pageTitle(heading, settings)) : SITE_NAME)
+  }, [settings, siteReady, view, slug, post?.title, loading, searching, section.en, section.zh, en])
   useEffect(() => () => { setPageTitle(MEMBER_NAME) }, [])
+  useEffect(() => {
+    if (loading || view !== 'home' || searching || slug) return
+    const root = document.getElementById('blog-content')
+    if (root) return observeBlogReveals(root)
+  }, [loading, view, searching, slug, posts, moments, settings])
 
   const lightboxOpen = lightbox !== null
   useEffect(() => {

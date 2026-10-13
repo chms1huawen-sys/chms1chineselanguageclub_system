@@ -13,7 +13,8 @@ const origin = 'https://example.com'
 test('edited branding and email reach server-rendered public metadata and footer', () => {
   const edited = { ...site, title: '导航简称', content: { site_name: '完整名称', social_links: [{ platform: 'email', label: 'Gmail', url: 'test@example.com' }] } }
   const html = renderBlogHtml(template, edited, [], [], '', origin)
-  assert.ok(html.includes('<title>首页｜完整名称</title>'))
+  assert.ok(html.includes('<title>完整名称</title>'))
+  assert.ok(html.includes('<meta property="og:title" content="完整名称">'))
   assert.ok(html.includes('"name":"完整名称","alternateName":"导航简称"'))
   assert.ok(html.includes('href="mailto:test@example.com"'))
   assert.ok(!html.includes('href="mailto:test@example.com" target'))
@@ -40,7 +41,8 @@ test('book contact buttons support email alone and alongside social links', () =
 test('public pages use canonical titles and sharing name; homepage declares one WebSite', () => {
   for (const [view, label] of Object.entries({ home: '首页', literature: '文学角落', activities: '活动记录', bookroom: '书坊', news: '学会资讯', about: '关于我们' })) {
     const html = renderBlogHtml(template, site, [], [], '', origin, view)
-    assert.ok(html.includes(`<title>${label}｜${SITE_NAME}</title>`))
+    const title = view === 'home' ? SITE_NAME : `${label}｜${SITE_NAME}`
+    assert.ok(html.includes(`<title>${title}</title>`))
     assert.ok(html.includes(`<meta property="og:site_name" content="${SITE_NAME}">`))
     const nodes = [...html.matchAll(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/g)].map(match => JSON.parse(match[1]))
     const websites = nodes.filter(node => node['@type'] === 'WebSite')
