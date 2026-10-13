@@ -1,14 +1,11 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
+import { loginPresentation } from '../utils/loginPresentation'
+import LoginPhoto from '../components/LoginPhoto'
 import { supabase } from '../supabaseClient'
 import { MEMBER_PROFILE_FIELDS } from '../utils/memberProfile'
 import { authErrorMessage } from '../utils/authErrorMessage'
 import { Globe, ShieldAlert } from 'lucide-react'
 import './MemberUi.css'
-
-const LOGIN_PHOTOS = [
-  { src: '/login-group-2026.jpeg', label: { zh: '一中华文学会 · 2026', en: 'CHMS1 Chinese Language Club · 2026' } },
-  { src: '/login-event-2026.jpeg', label: { zh: '第四届“传承”全校性华语诗歌朗诵比赛', en: 'The 4th “Inheritance” School-wide Chinese Poetry Recitation Competition' } },
-]
 
 const TRANSLATIONS = {
   zh: {
@@ -48,7 +45,16 @@ export default function Login({ onLoginSuccess }) {
   const [loading, setLoading] = useState(false)
   const [errorMsg, setErrorMsg] = useState('')
 
-  const t = TRANSLATIONS[lang]
+  const [presentation, setPresentation] = useState(() => loginPresentation())
+  useEffect(() => {
+    let active = true
+    supabase.from('blog_settings').select('content').eq('id', 1).single().then(({ data, error }) => {
+      if (active && !error && data) setPresentation(loginPresentation(data.content?.member_login))
+    }).catch(() => {})
+    return () => { active = false }
+  }, [])
+  const en = lang === 'en'
+  const t = { ...TRANSLATIONS[lang], ...Object.fromEntries(['title', 'subtitle', 'footer'].map(key => [key, presentation[en ? `${key}_en` : key]])) }
 
   const handleLogin = async (e) => {
     e.preventDefault()
@@ -116,21 +122,21 @@ export default function Login({ onLoginSuccess }) {
         <div className="hidden md:flex relative overflow-hidden items-stretch"
           style={{ background: 'linear-gradient(135deg, #dff1ff 0%, #f0f7ff 48%, #ffe9f0 100%)' }}>
           <div className="relative w-full overflow-hidden flex items-center justify-center">
-            {LOGIN_PHOTOS.map((photo, index) => (
-              <div key={photo.src} className={`login-carousel-slide login-carousel-slide-${index + 1}`}>
-                <img src={photo.src} alt={photo.label[lang]} className={`absolute inset-0 w-full h-full object-cover login-photo-pan login-photo-pan-${index + 1}`} />
+            {presentation.slides.map((photo, index) => (
+              <div key={`${index}-${photo.path}`} className={`login-carousel-slide login-carousel-slide-${index + 1}`}>
+                <LoginPhoto slide={photo} en={en} className={`login-photo-pan login-photo-pan-${index + 1}`} />
                 <div className="absolute inset-0" style={{ background: 'linear-gradient(180deg, rgba(255,255,255,0.04), rgba(41,95,150,0.32))' }} />
                 <div className="absolute left-6 right-6 bottom-6 z-20 flex items-end justify-between gap-4">
                   <div>
                     <p className="text-xs font-black uppercase tracking-[0.18em]" style={{ color: 'white', textShadow: '0 2px 8px rgba(34,91,145,0.88)' }}>
-                      {lang === 'zh' ? '古晋一中华文学会会员系统' : 'CLC_sys'}
+                      {photo[en ? 'eyebrow_en' : 'eyebrow']}
                     </p>
                     <p className="text-2xl font-black mt-1 leading-tight" style={{ color: 'white', textShadow: '0 2px 12px rgba(34,91,145,0.88)' }}>
-                      {photo.label[lang]}
+                      {photo[en ? 'title_en' : 'title']}
                     </p>
                   </div>
                   <div className="flex gap-1.5 shrink-0">
-                    {LOGIN_PHOTOS.map((_, dotIndex) => (
+                    {presentation.slides.map((_, dotIndex) => (
                       <span key={dotIndex} className={`w-2 h-2 rounded-full login-carousel-dot login-carousel-dot-${dotIndex + 1}`} />
                     ))}
                   </div>

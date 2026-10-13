@@ -150,8 +150,8 @@ body {
   .login-symbol, .login-dot, .login-photo-pan,
   .login-carousel-slide, .login-carousel-dot { animation: none !important; will-change: auto; }
   .login-photo-pan { transform: none; }
-  .login-carousel-slide-1 { opacity: 1; }
-  .login-carousel-slide-2 { opacity: 0; }
+  .login-carousel-slide.login-carousel-slide-1 { opacity: 1; }
+  .login-carousel-slide.login-carousel-slide-2 { opacity: 0; }
 }
 
 .login-carousel-slide {
