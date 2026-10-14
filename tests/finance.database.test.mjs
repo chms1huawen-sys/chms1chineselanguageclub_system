@@ -10,7 +10,7 @@ test('finance approval stages, receipts privacy, decimal ledger and duplicate pa
   const db = new PGlite()
   try {
     await db.exec(`
-      create role anon; create role authenticated;
+      create role anon; create role authenticated; create role service_role;
       create schema auth; create schema storage;
       create function auth.uid() returns uuid language sql stable as $$select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid$$;
       grant usage on schema auth,storage to authenticated;
@@ -33,6 +33,8 @@ test('finance approval stages, receipts privacy, decimal ledger and duplicate pa
     await db.exec(headingsSql); await db.exec(headingsSql)
     await db.exec(await boundedRpcSQL(['finance_mutate', 'finance_record_income']))
     await installMemberWriteLimits(db)
+    const separationSql = await readFile(new URL('../supabase_migration_2026_10_14_finance_stage_separation.sql', import.meta.url), 'utf8')
+    await db.exec(separationSql); await db.exec(separationSql)
     await assert.rejects(db.query("select finance_mutate('submit',$1::jsonb)",[JSON.stringify({note:'x'.repeat(262145)})]), /RPC_INPUT_INVALID/)
     const [member,other,treasurer,president,teacher,custom] = Array.from({length:6},randomUUID)
     for (const [id,role] of [[member,'ordinary_member'],[other,'ordinary_member'],[treasurer,'treasurer'],[president,'chairperson'],[teacher,'advisor_teacher'],[custom,'custom']]) await db.query('insert into users(id,name,role) values($1,$2,$2)',[id,role])
@@ -61,6 +63,11 @@ test('finance approval stages, receipts privacy, decimal ledger and duplicate pa
     await assert.rejects(db.query('select finance_record_income($1)',[JSON.stringify({operation_id:randomUUID(),amount:1,entry_date:'2026-01-02',description:'No'})]),/FINANCE_FORBIDDEN/)
     await as(president)
     await assert.rejects(mutate('approve',{id:request.id,expected_status:'treasury'}),/FINANCE_FORBIDDEN/)
+    await as(teacher)
+    await assert.rejects(mutate('approve',{id:request.id,expected_status:'treasury'}),/FINANCE_FORBIDDEN/)
+    await assert.rejects(mutate('return',{id:request.id,expected_status:'treasury',note:'Teacher override'}),/FINANCE_FORBIDDEN/)
+    assert.equal((await db.query('select status from finance_claims where id=$1',[request.id])).rows[0].status,'treasury','Denied teacher action rolls back the claim status')
+    assert.equal((await db.query("select * from finance_reviews where claim_id=$1 and action='approve'",[request.id])).rows.length,0)
     await as(treasurer)
     assert.equal((await db.query('select * from storage.objects')).rows.length,1,'Finance staff can read linked receipt')
     await mutate('opening',{amount:'283.25',description:'Balance b/d',entry_date:'2026-01-01'})
@@ -70,6 +77,8 @@ test('finance approval stages, receipts privacy, decimal ledger and duplicate pa
     assert.equal(years.includes(2000),false)
     await mutate('approve',{id:request.id,expected_status:'treasury'})
     await assert.rejects(mutate('approve',{id:request.id,expected_status:'treasury'}),/FINANCE_STATUS_CHANGED/)
+    await assert.rejects(mutate('approve',{id:request.id,expected_status:'president'}),/FINANCE_FORBIDDEN/)
+    await as(teacher)
     await assert.rejects(mutate('approve',{id:request.id,expected_status:'president'}),/FINANCE_FORBIDDEN/)
     await as(president)
     await mutate('approve',{id:request.id,expected_status:'president'})
@@ -95,7 +104,13 @@ test('finance approval stages, receipts privacy, decimal ledger and duplicate pa
     const own=await submit(treasurer)
     await assert.rejects(mutate('approve',{id:own.id,expected_status:'treasury'}),/FINANCE_SELF_APPROVAL/)
     const teacherOwn=await submit(teacher)
-    for (const expected_status of ['treasury','president','teacher']) await mutate('approve',{id:teacherOwn.id,expected_status})
+    await assert.rejects(mutate('approve',{id:teacherOwn.id,expected_status:'treasury'}),/FINANCE_FORBIDDEN/)
+    await as(treasurer)
+    await mutate('approve',{id:teacherOwn.id,expected_status:'treasury'})
+    await as(president)
+    await mutate('approve',{id:teacherOwn.id,expected_status:'president'})
+    await as(teacher)
+    await mutate('approve',{id:teacherOwn.id,expected_status:'teacher'})
     await mutate('pay',{id:teacherOwn.id,expected_status:'approved',entry_date:'2026-01-04',note:'Cash'})
     const returned=await submit(member)
     await as(treasurer)

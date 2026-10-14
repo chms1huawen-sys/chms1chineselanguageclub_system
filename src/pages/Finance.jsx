@@ -5,6 +5,7 @@ import { supabase } from '../supabaseClient'
 import { secureUpload } from '../utils/secureUpload'
 import { memberWriteError } from '../utils/memberWriteError'
 import { hasPermission } from '../utils/permissions'
+import { canReviewFinanceStage } from '../utils/financeApproval'
 import { sendPushForNotifications } from '../utils/pushNotifications'
 import './Inventory.css'
 import './Finance.css'
@@ -140,7 +141,7 @@ export default function Finance({ currentUserProfile: profile, lang = 'zh', noti
   const change = (key, value) => setForm(f => ({ ...f, [key]: value }))
   const close = () => { if (!lock.current) setModal(null) }
   const switchTab = next => { setLoading(true); setTab(next); setStatus(''); setPage(0) }
-  const canApprove = c => admin && (teacher || c.applicant_id !== profile.id) && ((c.status === 'treasury' && treasury) || (c.status === 'president' && president) || (c.status === 'teacher' && teacher))
+  const canApprove = c => admin && (teacher || c.applicant_id !== profile.id) && canReviewFinanceStage(profile, c.status)
   const detail = claims.find(c => c.id === form.id) || form
   const receiptLink = async receipt => {
     const popup = window.open('', '_blank')
