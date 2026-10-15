@@ -14,6 +14,6 @@ export default function LoginPhoto({ slide, en, className = '' }) {
     observer.observe(frame.current)
     return () => observer.disconnect()
   }, [])
-  const style = source === gateway && loginPhotoLayout(slide.crop, box)
+  const style = (source === gateway || source === slide.path) && loginPhotoLayout(slide.crop, box)
   return <div ref={frame} className={className} style={{ position: 'absolute', inset: 0, overflow: 'hidden' }}><img src={source} alt={en ? slide.title_en : slide.title} onError={() => setFailed(values => values.includes(source) ? values : [...values, source])} style={style || { width: '100%', height: '100%', objectFit: 'cover' }} /></div>
 }

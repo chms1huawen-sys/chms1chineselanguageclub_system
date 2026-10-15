@@ -55,10 +55,30 @@ test('refuses existing unverified objects, corrupted copies and unsupported cont
   assert.equal(existing.calls.put, 0)
   const corrupt = store({ corrupt: true })
   await assert.rejects(corrupt.mirror(target), /checksum/)
-  await assert.rejects(corrupt.mirror(target), /no verification marker/)
+  await assert.rejects(corrupt.mirror(target), /checksum/)
+  assert.equal(corrupt.calls.put, 1)
   const unsupported = store({ mime: 'text/html' })
   await assert.rejects(unsupported.mirror(target), /Unsupported/)
   assert.equal(unsupported.calls.put, 0)
+})
+
+test('interrupted verification resumes by comparing source and destination without overwriting', async () => {
+  const existing = store({ object: { bytes: image, ContentLength: image.length, ContentType: 'image/webp', Metadata: { sha256: hash(image) } } })
+  assert.match((await existing.mirror(target)).signedUrl, /expires=300/)
+  assert.equal(existing.calls.download, 1)
+  assert.equal(existing.calls.get, 1)
+  assert.equal(existing.calls.put, 0)
+})
+
+test('rejects oversized source before any destination write', async () => {
+  let writes = 0
+  const mirror = createPhotoMirror({
+    head: async () => { throw Object.assign(new Error(), { name: 'NotFound' }) },
+    fetchSource: async () => new Response('data', { headers: { 'content-type': 'image/webp', 'content-length': String(11 * 1024 * 1024) } }),
+    put: async () => { writes++ },
+  })
+  await assert.rejects(mirror(target), /too large/)
+  assert.equal(writes, 0)
 })
 
 test('configuration never accepts arbitrary endpoints; rollback disables R2', () => {

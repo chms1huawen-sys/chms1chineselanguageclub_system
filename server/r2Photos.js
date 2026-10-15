@@ -26,7 +26,10 @@ export function r2PhotoConfig(env) {
 }
 
 async function boundedBytes(response, max = MAX_PHOTO_BYTES) {
-  if (!response.ok || !response.body || Number(response.headers.get('content-length')) > max) throw new Error('Source image unavailable or too large')
+  if (!response.ok || !response.body || Number(response.headers.get('content-length')) > max) {
+    await response.body?.cancel()
+    throw new Error('Source image unavailable or too large')
+  }
   const reader = response.body.getReader()
   const chunks = []
   let size = 0
@@ -56,8 +59,7 @@ export function createPhotoMirror({ head, get, put, verified, markVerified, sign
       if (existing) {
         if (!/^[a-f0-9]{64}$/.test(existing.Metadata?.sha256 || '') || !mimeTypes.has(existing.ContentType) ||
             !Number.isSafeInteger(existing.ContentLength) || existing.ContentLength <= 0 || existing.ContentLength > MAX_PHOTO_BYTES) throw new Error('Unverified destination; refusing overwrite')
-        if (!await verified(key, existing.Metadata.sha256)) throw new Error('Destination has no verification marker; refusing overwrite')
-        return { sha256: existing.Metadata.sha256, bytes: existing.ContentLength, contentType: existing.ContentType }
+        if (await verified(key, existing.Metadata.sha256)) return { sha256: existing.Metadata.sha256, bytes: existing.ContentLength, contentType: existing.ContentType }
       }
       if (headOnly) throw new Error('Destination not yet copied')
       const response = await fetchSource(sourceUrl, { signal: AbortSignal.timeout(12000), redirect: 'error' })
@@ -65,11 +67,15 @@ export function createPhotoMirror({ head, get, put, verified, markVerified, sign
       if (!mimeTypes.has(contentType)) { await response.body?.cancel(); throw new Error('Unsupported source image') }
       const bytes = await boundedBytes(response)
       const sha256 = digest(bytes)
-      try {
-        await put(key, bytes, contentType, sha256)
-      } catch (error) {
-        // Another instance may have won the conditional write. Verify it below.
-        if (error?.$metadata?.httpStatusCode !== 412) throw error
+      if (existing) {
+        if (existing.Metadata.sha256 !== sha256 || existing.ContentLength !== bytes.length || existing.ContentType !== contentType) throw new Error('Destination differs from source; refusing overwrite')
+      } else {
+        try {
+          await put(key, bytes, contentType, sha256)
+        } catch (error) {
+          // Another instance may have won the conditional write. Verify it below.
+          if (error?.$metadata?.httpStatusCode !== 412) throw error
+        }
       }
       const destination = await get(key)
       const copy = await boundedBytes(destination)
@@ -97,7 +103,7 @@ export function s3PhotoMirror(config) {
   const client = new S3Client({
     region: 'auto', endpoint: config.endpoint,
     credentials: { accessKeyId: config.accessKeyId, secretAccessKey: config.secretAccessKey },
-    maxAttempts: 2, requestHandler: { connectionTimeout: 1500, requestTimeout: 5000 },
+    maxAttempts: 1, requestHandler: { connectionTimeout: 1000, requestTimeout: 2500 },
     requestChecksumCalculation: 'WHEN_REQUIRED', responseChecksumValidation: 'WHEN_REQUIRED',
   })
   const target = key => ({ Bucket: config.bucket, Key: key })

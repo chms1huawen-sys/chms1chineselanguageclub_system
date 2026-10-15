@@ -8,6 +8,7 @@ export function createBlogMediaHandler({ env, client = createClient, mirrorFacto
   return async (req, res) => {
     res.setHeader('Cache-Control', 'no-store')
     res.setHeader('X-Content-Type-Options', 'nosniff')
+    res.setHeader('X-Blog-Media-Version', 'r2-v1')
     if (!['GET', 'HEAD'].includes(req.method)) return res.status(405).end()
     const path = req.query?.path
     const bucket = req.query?.bucket ?? 'blog-photos'

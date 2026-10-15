@@ -1,9 +1,30 @@
 # R2 photo migration preparation
 
-Status (2026-10-16): private R2 delivery integration implemented locally. The owner
-created the bucket and saved four server-only R2 variables in Vercel Production.
-Deployment and live transfer must be verified separately; configuration alone is
-not evidence that an image has moved. No source deletion or database rewrite.
+Status (2026-10-16): first deployment and transfer verified on the production domain.
+All 86 images / 14,528,085 bytes passed destination size, MIME and SHA-256 checks.
+The owner created the private bucket and saved four server-only R2 variables in
+Vercel Production. No source deletion or database rewrite.
+
+## Verified rollout results
+
+- Initial commit `d38a8be` pushed to `main`; the production API returned provider=r2
+  and verification data. GitHub-triggered deployment worked without a Pro upgrade.
+- `backups/r2-photos-result-20261016.json` (ignored, local only) completed with 86
+  unique verified image keys, zero transfer/checksum failures. All are blog-photos;
+  the inventory contained no current blog-site-media references.
+- Homepage, literature, bookroom and about HTTP responses were 200. The first three
+  contained the new image gateway in server-rendered content. About had no matching
+  current Storage image. No R2 secret names appeared in these HTML responses or
+  the client build assets.
+- Live receipt, avatar and nonexistent-photo gateway probes returned 404 without
+  a redirect. Published-to-hidden transitions, R2 outage fallback and new eligible
+  target behavior are covered by unit mocks, not by modifying production content.
+- Production build, targeted lint, 26 related tests and 30 security tests passed;
+  secret scan found no working-tree, history or exposed-environment credentials.
+- Browser-based desktop/mobile visual QA could not run: the browser connector still
+  fails to initialize its request-header policy (403). No alternate browser security
+  bypass or live account/session extraction was used. Phone rendering and a real
+  newly published upload should still receive owner acceptance testing.
 
 ## Delivery and rollout
 
@@ -15,7 +36,9 @@ not evidence that an image has moved. No source deletion or database rewrite.
 - On a public image's first GET, download at most 10 MiB from the authorized source,
   conditionally copy to `photos-v1/<source-bucket>/<path>`, read back and compare
   byte length, MIME and SHA-256. Write a zero-byte `.verified` marker only after
-  verification. Existing unverified or mismatched objects are NOT overwritten.
+  verification. Existing objects are NOT overwritten. If verification was interrupted,
+  re-read both source and destination and write the marker only when they match;
+  invalid metadata, mismatched bytes or MIME fail closed without an overwrite.
 - Later requests use R2 only when both object metadata and its verification marker
   agree. HEAD never copies. Concurrent GETs share a copy within an instance; R2's
   conditional write also protects against other instances. Two small objects are
@@ -124,5 +147,6 @@ Blocked entries must be resolved before copying. Re-run immediately before migra
 10. Compare daily Storage and PostgREST egress after cutover. R2 does not eliminate
     public-page database reads, Auth, Realtime or function egress.
 
-Nothing in this preparation authorizes purchases, production switches, deleting source
-objects, publishing private media or changing current member-system workflows.
+The owner authorized the non-destructive photo rollout on Oct 16. Purchases,
+deleting source objects, publishing private media and changes to member-system
+workflows are outside this rollout.
