@@ -1,5 +1,6 @@
 import { cropStyles } from '../src/utils/photoCrop.js'
 import { createElement } from 'react'
+import process from 'node:process'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { richBody, photoWidth, galleryPreview } from '../src/utils/blogRichText.js'
 import { heroSlides, submissionNote, publicationYear } from '../src/utils/blogPresentation.js'
@@ -8,6 +9,7 @@ import { publicBlogSettings, publicBlogArticle } from '../src/utils/blogBootstra
 import { compareStories, featuredStories, HOME_STORY_COUNT, STORY_PAGE_SIZE } from '../src/utils/blogFeed.js'
 import { safeSocialLink } from '../src/utils/socialLink.js'
 import { siteName, brandedSettings, pageTitle } from '../src/utils/siteBrand.js'
+import { blogMediaUrl } from '../src/utils/blogMediaUrl.js'
 export const escapeHtml = value => String(value ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]))
 export const siteOrigin = env => new URL(env.BLOG_SITE_URL || 'https://chms1chineselanguageclubsystem.vercel.app').origin
 const safeHref = url => typeof url === 'string' && /^https?:\/\//.test(url) ? url : ''
@@ -23,7 +25,10 @@ export function renderBlogHtml(template, site, posts, media, slug, origin, view 
   const title = view === 'home' && !slug && !searching ? name : pageTitle(searching ? (search ? `搜索结果: ${search}` : '全部内容') : slug ? (post?.title || '文章不存在') : names[view], site)
   const description = (post?.summary || site.intro || '').slice(0, 300)
   const canonical = origin + (slug ? `/blog/${encodeURIComponent(slug)}` : view === 'home' ? '/' : `/${view}`)
-  const photoUrl = path => safeHref(path) || (path?.startsWith('/') && !path.startsWith('//') ? origin + path : `${origin}/api/blog-media?path=${encodeURIComponent(path || '')}`)
+  const photoUrl = path => {
+    const gateway = blogMediaUrl(path, process.env.VITE_SUPABASE_URL)
+    return gateway.startsWith('/api/blog-media?') ? origin + gateway : safeHref(path) || (path?.startsWith('/') && !path.startsWith('//') ? origin + path : `${origin}/api/blog-media?path=${encodeURIComponent(path || '')}`)
+  }
   const slide = heroSlides(site)[0]
   const cover = post?.cover_path || slide?.path || site.hero_path
   const image = cover ? `<meta property="og:image" content="${e(photoUrl(cover))}">` : ''

@@ -17,6 +17,8 @@
     "security:test": "node --test tests/securitySignup.test.mjs tests/securityTaskUpdate.test.mjs tests/securityRateLimit.test.mjs tests/securityPushInput.test.mjs tests/securityHeaders.test.mjs tests/securitySecrets.test.mjs tests/securityMemberProfile.test.mjs tests/securityProfileRpc.test.mjs tests/securityAuthErrors.test.mjs tests/securityUpload.test.mjs tests/securityUploadPermissions.test.mjs tests/blog.richtext.test.mjs tests/blog.api.test.mjs tests/pushRequestAuth.test.mjs tests/pushRecipientAuth.test.mjs tests/vercelRouting.test.mjs"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.1152.0",
+    "@aws-sdk/s3-request-presigner": "^3.1152.0",
     "@supabase/supabase-js": "^2.106.1",
     "@tiptap/extension-highlight": "^3.31.3",
     "@tiptap/extension-subscript": "^3.31.3",

@@ -1,9 +1,9 @@
-export function createSignedImageCache(sign, now = Date.now) {
+export function createSignedImageCache(sign, now = Date.now, ttl = 50 * 60 * 1000) {
   const entries = new Map()
   return path => {
     const cached = entries.get(path)
     if (cached && cached.expires > now()) return cached.promise
-    const entry = { expires: now() + 50 * 60 * 1000 }
+    const entry = { expires: now() + ttl }
     entry.promise = Promise.resolve().then(() => sign(path)).then(result => {
       if (result.error || !result.data?.signedUrl) throw result.error || new Error('Image URL unavailable')
       return result
