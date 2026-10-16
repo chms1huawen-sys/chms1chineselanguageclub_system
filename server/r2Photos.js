@@ -11,7 +11,7 @@ export const photoKey = (bucket, path) => `photos-v1/${bucket}/${path}`
 
 export function validPhotoTarget(bucket, path) {
   return ['blog-photos', 'blog-site-media'].includes(bucket) && typeof path === 'string' && path.length <= 500 &&
-    /^[a-zA-Z0-9_-]+\/[a-zA-Z0-9_./-]+\.(?:jpe?g|png|webp|avif)$/i.test(path) &&
+    (bucket === 'blog-site-media' ? /^[a-zA-Z0-9_./-]+\.(?:jpe?g|png|webp|avif)$/i : /^[a-zA-Z0-9_-]+\/[a-zA-Z0-9_./-]+\.(?:jpe?g|png|webp|avif)$/i).test(path) &&
     !path.split('/').some(part => !part || part === '.' || part === '..')
 }
 

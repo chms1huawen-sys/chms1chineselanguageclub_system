@@ -1,5 +1,5 @@
-const imagePath = value => typeof value === 'string' &&
-  /^[a-zA-Z0-9_-]+\/[a-zA-Z0-9_./-]+\.(?:jpe?g|png|webp|avif)$/i.test(value) &&
+const imagePath = (value, bucket = 'blog-photos') => typeof value === 'string' &&
+  (bucket === 'blog-site-media' ? /^[a-zA-Z0-9_./-]+\.(?:jpe?g|png|webp|avif)$/i : /^[a-zA-Z0-9_-]+\/[a-zA-Z0-9_./-]+\.(?:jpe?g|png|webp|avif)$/i).test(value) &&
   !value.split('/').some(part => !part || part === '.' || part === '..')
 
 export function photoCandidates({ posts, albums, media, settings, projectUrl }) {
@@ -8,7 +8,7 @@ export function photoCandidates({ posts, albums, media, settings, projectUrl }) 
   const publishedAlbums = new Set(albums.filter(row => row.status === 'published').map(row => row.id))
   const displays = new Map()
   const add = (bucket, path) => {
-    if (!imagePath(path)) return
+    if (!imagePath(path, bucket)) return
     candidates.set(`${bucket}/${path}`, { bucket, path, targetKey: `photos-v1/${bucket}/${path}` })
   }
   let optimizedPhotos = 0

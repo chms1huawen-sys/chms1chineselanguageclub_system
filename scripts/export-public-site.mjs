@@ -32,13 +32,20 @@ export function staticPublicSnapshot(snapshot, projectUrl) {
   return { snapshot: transform(snapshot), candidates }
 }
 
-async function downloadPhoto(file, origin) {
+export function renderStaticPreviewPage(template, snapshot, request, origin) {
+  const page = renderSnapshotPage(template, snapshot, request, origin)
+  return { ...page, html: page.html.replaceAll(`${origin}/public-media/`, '/public-media/') }
+}
+
+async function downloadPhoto(file, origin, reserve) {
   const url = new URL('/api/blog-media', origin)
   url.search = new URLSearchParams({ bucket: file.bucket, path: file.path, format: 'json' })
   const result = await fetch(url, { redirect: 'error', signal: AbortSignal.timeout(45000) })
   if (!result.ok) throw new Error('Public image unavailable')
   const signed = await result.json()
   if (signed.provider !== 'r2' || !/^[a-f0-9]{64}$/.test(signed.verification?.sha256 || '')) throw new Error('Image not verified on R2')
+  if (!Number.isSafeInteger(signed.verification.bytes) || signed.verification.bytes <= 0 || signed.verification.bytes > 10 * 1024 * 1024) throw new Error('Invalid image size')
+  reserve(signed.verification.bytes)
   const target = new URL(signed.data.signedUrl)
   if (target.protocol !== 'https:' || !target.hostname.endsWith('.r2.cloudflarestorage.com') || target.username || target.password) throw new Error('Unexpected image provider')
   const response = await fetch(target, { redirect: 'error', signal: AbortSignal.timeout(15000) })
@@ -72,13 +79,18 @@ async function main() {
   await mkdir(out)
   await cp(resolve('dist'), out, { recursive: true })
   let bytes = 0
-  for (const file of candidates) {
-    const image = await downloadPhoto(file, origin.origin)
-    bytes += image.length
-    if (bytes > 30 * 1024 * 1024) throw new Error('Static image export budget exceeded')
-    const filename = join(out, 'public-media', file.bucket, file.path)
-    await mkdir(dirname(filename), { recursive: true })
-    await writeFile(filename, image, { flag: 'wx' })
+  let reserved = 0
+  const reserve = size => { if (reserved + size > 30 * 1024 * 1024) throw new Error('Static image export budget exceeded'); reserved += size }
+  for (let start = 0; start < candidates.length; start += 3) {
+    const results = await Promise.allSettled(candidates.slice(start, start + 3).map(async file => {
+      const image = await downloadPhoto(file, origin.origin, reserve)
+      const filename = join(out, 'public-media', file.bucket, file.path)
+      await mkdir(dirname(filename), { recursive: true })
+      await writeFile(filename, image, { flag: 'wx' })
+      return image.length
+    }))
+    for (const result of results) { if (result.status === 'rejected') throw result.reason; bytes += result.value }
+    console.log(`Static images verified: ${Math.min(start + 3, candidates.length)}/${candidates.length}`)
   }
   const template = withPublicStyles(await readFile(join(out, 'index.html'), 'utf8'), JSON.parse(await readFile(join(out, '.vite/manifest.json'), 'utf8')))
     .replace('</head>', '<meta name="public-static-preview" content="true"></head>')
@@ -87,7 +99,7 @@ async function main() {
   for (const [path, view, slug = ''] of routes) {
     const filename = join(out, path, 'index.html')
     await mkdir(dirname(filename), { recursive: true })
-    const page = renderSnapshotPage(template, snapshot, { slug, view, search: '' }, origin.origin)
+    const page = renderStaticPreviewPage(template, snapshot, { slug, view, search: '' }, origin.origin)
     await writeFile(filename, page.html)
   }
   await mkdir(join(out, 'api'), { recursive: true })

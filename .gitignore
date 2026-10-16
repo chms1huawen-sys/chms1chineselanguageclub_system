@@ -31,6 +31,7 @@ dist-ssr
 !.env.example
 !.env.template
 test-results/
+.wrangler/
 
 # Database exports contain private member data and must never be published.
 backups/

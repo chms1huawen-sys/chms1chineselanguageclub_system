@@ -6,7 +6,8 @@ import { createPublicSnapshotHandler } from '../server/publicSnapshotHandler.js'
 import { snapshotPhotoPath } from '../server/snapshotPhotos.js'
 import { renderSnapshotPage } from '../server/snapshotPage.js'
 import { createPublicSnapshotReader, syncPublicSnapshot } from '../src/utils/publicSnapshotClient.js'
-import { staticPublicSnapshot } from '../scripts/export-public-site.mjs'
+import { staticPublicSnapshot, renderStaticPreviewPage } from '../scripts/export-public-site.mjs'
+import { blogMediaUrl } from '../src/utils/blogMediaUrl.js'
 
 const time = Date.parse('2026-10-16T00:00:00Z')
 const input = {
@@ -159,4 +160,20 @@ test('static preview rewrites covers, gallery and rich text to local compressed 
   assert.equal(snapshot.media[0].path, snapshot.posts[0].cover_path)
   assert.equal(snapshot.posts[0].body_document.content[0].attrs.src, snapshot.posts[0].cover_path)
   assert.ok(validPublicSnapshot(snapshot))
+})
+
+test('root-level public site images migrate and static SSR images stay on the preview origin', () => {
+  const url = 'https://example.supabase.co/storage/v1/object/public/blog-site-media/banner.jpg'
+  const source = makePublicSnapshot({ ...input, settings: { ...input.settings, hero_path: url, content: { about_image: url } } }, time)
+  assert.equal(snapshotPhotoPath(source, 'blog-site-media', 'banner.jpg', 'https://example.supabase.co'), 'banner.jpg')
+  assert.equal(snapshotPhotoPath(source, 'blog-site-media', 'unlisted.jpg', 'https://example.supabase.co'), null)
+  assert.match(blogMediaUrl(url, 'https://example.supabase.co'), /^\/api\/blog-media\?bucket=blog-site-media/)
+  const { snapshot, candidates } = staticPublicSnapshot(source, 'https://example.supabase.co')
+  assert.equal(candidates.length, 2)
+  assert.equal(snapshot.settings.hero_path, '/public-media/blog-site-media/banner.jpg')
+  assert.equal(snapshot.settings.content.about_image, snapshot.settings.hero_path)
+  const page = renderStaticPreviewPage('<html><head></head><body><div id="root"></div></body></html>', snapshot, { slug: '', view: 'home', search: '' }, 'https://site.example')
+  assert.ok(page.html.includes('src="/public-media/blog-site-media/banner.jpg"'))
+  assert.ok(!page.html.includes('https://site.example/public-media/'))
+  assert.ok(page.html.includes('rel="canonical" href="https://site.example/"'))
 })

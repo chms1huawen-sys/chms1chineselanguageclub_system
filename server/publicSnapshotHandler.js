@@ -5,6 +5,7 @@ export function createPublicSnapshotHandler({ env, snapshot, client = createClie
   return async (req, res) => {
     res.setHeader('Cache-Control', 'no-store')
     res.setHeader('X-Content-Type-Options', 'nosniff')
+    res.setHeader('X-Robots-Tag', 'noindex, nofollow')
     if (!['GET', 'HEAD', 'POST'].includes(req.method)) return res.status(405).end()
     const force = req.method === 'POST'
     if (force) {
