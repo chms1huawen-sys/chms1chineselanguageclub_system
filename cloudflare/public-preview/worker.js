@@ -12,8 +12,8 @@ const reply = (body, status = 200, type = 'text/html; charset=utf-8', extra = {}
 export function createPreviewWorker({ now = Date.now, fetchOrigin = fetch } = {}) {
   let cached
   let until = 0
-  async function current(env) {
-    if (cached && now() < until) return cached
+  let pending
+  async function readCurrent(env) {
     const object = await env.PUBLIC_SITE.get(SNAPSHOT_KEY)
     if (!object || object.size > 3 * 1024 * 1024) throw new Error('Public preview unavailable')
     const text = await object.text()
@@ -24,9 +24,14 @@ export function createPreviewWorker({ now = Date.now, fetchOrigin = fetch } = {}
     if (preview?.schemaVersion !== 1 || preview.generatedAt !== data.generatedAt || !preview.pages?.['/'] ||
         !Array.isArray(preview.photos) || !Array.isArray(preview.snapshot?.posts) ||
         preview.snapshot.posts.some(post => post.status !== 'published') || preview.snapshot.links.some(link => link.visibility !== 'public')) throw new Error('Public preview invalid')
-    cached = { preview, checkedAt: data.checkedAt }
+    cached = { preview, checkedAt: data.checkedAt, json: JSON.stringify(preview.snapshot), photos: new Map(preview.photos.map(photo => [photo.url, photo])) }
     until = now() + 15000
     return cached
+  }
+  function current(env) {
+    if (cached && now() < until) return Promise.resolve(cached)
+    pending ||= readCurrent(env).finally(() => { pending = null })
+    return pending
   }
   return {
     async fetch(request, env) {
@@ -39,14 +44,15 @@ export function createPreviewWorker({ now = Date.now, fetchOrigin = fetch } = {}
       if (path === '/index.html') return reply(null, 302, 'text/plain', { Location: '/' + url.search })
       if (/^\/(?:manifest[^/]*\.json|firebase-messaging-sw\.js)$/.test(path)) return reply(null, 404)
       try {
-        const { preview, checkedAt } = await current(env)
+        const { preview, checkedAt, json, photos } = await current(env)
         const version = { 'X-Public-Preview-Version': preview.generatedAt }
         if (path === '/api/preview-status') return reply(request.method === 'HEAD' ? null : JSON.stringify({ automatic: true, generatedAt: preview.generatedAt, checkedAt, posts: preview.snapshot.posts.length }), 200, 'application/json', version)
-        if (path === '/api/blog-public') return reply(request.method === 'HEAD' ? null : JSON.stringify(preview.snapshot), 200, 'application/json; charset=utf-8', version)
+        if (path === '/api/blog-public') return reply(request.method === 'HEAD' ? null : json, 200, 'application/json; charset=utf-8', version)
         if (path.startsWith('/public-media/')) {
-          const photo = preview.photos.find(file => file.url === path)
+          const photo = photos.get(path)
           if (!photo || !/^photos-v1\/(blog-photos|blog-site-media)\/[a-zA-Z0-9_./-]+$/.test(photo.key) || photo.key.split('/').some(part => part === '..' || part === '.')) return reply(null, 404)
-          const image = request.method === 'HEAD' ? await env.PUBLIC_SITE.head(photo.key) : await env.PUBLIC_SITE.get(photo.key)
+          const condition = request.headers.get('If-None-Match')
+          let image = request.method === 'HEAD' || condition ? await env.PUBLIC_SITE.head(photo.key) : await env.PUBLIC_SITE.get(photo.key)
           const marker = image && await env.PUBLIC_SITE.head(photo.key + '.verified')
           if (!image || !marker || marker.size !== 0 || !/^[a-f0-9]{64}$/.test(image.customMetadata?.sha256 || '') || marker.customMetadata?.sha256 !== image.customMetadata.sha256) {
             const target = new URL('/api/blog-media', ORIGIN)
@@ -55,7 +61,13 @@ export function createPreviewWorker({ now = Date.now, fetchOrigin = fetch } = {}
           }
           const type = image.httpMetadata?.contentType
           if (!/^image\/(jpeg|png|webp|avif)$/.test(type || '') || image.size > 10 * 1024 * 1024) return reply(null, 503)
-          return reply(request.method === 'HEAD' ? null : image.body, 200, type, { ...version, 'Cache-Control': 'private, max-age=30', ETag: image.httpEtag })
+          const imageHeaders = { ...version, 'Cache-Control': 'private, max-age=30', ETag: image.httpEtag }
+          if (condition && condition.split(',').some(value => value.trim() === '*' || value.trim().replace(/^W\//, '') === image.httpEtag?.replace(/^W\//, ''))) return reply(null, 304, type, imageHeaders)
+          if (condition && request.method !== 'HEAD') {
+            image = await env.PUBLIC_SITE.get(photo.key)
+            if (!image || image.httpEtag !== imageHeaders.ETag) return reply(null, 503)
+          }
+          return reply(request.method === 'HEAD' ? null : image.body, 200, type, imageHeaders)
         }
         if (path === '/sitemap.xml') {
           const xml = '<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">' + Object.keys(preview.pages).map(route => `<url><loc>${ORIGIN}${route}</loc></url>`).join('') + '</urlset>'

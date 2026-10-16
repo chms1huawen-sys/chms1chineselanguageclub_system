@@ -169,3 +169,39 @@ test('R2 publishes pages and JSON atomically, protects the revision and omits HT
   await assert.rejects(large.write(snapshot, 'previous-revision'), /too large/)
   assert.equal(writes, 1)
 })
+
+test('concurrent cold reads share one R2 snapshot and failures can be retried', async () => {
+  const state = setup()
+  let reads = 0
+  const get = state.env.PUBLIC_SITE.get
+  state.env.PUBLIC_SITE.get = async key => { if (key === 'public-site/v1/current.json') reads++; return get(key) }
+  await Promise.all(Array.from({ length: 12 }, () => state.request('/api/blog-public')))
+  assert.equal(reads, 1)
+  state.corrupt()
+  assert.equal((await state.request('/')).status, 503)
+  assert.equal((await state.request('/')).status, 503)
+  assert.equal(reads, 3)
+})
+
+test('conditional images return body-free 304 only after public authorization and verification', async () => {
+  const state = setup()
+  const key = 'photos-v1/blog-photos/one/display.webp'
+  const sha = 'a'.repeat(64)
+  state.objects.set(key, { size: 3, customMetadata: { sha256: sha }, body: 'img', httpMetadata: { contentType: 'image/webp' }, httpEtag: '"photo"' })
+  state.objects.set(key + '.verified', { size: 0, customMetadata: { sha256: sha } })
+  let bodies = 0
+  const get = state.env.PUBLIC_SITE.get
+  state.env.PUBLIC_SITE.get = async path => { if (path === key) bodies++; return get(path) }
+  const request = tag => state.worker.fetch(new Request('https://preview.example/public-media/blog-photos/one/display.webp', { headers: { 'If-None-Match': tag } }), state.env)
+  for (const tag of ['"photo"', 'W/"photo"', '"other", "photo"', '*']) {
+    const response = await request(tag)
+    assert.equal(response.status, 304)
+    assert.equal(await response.text(), '')
+    assert.equal(response.headers.get('cache-control'), 'private, max-age=30')
+  }
+  assert.equal(bodies, 0)
+  assert.equal((await request('"different"')).status, 200)
+  assert.equal(bodies, 1)
+  state.set({ ...input, posts: [] })
+  assert.equal((await request('"photo"')).status, 404)
+})
