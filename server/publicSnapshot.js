@@ -6,6 +6,7 @@ import { S3Client, GetObjectCommand, PutObjectCommand } from '@aws-sdk/client-s3
 import { waitUntil } from '@vercel/functions'
 import { r2PhotoConfig } from './r2Photos.js'
 import { makePublicSnapshot, validPublicSnapshot } from '../src/utils/publicSnapshot.js'
+import { publishedPreview } from './publicPreview.js'
 
 export const SNAPSHOT_KEY = 'public-site/v1/current.json'
 export const MAX_SNAPSHOT_BYTES = 3 * 1024 * 1024
@@ -13,7 +14,7 @@ const CHECK_MS = 60000
 const REBUILD_MS = 60 * 60000
 const missing = error => error?.$metadata?.httpStatusCode === 404 || error?.name === 'NoSuchKey'
 
-export function snapshotStore(config) {
+export function snapshotStore(config, preview = snapshot => publishedPreview(snapshot, process.env)) {
   const client = new S3Client({ region: 'auto', endpoint: config.endpoint, credentials: { accessKeyId: config.accessKeyId, secretAccessKey: config.secretAccessKey }, maxAttempts: 1, requestHandler: { connectionTimeout: 1000, requestTimeout: 5000 }, requestChecksumCalculation: 'WHEN_REQUIRED', responseChecksumValidation: 'WHEN_REQUIRED' })
   const target = { Bucket: config.bucket, Key: SNAPSHOT_KEY }
   return {
@@ -24,13 +25,14 @@ export function snapshotStore(config) {
         const text = await object.Body.transformToString()
         if (Buffer.byteLength(text) > MAX_SNAPSHOT_BYTES || createHash('sha256').update(text).digest('hex') !== object.Metadata?.sha256) throw new Error('Public snapshot checksum failed')
         const snapshot = JSON.parse(text)
+        delete snapshot.publicPreview
         if (!validPublicSnapshot(snapshot)) throw new Error('Invalid public snapshot')
         return { snapshot, etag: object.ETag }
       } catch (error) { if (missing(error)) return null; throw error }
     },
     async write(snapshot, etag) {
       if (!validPublicSnapshot(snapshot)) throw new Error('Refusing invalid public snapshot')
-      const body = JSON.stringify(snapshot)
+      const body = JSON.stringify({ ...snapshot, publicPreview: await preview(snapshot) })
       if (Buffer.byteLength(body) > MAX_SNAPSHOT_BYTES) throw new Error('Public snapshot too large; split the export before publishing')
       await client.send(new PutObjectCommand({ ...target, Body: body, ContentType: 'application/json', CacheControl: 'no-store', Metadata: { sha256: createHash('sha256').update(body).digest('hex') }, ...(etag ? { IfMatch: etag } : { IfNoneMatch: '*' }) }))
     },

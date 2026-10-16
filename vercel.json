@@ -3,8 +3,9 @@
   "outputDirectory": "dist",
   "functions": {
     "api/blog.js": { "includeFiles": "dist/{index.html,.vite/manifest.json}" },
-    "api/blog-media.js": { "maxDuration": 60 },
-    "api/blog-public.js": { "maxDuration": 60 }
+    "api/blog-media.js": { "maxDuration": 60, "includeFiles": "dist/{index.html,.vite/manifest.json}" },
+    "api/blog-public.js": { "maxDuration": 60, "includeFiles": "dist/{index.html,.vite/manifest.json}" },
+    "api/sitemap.js": { "includeFiles": "dist/{index.html,.vite/manifest.json}" }
   },
   "routes": [
     { "src": "^/.*$", "continue": true, "headers": {

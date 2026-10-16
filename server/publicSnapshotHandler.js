@@ -30,6 +30,7 @@ export function createPublicSnapshotHandler({ env, snapshot, client = createClie
       const data = await snapshot({ force, refresh: req.query?.refresh === '1' })
       res.setHeader('Content-Type', 'application/json; charset=utf-8')
       res.setHeader('X-Public-Site-Provider', 'r2-snapshot-v1')
+      res.setHeader('X-Public-Site-Checked-At', data.checkedAt)
       if (force) return res.status(200).send(JSON.stringify({ synced: true, generatedAt: data.generatedAt, posts: data.posts.length }))
       if (req.query?.refresh !== '1') res.setHeader('Cache-Control', 'public, max-age=0, s-maxage=30, must-revalidate')
       return req.method === 'HEAD' ? res.status(200).end() : res.status(200).send(JSON.stringify(data))

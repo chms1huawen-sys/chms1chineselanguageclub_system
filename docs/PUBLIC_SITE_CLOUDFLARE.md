@@ -1,5 +1,52 @@
 # Public site isolation rollout
 
+## Automatic preview (Oct 16, supersedes the manual preview below)
+
+The preview Worker now reads a pre-rendered public bundle inside the same
+checksum-protected, conditional-write R2 snapshot object. The Vercel publishing
+path renders HTML and transformed public JSON before the atomic snapshot write;
+render failure is a synchronization failure, not a false success. Readers never
+combine HTML from one revision with JSON from another stored revision.
+
+- Studio saves still go to the existing Supabase database, then synchronize R2.
+  Successful synchronization updates the preview without a Cloudflare redeploy.
+- The Worker reads R2 through an internal binding; no additional API token is
+  stored in Vercel or exposed to browsers. Public snapshot responses omit the
+  server-only pre-rendered bundle.
+- Worker memory cache is 15 seconds; client data cache remains 30 seconds and
+  image browser cache is 30 seconds. Existing open tabs/downloaded files cannot
+  be retracted. Missing/unpublished routes do not fall back to old exported HTML.
+- Only snapshot-listed compressed images with matching verification markers are
+  served from R2. A newly published image not yet mirrored redirects through the
+  existing authorized production gateway once; original downloads stay unchanged.
+- A Cloudflare Cron Trigger runs every minute, making a HEAD refresh request to
+  the fixed production public endpoint. It transfers no article JSON body.
+  This checks scheduled publication without visitors, normally within 1-2 minutes,
+  not an exact-second SLA. Provider outages/cron propagation can delay execution.
+- Direct database edits outside the studio retain hourly reconciliation. The
+  existing save/retry workflow is still required for immediate synchronization.
+- Dynamic page/data/image requests now invoke a lightweight Worker and therefore
+  count toward Workers Free's request/CPU limits. This is NOT unlimited static
+  hosting. JS/CSS assets continue using Static Assets. No paid plan was enabled.
+- The template is generated from the current frontend build. When application
+  code/assets change, rebuild and redeploy preview assets too. Missing hashed
+  JS/CSS files may redirect to the production origin; content changes need no
+  redeploy. All preview routes remain noindex, member/admin redirect to production,
+  and preview PWA manifests/service worker return 404 to avoid a second install.
+- The combined snapshot including HTML must remain below 3 MiB; larger exports
+  fail explicitly rather than silently truncate public data.
+
+Deploy runtime assets with:
+
+```powershell
+npm run build
+node scripts/prepare-cloudflare-runtime.mjs
+npx wrangler deploy --config cloudflare/public-preview/wrangler.jsonc
+```
+
+The original point-in-time export and its instructions below are retained as
+historical recovery tooling, not the current preview's publication mechanism.
+
 ## Scope and current boundaries
 
 The original Vercel domain, member routes, PWA origin, Supabase schema and private
