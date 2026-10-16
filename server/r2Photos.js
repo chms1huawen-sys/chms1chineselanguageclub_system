@@ -62,7 +62,7 @@ export function createPhotoMirror({ head, get, put, verified, markVerified, sign
         if (await verified(key, existing.Metadata.sha256)) return { sha256: existing.Metadata.sha256, bytes: existing.ContentLength, contentType: existing.ContentType }
       }
       if (headOnly) throw new Error('Destination not yet copied')
-      const response = await fetchSource(sourceUrl, { signal: AbortSignal.timeout(12000), redirect: 'error' })
+      const response = await fetchSource(typeof sourceUrl === 'function' ? await sourceUrl() : sourceUrl, { signal: AbortSignal.timeout(12000), redirect: 'error' })
       const contentType = (response.headers.get('content-type') || '').split(';')[0].trim().toLowerCase()
       if (!mimeTypes.has(contentType)) { await response.body?.cancel(); throw new Error('Unsupported source image') }
       const bytes = await boundedBytes(response)

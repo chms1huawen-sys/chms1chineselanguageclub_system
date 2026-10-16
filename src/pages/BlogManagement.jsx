@@ -6,6 +6,7 @@ import { adminTagIds } from '../utils/blogAdminTags'
 import { LayoutDashboard, Files, BookOpen, CalendarDays, Megaphone, Tags, Trash2, Settings, ChartColumn, Plus, Pencil, RotateCcw, Search, RefreshCw, Archive, LockKeyhole, Pin, ArrowLeft, ExternalLink } from 'lucide-react'
 import { supabase } from '../supabaseClient'
 import { canManageBlog, emptyArticle } from '../utils/blog'
+import { syncPublicSnapshot } from '../utils/publicSnapshotClient'
 import { StudioPostEditor, StudioSettings } from './BlogStudioEditors'
 import { CultureTaxonomy } from './BlogCultureEditors'
 import StudioAnalytics from './BlogStudioAnalytics'
@@ -40,6 +41,7 @@ export default function BlogManagement({ profile, lang = 'zh', onSiteChange }) {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [message, setMessage] = useState('')
+  const [syncFailed, setSyncFailed] = useState(false)
   const [filters, setFilters] = useState({ search: '', category: '', status: '', tag: '', type: '', sort: 'updated', quick: 'all' })
   const [page, setPage] = useState(1)
   const allowed = canManageBlog(profile)
@@ -58,11 +60,29 @@ export default function BlogManagement({ profile, lang = 'zh', onSiteChange }) {
     setData({ posts: posts.map(post => ({ ...post, status: post.status === 'review' ? 'draft' : post.status, tag_ids: adminTagIds(post, tags) })), albums, categories, tags, years, site })
     onSiteChange?.(site)
   }
-  async function run(action, success = t('已保存。', 'Saved.')) {
+  async function run(action, success = t('已保存。', 'Saved.'), synchronize = true) {
     if (busyRef.current) return false
     busyRef.current = true; setBusy(true); setError(''); setMessage('')
-    try { await action(); if (success) setMessage(success); return true }
-    catch (err) { setError(String(err.message || err).includes('BLOG_EDIT_CONFLICT') ? t('内容已被其他人修改。请保留你的修改，重新打开内容后再保存。', 'Another editor changed this content. Preserve your changes and reopen it before saving.') : String(err.message || err)); return false }
+    try {
+      await action()
+      if (success && synchronize) {
+        try { await syncPublicSnapshot(supabase); setSyncFailed(false) }
+        catch {
+          setSyncFailed(true)
+          setError(t('资料已保存，但公开网站尚未同步。请重试同步，不要重复提交内容。', 'Changes are saved, but the public website has not synchronized. Retry synchronization without submitting the content again.'))
+          return true
+        }
+      }
+      if (success) setMessage(success)
+      return true
+    }
+    catch (err) {
+      if (success && synchronize) {
+        try { await syncPublicSnapshot(supabase) } catch { setSyncFailed(true) }
+      }
+      setError(String(err.message || err).includes('BLOG_EDIT_CONFLICT') ? t('内容已被其他人修改。请保留你的修改，重新打开内容后再保存。', 'Another editor changed this content. Preserve your changes and reopen it before saving.') : String(err.message || err))
+      return false
+    }
     finally { busyRef.current = false; setBusy(false) }
   }
   useEffect(() => {
@@ -142,7 +162,7 @@ export default function BlogManagement({ profile, lang = 'zh', onSiteChange }) {
   return <div className="bs-layout">
     <aside className="bs-sidebar"><div className="bs-sidebar-title">{data.site?.title ? `${brandedSettings(data.site).title} · ${t('后台', 'Studio')}` : t('网站后台', 'Blog Studio')}</div><nav aria-label={t('后台导航', 'Studio navigation')}>{navigation.map(([id, Icon, zh, english]) => <button key={id} className={tab === id ? 'active' : ''} aria-current={tab === id ? 'page' : undefined} disabled={busy} onClick={() => tab !== id && navigate(id)}><Icon size={18} />{t(zh, english)}</button>)}</nav><a href={publicHomeUrl()} target="_blank" rel="noreferrer"><ExternalLink size={16} />{t('公开网站', 'Public website')}</a></aside>
     <main className="bs-workspace"><header className="bs-heading"><div><p>CLC_sys / {t('网站管理', 'Website administration')}</p><h1>{t(selectedNav[2], selectedNav[3])}</h1></div><div className="bs-actions">{usesYear && <label className="bs-year">{t('网站发布年份', 'Website publication year')}<select aria-label={t('管理年份', 'Management year')} disabled={busy} value={year} onChange={e => { if (discard()) { setYear(e.target.value); setEditor(null); setDirty(false); setPage(1) } }}><option value="">{t('全部年份', 'All years')}</option><option value="unpublished">{t('尚未发布', 'Never published')}</option>{yearOptions.map(y => <option key={y} value={y}>{y}</option>)}</select></label>}<button title={t('刷新', 'Refresh')} aria-label={t('刷新', 'Refresh')} disabled={busy || dirty} onClick={() => run(load, '')}><RefreshCw size={17} /></button></div></header>
-      {error && <div className="bs-alert bs-error" role="alert">{error}</div>}{message && <div className="bs-alert bs-success" role="status">{message}</div>}
+      {error && <div className="bs-alert bs-error" role="alert">{error}</div>}{syncFailed && <div className="bs-actions"><button disabled={busy} onClick={() => run(async () => { await syncPublicSnapshot(supabase); setSyncFailed(false) }, t('公开网站已同步。', 'Public website synchronized.'), false)}><RefreshCw size={17} />{t('重试同步公开网站', 'Retry public synchronization')}</button></div>}{message && <div className="bs-alert bs-success" role="status">{message}</div>}
       {loading ? <p className="bs-empty" role="status">{t('正在载入后台…', 'Loading studio…')}</p> : editor ? <><div className="bs-toolbar"><button disabled={busy} onClick={() => { if (discard()) { setEditor(null); setDirty(false) } }}><ArrowLeft size={17} />{t('返回列表', 'Back to list')}</button>{dirty && <span className="bs-muted">{t('尚未保存', 'Unsaved changes')}</span>}</div>{<StudioPostEditor key={editor.row.id || 'new-post'} initial={editor} data={data} busy={busy} run={run} reload={load} setDirty={setDirty} dirty={dirty} en={en} archived={archived} onSaved={row => setEditor(e => ({ ...e, row }))} />}</> : <>
         {tab === 'dashboard' && <><div className="bs-stats">{[[t('内容总数', 'Total content'), activePosts.length], [t('已发布', 'Published'), activePosts.filter(p => p.status === 'published').length], [t('草稿', 'Drafts'), activePosts.filter(p => p.status === 'draft').length], [t('活动记录', 'Activities'), activePosts.filter(p => p.content_type === 'event').length]].map(([title, value]) => <div key={title}><span>{title}</span><strong>{value}</strong></div>)}</div><section className="bs-section"><div className="bs-section-heading"><h2>{t('最近编辑', 'Recent edits')}</h2><button onClick={() => navigate('content')}>{t('全部内容', 'All content')}</button></div><ContentTable rows={[...activePosts].sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at)).slice(0, 8).map(p => ({ ...p, kind: 'post' }))} categories={data.categories} t={t} label={label} busy={busy} archived={archived} open={open} changeState={changeState} /></section><details className="bs-section bs-advanced"><summary>{t('高级：按内容年份锁定编辑', 'Advanced: lock editing by content year')}</summary><p className="bs-muted">{t('此功能按编辑器中的内容年份锁定旧内容，不是网站发布年份或书本出版日期。无内容关联且未锁定的旧年份不再显示。', 'Locks records by their editor content year, not website publication year or book publication date. Unused unlocked years are omitted.')}</p><form className="bs-inline" onSubmit={e => { e.preventDefault(); const value = Number(new FormData(e.currentTarget).get('year')); run(async () => { await checked(supabase.from('blog_years').upsert({ year: value }, { onConflict: 'year', ignoreDuplicates: true })); await load(); setYear(String(value)) }) }}><label>{t('新增年份', 'Add year')}<input name="year" type="number" min="1900" max="2200" defaultValue={currentYear + 1} required /></label><button disabled={busy}><Plus size={16} />{t('新增', 'Add')}</button></form><div className="bs-year-list">{archiveYears.map(y => <div key={y}><strong>{y}</strong><span>{archived(y) ? t('已归档', 'Archived') : t('开放编辑', 'Open')}</span><button disabled={busy || !canArchive} title={t('仅老师与会长可更改归档状态', 'Only teachers and the president can change archive status')} onClick={() => { if (window.confirm(archived(y) ? t(`重新开放 ${y} 年？`, `Reopen ${y}?`) : t(`归档 ${y} 年？内容及照片将锁定。`, `Archive ${y}? Content, albums and media will be locked.`))) run(async () => { await checked(supabase.from('blog_years').upsert({ year: y, is_archived: !archived(y) }, { onConflict: 'year' })); await load() }) }}><Archive size={16} />{archived(y) ? t('重新开放', 'Reopen') : t('归档', 'Archive')}</button></div>)}</div></details></>}
         {['content', 'literature', 'activities', 'books', 'news', 'trash'].includes(tab) && <><div className="bs-section-heading"><h2>{['content', 'literature', 'activities', 'books', 'news'].includes(tab) ? t('内容列表', 'Content library') : tab === 'albums' ? t('相册列表', 'Album library') : t('已删除的内容与相册', 'Deleted content and albums')} <span className="bs-count">{rows.length}</span></h2>{tab !== 'trash' && <button className="bs-primary" disabled={busy || (year && archived(year))} onClick={() => create(tab === 'albums' ? 'album' : 'post')}><Plus size={17} />{tab === 'albums' ? t('新增相册', 'New album') : t('新增内容', 'New content')}</button>}</div>

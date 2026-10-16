@@ -24,6 +24,8 @@ import { compareStories, featuredStories, HOME_STORY_COUNT, STORY_PAGE_SIZE, MOM
 import { clubStatistics, matchesPublicSearch, submissionNote, publicationYear } from '../utils/blogPresentation'
 import BlogNavigation, { SocialLinks } from '../components/BlogNavigation'
 import { sections, sectionOf, publicCategories, postTags, safeColor } from '../utils/blogContent'
+import { readPublicSnapshot } from '../utils/publicSnapshotClient'
+import { snapshotArticle, snapshotMoments } from '../utils/publicSnapshot'
 
 const localPath = value => typeof value === 'string' && /^\/(?!\/)[^\\\s]*$/.test(value) && !value.includes('..')
 const webLink = value => {
@@ -156,6 +158,22 @@ export default function Blog({ profile, lang, setLang }) {
     let active = true
     async function load() {
       try {
+        const snapshot = await readPublicSnapshot().catch(() => null)
+        if (snapshot) {
+          const current = slug ? snapshotArticle(snapshot, slug) : null
+          if (active) {
+            setSettings(snapshot.settings); setCategories(snapshot.categories); setTagLibrary(snapshot.tags)
+            setPosts(snapshot.posts); setArticle(current?.post || null); setMedia(current?.media || [])
+            setLinks(current?.links || []); setMoments(view === 'home' && !slug ? snapshotMoments(snapshot) : []); setLoading(false)
+          }
+          if (current && readMemberLinks) {
+            try {
+              const extra = await rows(supabase.from('blog_links').select('*').eq('post_id', current.post.id).eq('visibility', 'member').order('position'))
+              if (active) setLinks([...(current.links || []), ...extra])
+            } catch { if (active) setError('extras') }
+          }
+          return
+        }
         const metadata = Promise.all([
           supabase.from('blog_settings').select('*').eq('id', 1).single().then(site => {
             if (site.error) throw site.error

@@ -1,5 +1,10 @@
 # R2 photo migration preparation
 
+The later public snapshot rollout replaces per-view Supabase checks for eligible
+published R2 hits. See `PUBLIC_SITE_CLOUDFLARE.md` for the current authorization,
+cache/withdrawal window, rollback and deployment boundaries. The results below
+describe the initial photo-only migration.
+
 Status (2026-10-16): first deployment and transfer verified on the production domain.
 All 86 images / 14,528,085 bytes passed destination size, MIME and SHA-256 checks.
 The owner created the private bucket and saved four server-only R2 variables in

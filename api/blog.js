@@ -8,6 +8,8 @@ import { publicPageRequest } from '../server/publicRequest.js'
 import { matchesPublicSearch } from '../src/utils/blogPresentation.js'
 import { postTags } from '../src/utils/blogContent.js'
 import { FEATURED_STORY_COUNT, MOMENT_COUNT } from '../src/utils/blogFeed.js'
+import { getPublicSnapshot } from '../server/publicSnapshot.js'
+import { renderSnapshotPage } from '../server/snapshotPage.js'
 
 const feedFields = 'id,slug,title,author,summary,cover_path,featured,is_sticky,published_at,content_type,content_year,book_details'
 
@@ -28,6 +30,16 @@ export default async function handler(req, res) {
       readFileSync(join(process.cwd(), 'dist', 'index.html'), 'utf8'),
       JSON.parse(readFileSync(join(process.cwd(), 'dist', '.vite', 'manifest.json'), 'utf8')),
     )
+    const snapshot = await getPublicSnapshot().catch(() => null)
+    if (snapshot) {
+      const page = renderSnapshotPage(template, snapshot, { ...request, browseAll: !slug && view === 'home' && Object.hasOwn(req.query, 'q') }, siteOrigin(process.env))
+      res.setHeader('X-Public-Site-Provider', 'r2-snapshot-v1')
+      res.setHeader('Content-Type', 'text/html; charset=utf-8')
+      if (page.status === 404) res.setHeader('X-Robots-Tag', 'noindex')
+      else if (search || Object.hasOwn(req.query, 'q')) res.setHeader('X-Robots-Tag', 'noindex, follow')
+      res.setHeader('Cache-Control', page.status === 200 ? 'public, max-age=0, s-maxage=30, must-revalidate' : 'no-store')
+      return res.status(page.status).send(page.html)
+    }
     // Always use the anonymous key. Never forward the visitor session into SEO responses.
     const db = createClient(process.env.VITE_SUPABASE_URL, process.env.VITE_SUPABASE_ANON_KEY, { auth: { persistSession: false, autoRefreshToken: false } })
     const started = performance.now()

@@ -1,0 +1,10 @@
+{
+  "name": "chms1clc-public-preview",
+  "compatibility_date": "2026-10-16",
+  "workers_dev": true,
+  "assets": {
+    "directory": "../../test-results/cloudflare-public-preview",
+    "not_found_handling": "404-page",
+    "html_handling": "auto-trailing-slash"
+  }
+}

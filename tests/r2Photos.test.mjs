@@ -166,3 +166,15 @@ test('browser URL cache expires before the five-minute signed URL', async () => 
   assert.equal((await sign(path)).data.signedUrl, 'url-2')
   assert.equal(hash(image).length, 64)
 })
+
+test('verified R2 hits use public snapshot authorization without contacting Supabase', async () => {
+  const snapshot = { posts: [{ cover_path: path }], media: [{ path }], settings: {} }
+  const handler = createBlogMediaHandler({ env: configEnv, snapshot: async () => snapshot, client: () => { throw new Error('Supabase must not be contacted') }, mirrorFactory: () => async () => ({ signedUrl: 'https://r2.example/verified', sha256: hash(image), bytes: image.length, contentType: 'image/webp' }) })
+  const res = response()
+  await handler({ method: 'GET', query: { path, format: 'json' } }, res)
+  assert.equal(res.code, 200)
+  assert.equal(JSON.parse(res.body).provider, 'r2')
+  const denied = response()
+  await handler({ method: 'GET', query: { path: 'private/hidden.webp' } }, denied)
+  assert.equal(denied.code, 404)
+})

@@ -21,9 +21,10 @@ export default function BlogAnalyticsConsent({ lang = 'zh', disabled = false, al
   const [open, setOpen] = useState(false)
   const en = lang === 'en'
   const optedOut = navigator.globalPrivacyControl === true || navigator.doNotTrack === '1'
+  const preview = !!document.querySelector('meta[name="public-static-preview"]')
   const path = window.location.pathname
   useEffect(() => {
-    if (disabled || choice !== 'allowed' || optedOut || (!allowLocal && ['localhost', '127.0.0.1'].includes(location.hostname))) return
+    if (disabled || preview || choice !== 'allowed' || optedOut || (!allowLocal && ['localhost', '127.0.0.1'].includes(location.hostname))) return
     // Delay avoids counting accidental bounces and React development remounts.
     const timer = setTimeout(() => {
       if (document.visibilityState !== 'visible') return
@@ -31,7 +32,7 @@ export default function BlogAnalyticsConsent({ lang = 'zh', disabled = false, al
       if (payload) supabase.functions.invoke('blog-visit', { body: payload }).then(() => {}).catch(() => {})
     }, 1200)
     return () => clearTimeout(timer)
-  }, [choice, disabled, optedOut, path, allowLocal])
+  }, [choice, disabled, preview, optedOut, path, allowLocal])
   function decide(next) {
     try {
       localStorage.setItem(CHOICE, next)
@@ -39,7 +40,7 @@ export default function BlogAnalyticsConsent({ lang = 'zh', disabled = false, al
     } catch { /* Storage unavailable: do not track. */ }
     setChoice(next); setOpen(false)
   }
-  if (disabled) return null
+  if (disabled || preview) return null
   return <aside className="blog-statistics-consent">
     <button className="blog-statistics-choice" onClick={() => setOpen(v => !v)}>{en ? 'Privacy preferences' : '隐私设置'}</button>
     {(open || !choice) && <div className="blog-statistics-panel" role="region" aria-label={en ? 'Anonymous visit statistics' : '匿名访问统计'}>
