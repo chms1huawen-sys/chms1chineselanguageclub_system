@@ -14,8 +14,8 @@ const CHECK_MS = 60000
 const REBUILD_MS = 60 * 60000
 const missing = error => error?.$metadata?.httpStatusCode === 404 || error?.name === 'NoSuchKey'
 
-export function snapshotStore(config, preview = snapshot => publishedPreview(snapshot, process.env)) {
-  const client = new S3Client({ region: 'auto', endpoint: config.endpoint, credentials: { accessKeyId: config.accessKeyId, secretAccessKey: config.secretAccessKey }, maxAttempts: 1, requestHandler: { connectionTimeout: 1000, requestTimeout: 5000 }, requestChecksumCalculation: 'WHEN_REQUIRED', responseChecksumValidation: 'WHEN_REQUIRED' })
+export function snapshotStore(config, preview = snapshot => publishedPreview(snapshot, process.env), transport) {
+  const client = transport || new S3Client({ region: 'auto', endpoint: config.endpoint, credentials: { accessKeyId: config.accessKeyId, secretAccessKey: config.secretAccessKey }, maxAttempts: 1, requestHandler: { connectionTimeout: 1000, requestTimeout: 5000 }, requestChecksumCalculation: 'WHEN_REQUIRED', responseChecksumValidation: 'WHEN_REQUIRED' })
   const target = { Bucket: config.bucket, Key: SNAPSHOT_KEY }
   return {
     async read() {

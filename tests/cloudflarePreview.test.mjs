@@ -1,9 +1,11 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { createHash } from 'node:crypto'
+import { readFile } from 'node:fs/promises'
 import { makePublicSnapshot } from '../src/utils/publicSnapshot.js'
 import { buildPublicPreview } from '../server/publicPreview.js'
 import { createPreviewWorker } from '../cloudflare/public-preview/worker.js'
+import { snapshotStore, MAX_SNAPSHOT_BYTES } from '../server/publicSnapshot.js'
 
 const origin = 'https://chms1chineselanguageclubsystem.vercel.app'
 const project = 'https://example.supabase.co'
@@ -114,7 +116,7 @@ test('scheduler runs without a visitor, exposes failures, and only refreshes the
   const worker = createPreviewWorker({ now: () => time, fetchOrigin: async (url, options) => {
     calls++
     assert.equal(url, origin + '/api/blog-public?refresh=1')
-    assert.equal(options.redirect, 'error')
+    assert.equal(options.redirect, 'manual')
     assert.equal(options.method, 'HEAD')
     return new Response(null, { headers: { 'X-Public-Site-Checked-At': new Date(time).toISOString() } })
   } })
@@ -123,4 +125,47 @@ test('scheduler runs without a visitor, exposes failures, and only refreshes the
   assert.equal(calls, 1)
   const failure = createPreviewWorker({ now: () => time, fetchOrigin: async () => new Response(null, { headers: { 'X-Public-Site-Checked-At': new Date(time - 300000).toISOString() } }) })
   await assert.rejects(failure.scheduled({}, {}, { waitUntil: value => value.catch(() => {}) }), /stale/)
+  const redirect = createPreviewWorker({ fetchOrigin: async () => new Response(null, { status: 302, headers: { Location: 'https://untrusted.example' } }) })
+  await assert.rejects(redirect.scheduled({}, {}, { waitUntil: value => value.catch(() => {}) }), /failed/)
+})
+
+test('deployed public routes invoke the worker rather than the static 404 fallback', async () => {
+  const config = JSON.parse(await readFile(new URL('../cloudflare/public-preview/wrangler.jsonc', import.meta.url), 'utf8'))
+  for (const section of ['literature', 'activities', 'bookroom', 'news', 'about']) {
+    assert.ok(config.assets.run_worker_first.includes('/' + section))
+    assert.ok(config.assets.run_worker_first.includes('/' + section + '/*'))
+  }
+  assert.ok(config.assets.run_worker_first.includes('/blog/*'))
+  assert.ok(config.assets.run_worker_first.includes('/public-media/*'))
+  assert.equal(config.triggers.crons[0], '* * * * *')
+})
+
+test('R2 publishes pages and JSON atomically, protects the revision and omits HTML from the public API data', async () => {
+  const snapshot = makePublicSnapshot(input)
+  let object
+  let writes = 0
+  const transport = { send: async command => {
+    if (command.constructor.name === 'PutObjectCommand') {
+      writes++
+      assert.equal(command.input.IfMatch, 'previous-revision')
+      object = command.input
+      return {}
+    }
+    return { ContentLength: Buffer.byteLength(object.Body), Metadata: object.Metadata, ETag: 'next-revision', Body: { transformToString: async () => object.Body } }
+  } }
+  const store = snapshotStore({ bucket: 'test-bucket' }, async data => buildPublicPreview(data, template, project, origin), transport)
+  await store.write(snapshot, 'previous-revision')
+  const stored = JSON.parse(object.Body)
+  assert.equal(stored.publicPreview.generatedAt, stored.generatedAt)
+  assert.equal(stored.publicPreview.snapshot.posts[0].title, stored.posts[0].title)
+  assert.equal(object.Metadata.sha256, createHash('sha256').update(object.Body).digest('hex'))
+  const read = await store.read()
+  assert.equal(read.etag, 'next-revision')
+  assert.equal(read.snapshot.publicPreview, undefined)
+  assert.equal(writes, 1)
+  const broken = snapshotStore({ bucket: 'test-bucket' }, async () => { throw new Error('render failed') }, transport)
+  await assert.rejects(broken.write(snapshot, 'previous-revision'), /render failed/)
+  const large = snapshotStore({ bucket: 'test-bucket' }, async () => ({ html: 'x'.repeat(MAX_SNAPSHOT_BYTES) }), transport)
+  await assert.rejects(large.write(snapshot, 'previous-revision'), /too large/)
+  assert.equal(writes, 1)
 })

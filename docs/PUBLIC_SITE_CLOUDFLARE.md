@@ -47,6 +47,22 @@ npx wrangler deploy --config cloudflare/public-preview/wrangler.jsonc
 The original point-in-time export and its instructions below are retained as
 historical recovery tooling, not the current preview's publication mechanism.
 
+Automatic-preview verification on Oct 16: 40 focused tests and 30 security tests
+passed; build, targeted lint and secret scanning passed. All 19 live page routes
+and 93 verified R2 image HEAD requests returned 200 without image redirects.
+Public JSON excludes the server HTML bundle. Missing/unpublished article and
+unlisted image paths return 404; member/admin redirect to the unchanged original
+site. Browser search returned the matching published story; the 390-pixel viewport
+had no horizontal overflow or visible broken images. No production stories were
+created, edited or withdrawn for testing: mutation cases use isolated fixtures.
+
+The actual Wrangler runtime scheduled handler was invoked against the production
+public refresh endpoint and returned outcome=ok. This caught and fixed an edge
+runtime incompatibility with redirect=error (manual + explicit status checking is
+used instead). Cloudflare's own first Cron event is checked separately after
+trigger propagation. Platform guidance allows up to 15 minutes for new triggers:
+https://developers.cloudflare.com/workers/configuration/cron-triggers/
+
 ## Scope and current boundaries
 
 The original Vercel domain, member routes, PWA origin, Supabase schema and private

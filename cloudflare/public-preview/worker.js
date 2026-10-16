@@ -72,7 +72,7 @@ export function createPreviewWorker({ now = Date.now, fetchOrigin = fetch } = {}
     },
     async scheduled(_controller, _env, ctx) {
       const task = (async () => {
-        const response = await fetchOrigin(ORIGIN + '/api/blog-public?refresh=1', { method: 'HEAD', redirect: 'error', signal: AbortSignal.timeout(55000) })
+        const response = await fetchOrigin(ORIGIN + '/api/blog-public?refresh=1', { method: 'HEAD', redirect: 'manual', signal: AbortSignal.timeout(55000) })
         if (!response.ok) throw new Error('Scheduled public synchronization failed')
         const checkedAt = Date.parse(response.headers.get('X-Public-Site-Checked-At'))
         if (!Number.isFinite(checkedAt) || now() - checkedAt > 180000) throw new Error('Scheduled public synchronization is stale')

@@ -6,7 +6,7 @@
   "assets": {
     "directory": "../../test-results/cloudflare-preview-runtime",
     "binding": "ASSETS",
-    "run_worker_first": ["/", "/index.html", "/api/*", "/public-media/*", "/member", "/member/*", "/blog-admin", "/blog-admin/*", "/sitemap.xml", "/robots.txt", "/manifest*.json", "/firebase-messaging-sw.js"],
+    "run_worker_first": ["/", "/index.html", "/literature", "/literature/*", "/activities", "/activities/*", "/bookroom", "/bookroom/*", "/news", "/news/*", "/about", "/about/*", "/blog/*", "/api/*", "/public-media/*", "/member", "/member/*", "/blog-admin", "/blog-admin/*", "/sitemap.xml", "/robots.txt", "/manifest*.json", "/firebase-messaging-sw.js"],
     "not_found_handling": "404-page",
     "html_handling": "auto-trailing-slash"
   },
