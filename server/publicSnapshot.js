@@ -53,10 +53,15 @@ async function rows(makeQuery) {
 export function snapshotSource(env, client = createClient) {
   const db = client(env.VITE_SUPABASE_URL, env.VITE_SUPABASE_ANON_KEY, { auth: { persistSession: false, autoRefreshToken: false } })
   return {
-    async checkDue() {
+    async checkDue(current) {
       const result = await db.rpc('blog_publish_due')
       if (result.error) throw new Error('Scheduled publishing unavailable')
-      return Number(result.data) > 0
+      if (Number(result.data) > 0) return true
+      if (!current) return false
+      // A previous publish may have committed in Postgres before its R2 write failed.
+      const revision = await db.from('blog_posts').select('updated_at,published_at', { count: 'exact' }).eq('status', 'published').is('deleted_at', null).order('updated_at', { ascending: false }).limit(1)
+      if (revision.error || !Number.isSafeInteger(revision.count)) throw new Error('Public revision unavailable')
+      return revision.count !== current.posts.length || (revision.data || []).some(row => Math.max(Date.parse(row.updated_at) || 0, Date.parse(row.published_at) || 0) > Date.parse(current.generatedAt))
     },
     async build(now) {
       const [site, posts, media, links, categories, tags] = await Promise.all([
@@ -84,7 +89,7 @@ export function createSnapshotService({ store, source, now = Date.now, defer = t
       current = await store.read()
       if (!force && current && now() - Date.parse(current.snapshot.checkedAt) < CHECK_MS) return current.snapshot
       for (let attempt = 0; attempt < 2; attempt++) {
-        const changed = !force && current ? await source.checkDue() : false
+        const changed = !force && current ? await source.checkDue(current.snapshot) : false
         const snapshot = force || !current || changed || now() - Date.parse(current.snapshot.generatedAt) >= REBUILD_MS
           ? await source.build(now()) : { ...current.snapshot, checkedAt: new Date(now()).toISOString() }
         try {

@@ -1,7 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { makePublicSnapshot, validPublicSnapshot, snapshotArticle, snapshotMoments } from '../src/utils/publicSnapshot.js'
-import { createSnapshotService } from '../server/publicSnapshot.js'
+import { createSnapshotService, snapshotSource } from '../server/publicSnapshot.js'
 import { createPublicSnapshotHandler } from '../server/publicSnapshotHandler.js'
 import { snapshotPhotoPath } from '../server/snapshotPhotos.js'
 import { renderSnapshotPage } from '../server/snapshotPage.js'
@@ -176,4 +176,18 @@ test('root-level public site images migrate and static SSR images stay on the pr
   assert.ok(page.html.includes('src="/public-media/blog-site-media/banner.jpg"'))
   assert.ok(!page.html.includes('https://site.example/public-media/'))
   assert.ok(page.html.includes('rel="canonical" href="https://site.example/"'))
+})
+
+test('minute revision check recovers publications whose first R2 write failed, without a full data download', async () => {
+  const current = makePublicSnapshot(input, time)
+  let count = current.posts.length
+  let updated = new Date(time - 1000).toISOString()
+  const query = { select(fields, options) { assert.equal(fields, 'updated_at,published_at'); assert.equal(options.count, 'exact'); return this }, eq() { return this }, is() { return this }, order() { return this }, async limit(value) { assert.equal(value, 1); return { count, data: [{ updated_at: updated }] } } }
+  const source = snapshotSource({}, () => ({ rpc: async () => ({ data: 0 }), from: table => { assert.equal(table, 'blog_posts'); return query } }))
+  assert.equal(await source.checkDue(current), false)
+  count++
+  assert.equal(await source.checkDue(current), true)
+  count = current.posts.length
+  updated = new Date(time + 1000).toISOString()
+  assert.equal(await source.checkDue(current), true)
 })

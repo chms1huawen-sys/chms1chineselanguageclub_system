@@ -25,6 +25,10 @@ combine HTML from one revision with JSON from another stored revision.
   not an exact-second SLA. Provider outages/cron propagation can delay execution.
 - Direct database edits outside the studio retain hourly reconciliation. The
   existing save/retry workflow is still required for immediate synchronization.
+- Each minute also checks only the published-post count and latest update time.
+  This recovers a publication whose database commit succeeded but R2 write failed,
+  without re-downloading every article each minute. External post edits can be
+  detected this way; settings/taxonomy-only external changes still reconcile hourly.
 - Dynamic page/data/image requests now invoke a lightweight Worker and therefore
   count toward Workers Free's request/CPU limits. This is NOT unlimited static
   hosting. JS/CSS assets continue using Static Assets. No paid plan was enabled.
