@@ -1,6 +1,50 @@
 # Public traffic preflight - Oct 16
 
-## Status
+## Follow-up: deployed and checked at approximately 23:04 Malaysia time
+
+Connectivity recovered. Commit 562db34 was pushed to GitHub and the preview Worker
+was deployed successfully as version 6fa479bb-5296-4a39-a2b5-22a864defbf0. The minute
+schedule and original domains remain unchanged. No plan upgrade was performed.
+
+The post-deployment audit made 12 sequential read-only requests and received
+424,674 decoded body bytes across the entire audit (NOT the size of one browser
+visit). Public JSON, home, literature, activities, bookroom and an article returned
+200. A verified image returned 200, followed by body-free 304 for its matching ETag.
+Member HEAD redirected only to the existing Vercel site. The test article was
+absent from public JSON and sitemap and its detail URL returned 404. Report:
+`test-results/public-traffic-audit-20261016-deployed.json` (ignored by Git).
+The earlier `-before.json` run overlapped deployment and is not a valid performance
+baseline. Do not claim a speedup from comparing those two runs. All 45 focused
+tests were rerun successfully after deployment.
+
+Read-only dashboard observations (counters can lag and continue changing):
+
+| Account metric | Observed value / window |
+| --- | --- |
+| Workers requests today | 258 / 100,000 (approximately 0.258%) |
+| Workers billed amount | $0.00, Oct 15-Nov 15 |
+| Cloudflare account Worker errors | 0 shown for last 24 hours |
+| Cloudflare account CPU P90 | 17 ms shown for last 24 hours; not post-deploy-only and not a load-test result |
+| R2 bucket objects / size | 187 objects / 16.3 MB |
+| R2 billed amount | $0.00, Oct 15-Nov 15 |
+| R2 operations in current period | Class A 398; Class B approximately 3.09k |
+| R2 billing usage storage tile | 14.58 MB; different aggregate/refresh from current bucket size |
+| Supabase billing cycle | Sep 24-Oct 24 |
+| Supabase uncached egress | 7.761 / 5 GB, approximately 2.761 GB over |
+| Supabase cached egress | 0.258 / 5 GB |
+| Supabase last 7 days | 0.287 GB uncached; 0.047 GB cached |
+| Supabase warning | Grace ends Oct 30; restrictions/402 may apply if still over quota |
+| Vercel team last 30 days | CDN requests about 30k / 1M; invocations about 2.1k / 1M; fast data transfer about 176 MB / 100 GB |
+
+These do not establish future capacity. In particular the Supabase warning remains
+unresolved: moving subsequent reads does not erase historical overage. Do not
+interpret a low R2 bill as permission to ignore the original backend's risk.
+Do not promise restrictions will automatically disappear at the next cycle.
+
+No high-concurrency or load test was run. Formal cutover and indexing remain off.
+The original failure report below is retained as historical diagnostic context.
+
+## Initial connectivity failure (resolved)
 
 This is a code-path and local-test audit, not a load test or an account usage
 report. Live checks from this computer timed out for the preview, the formal
