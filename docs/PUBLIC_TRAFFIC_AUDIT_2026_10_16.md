@@ -1,5 +1,37 @@
 # Public traffic preflight - Oct 16
 
+## Approved bounded concurrency test - 23:13 to 23:14 Malaysia time
+
+The owner approved preview-only reads with ceilings of 5 concurrent requests,
+500 requests and 50 MiB decoded bodies. The actual run used 20 paced bursts per
+stage, totaling 160 requests. All returned 200 with the preview version header.
+
+| Concurrent requests per burst | Requests | Successful | P50 | P95 | Maximum |
+| --- | --- | --- | --- | --- | --- |
+| 1 | 20 | 20 | 87 ms | 272 ms | 558 ms |
+| 2 | 40 | 40 | 84 ms | 239 ms | 375 ms |
+| 5 | 100 | 100 | 88 ms | 259 ms | 461 ms |
+
+Total decoded bodies: 5,332,300 bytes (approximately 5.09 MiB). Overall P95:
+260 ms. Peak concurrency: 5. No stop condition, error or rate-limit response
+was observed. These are full-response timings from one client, not browser
+render/LCP measurements. The run covers HTML and JSON, not complete browser
+image/asset waterfalls. Requests are not visitor counts; this does not establish
+capacity for hundreds of simultaneous visitors or guarantee future availability.
+
+At 23:15, two separate post-test checks found public status 200 with 13 posts and
+a fresh scheduler check timestamp, and the withdrawn test article still 404.
+The test performed no member operations, writes, refresh calls or redirect
+following. Formal domains, PWA and noindex remain unchanged. The historical
+Supabase over-quota warning remains unresolved. Dashboard counters were not
+remeasured after this test.
+
+Runner: `scripts/test-public-concurrency.mjs`; ignored local report:
+`test-results/public-concurrency-20261016-run1.json`. The runner refuses report
+overwrites, bounds concurrency/bytes and stops on errors, redirects, oversized
+responses or repeated slow responses. All 48 focused tests and targeted lint
+passed before the live run.
+
 ## Follow-up: deployed and checked at approximately 23:04 Malaysia time
 
 Connectivity recovered. Commit 562db34 was pushed to GitHub and the preview Worker
@@ -41,7 +73,8 @@ unresolved: moving subsequent reads does not erase historical overage. Do not
 interpret a low R2 bill as permission to ignore the original backend's risk.
 Do not promise restrictions will automatically disappear at the next cycle.
 
-No high-concurrency or load test was run. Formal cutover and indexing remain off.
+At this earlier observation no concurrency test had run; the later approved
+bounded test is recorded above. Formal cutover and indexing remain off.
 The original failure report below is retained as historical diagnostic context.
 
 ## Initial connectivity failure (resolved)
@@ -131,8 +164,9 @@ agree the load-test ceiling. A proposed first test is preview read-only traffic,
 500 requests total and 50 MiB decoded downloads. Stop on quota/rate-limit signals,
 CPU-limit errors, repeated 5xx responses or excessive latency. No authenticated
 member operations, uploads, mutations, source refresh requests or external
-redirect targets should be exercised. This proposal has NOT been executed or
-approved by the owner yet and is not evidence of production capacity.
+redirect targets should be exercised. This was the original unapproved proposal;
+the owner later approved the ceilings and the smaller 160-request run recorded
+above was executed. The original longer proposal was not executed.
 
 Do not cut over the public domain, enable indexing or recommend broad promotion
 based only on functional tests. Keep the current formal URL/PWA and rollback path.
