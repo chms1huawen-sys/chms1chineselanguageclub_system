@@ -51,7 +51,7 @@ npx wrangler deploy --config cloudflare/public-preview/wrangler.jsonc
 The original point-in-time export and its instructions below are retained as
 historical recovery tooling, not the current preview's publication mechanism.
 
-Automatic-preview verification on Oct 16: 40 focused tests and 30 security tests
+Automatic-preview verification on Oct 16: 41 focused tests and 30 security tests
 passed; build, targeted lint and secret scanning passed. All 19 live page routes
 and 93 verified R2 image HEAD requests returned 200 without image redirects.
 Public JSON excludes the server HTML bundle. Missing/unpublished article and
@@ -63,8 +63,12 @@ created, edited or withdrawn for testing: mutation cases use isolated fixtures.
 The actual Wrangler runtime scheduled handler was invoked against the production
 public refresh endpoint and returned outcome=ok. This caught and fixed an edge
 runtime incompatibility with redirect=error (manual + explicit status checking is
-used instead). Cloudflare's own first Cron event is checked separately after
-trigger propagation. Platform guidance allows up to 15 minutes for new triggers:
+used instead). Cloudflare's own Cron events then succeeded at 21:47:44, 21:48:44
+and 21:49:44 Malaysia time on Oct 16. The preview's checkedAt advanced to 21:49:48
+and was only 12 seconds old at the final status check, without another manual
+refresh. The production homepage still returned 200 using r2-snapshot-v1.
+The current packed object is approximately 843 kB, below its 3 MiB limit.
+Platform guidance allows up to 15 minutes for new triggers:
 https://developers.cloudflare.com/workers/configuration/cron-triggers/
 
 ## Scope and current boundaries
