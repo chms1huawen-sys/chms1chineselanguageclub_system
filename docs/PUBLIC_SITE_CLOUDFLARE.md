@@ -17,9 +17,10 @@ business records stay unchanged. No source photos or records are deleted.
 4. A fully static Cloudflare preview exporter is provided separately. This is a
    point-in-time preview, NOT an automatically updated second production website.
 
-Cloudflare CLI login was expired on Oct 16. An Object Read & Write R2 credential
-does NOT grant permission to deploy Workers/Static Assets. No broader token was
-created, no paid plan enabled and no formal domain or PWA entrypoint switched.
+The owner renewed Cloudflare CLI login on Oct 16 and the static preview was
+deployed using that authorization. An Object Read & Write R2 credential alone
+does NOT grant permission to deploy Workers/Static Assets. No paid plan was
+enabled and no formal domain or PWA entrypoint switched.
 
 ## Snapshot contract
 
@@ -68,7 +69,7 @@ Do not delete the R2 bucket, verification markers or Supabase source objects.
 
 ```powershell
 npm run build
-node --env-file=.env.local scripts/export-public-site.mjs https://chms1chineselanguageclubsystem.vercel.app test-results/cloudflare-public-preview
+node --env-file=.env.local scripts/export-public-site.mjs https://chms1chineselanguageclubsystem.vercel.app test-results/cloudflare-public-preview-v2
 ```
 
 The exporter accepts a NEW output directory only, reads the public snapshot, copies
@@ -85,12 +86,29 @@ The output has a static `/api/blog-public` JSON asset, `_headers`, `_redirects`,
 `sitemap.xml`, local images and the existing compiled CSS/JS. It needs no D1 database,
 no Supabase service key, no R2 public bucket and no dynamic Worker for normal reads.
 
-After the owner renews Cloudflare CLI authorization, deploy only the preview:
+With valid Cloudflare CLI authorization, deploy only the preview:
 
 ```powershell
 npx wrangler login
 npx wrangler deploy --config cloudflare/public-preview/wrangler.jsonc
 ```
+
+Current preview: https://chms1clc-public-preview.chms1chineselanguageclub-system.workers.dev
+
+The Oct 16 export includes 19 pages (six sections and 13 published posts),
+93 checksum-verified images totaling 15,426,008 bytes. Root-level site images
+are included as well as post images. Static SSR image URLs are local while
+canonical URLs retain the formal origin. Existing exports are preserved;
+choose a new output directory and update the config for subsequent exports.
+
+Verification: six section routes, an article and a local site image return 200;
+missing pages return 404; member/admin routes redirect to the formal Vercel
+origin. The JSON endpoint has the correct MIME type. Responses carry noindex.
+The package has 228 files, a largest file of 1,225,122 bytes and 331 checked
+local HTML asset references. Desktop browser rendering and a 390 x 844 mobile
+viewport were checked; mobile menu opens, visible images load, and no horizontal
+overflow or Supabase/Vercel media image URLs were found in the rendered homepage.
+Function/security suites passed (32 and 30 tests). This is not a load test.
 
 Do not call it the final migration: automated static re-export/deployment on publish,
 edit, withdrawal and scheduled release still needs authenticated deployment access

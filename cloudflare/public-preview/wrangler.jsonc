@@ -3,7 +3,7 @@
   "compatibility_date": "2026-10-16",
   "workers_dev": true,
   "assets": {
-    "directory": "../../test-results/cloudflare-public-preview",
+    "directory": "../../test-results/cloudflare-public-preview-v2",
     "not_found_handling": "404-page",
     "html_handling": "auto-trailing-slash"
   }
