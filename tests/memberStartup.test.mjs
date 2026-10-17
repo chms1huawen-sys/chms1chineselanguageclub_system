@@ -19,7 +19,7 @@ test('early launch changes only member URLs, without another document request', 
     vm.runInNewContext(read('public/app-launch.js'), {
       URL, window: { location: { href: 'https://club.example' + path }, navigator: {}, matchMedia: () => ({ matches: installed }),
         history: { replaceState: (_state, _title, value) => { replacement = value } } },
-      document: { documentElement: { setAttribute() {} } },
+      document: { addEventListener() {}, documentElement: { setAttribute() {} } },
     })
     assert.equal(replacement, expected === null ? null : 'https://club.example' + expected, path)
   }
