@@ -84,3 +84,23 @@ public apex indexing enabled. Search Console and old-public redirects remain pen
 If validation remains pending beyond the vendor's stated window, investigate DCV
 and public delegation first. Do not toggle SSL protection off or buy an upgrade
 as an unreviewed workaround. The original site remains the fallback meanwhile.
+
+## Member Exit And Public Home Correction
+
+Owner reported member exits still used the old public host. The common publicHomeUrl
+helper still returned a relative old-host path; custom-domain binding cannot update
+such client links. Commit9594b90 now targets https://chms1clc.org/ from the original
+member/admin host, including installed member PWA. Public/preview/local pages keep
+their own relative home navigation. Successful explicit sign-out also redirects to
+the new public home; an auth error displays a retry notice and does not navigate as
+if sign-out succeeded. Member manifest/start URL, Firebase registration, member
+host and blog-login return/download permissions remain unchanged.
+
+24focused tests, build and targeted lint passed. Vercel9594b90 observed Production
+Ready (26seconds). Cloudflare asset deployment0a0c215c-4117-4b97-aaf5-3a325023ae08.
+Browser verified the actual Blog admin return-home href and clicked it through to
+the new domain, with full client content loaded and no captured console errors.
+No real member sign-out was triggered during agent verification; the auth error
+guard/navigation wiring was checked by tests/source assertions. Existing open
+member documents must reload to run the new client code; no reinstall is needed.
+Screenshot: test-results/member-return-new-home-20261018.png (ignored).
