@@ -2,7 +2,8 @@
 
 Last observation: 2026-10-18 21:48 MYT. Binding and HTTPS acceptance completed;
 public apex indexing enabled. UPDATE: old root homepage now retired as described
-below; Search Console and remaining old public-section/article redirects are pending.
+below. UPDATE: public-section/article redirects are now deployed (84f87f6);
+Search Console ownership and sitemap submission are still pending owner input.
 
 ## Ownership And Boundaries
 
@@ -13,8 +14,8 @@ below; Search Console and remaining old public-section/article redirects are pen
 - www and HTTP apex requests redirect to HTTPS apex, preserving path/query.
 - Member/admin redirects, image fallback, and scheduled source refresh remain
   on the original Vercel origin. Supabase/Auth/Firebase/PWA identity is unchanged.
-- Original Vercel public pages remain available. No legacy redirect, Search
-  Console migration or new-host indexing has been activated.
+- Original Vercel public sections/articles now permanently redirect as recorded
+  below. New-host indexing is enabled; Search Console verification is not done.
 
 ## Deployed Configuration
 
@@ -77,8 +78,8 @@ below; Search Console and remaining old public-section/article redirects are pen
 
 ## Resume Order
 
-1. Configure Search Console ownership/sitemap and explicitly scoped old-public
-   redirects separately. Keep member/PWA/API/asset/service-worker routes untouched.
+1. Configure Search Console ownership/sitemap. Scoped old-public redirects are
+   complete. Keep member/PWA/API/asset/service-worker routes untouched.
 2. Confirm the owner's final new-domain acceptance and monitor real traffic/errors
    and the next Supabase quota cycle before broad promotion.
 
@@ -136,3 +137,32 @@ The new site's live sitemap continues to include its own root.
 Only the old homepage is retired in this step; old public sections/articles still
 work until a separately scoped migration. Do not close the source Vercel project.
 Proof: test-results/old-home-retired-20261018.png (ignored).
+
+## Public Section And Article Moves
+
+Commit84f87f6 deployed permanent308 redirects from the original Vercel public
+sections and valid /blog/:slug URLs to corresponding chms1clc.org paths. Query
+parameters are preserved; internal routing parameters are omitted. Redirects
+run before database/R2 reads. Root remains the browser bridge described above.
+
+Member article returns use member_view=1 on the original host, served no-store
+and noindex,nofollow. This marker is not authorization: existing session/RLS
+checks still govern original images and member downloads. Auth callback queries
+stay on the original /member route. Generic public login opens the member app;
+static public member-hash launches also stay on the original member origin.
+
+33 focused tests, build and targeted lint passed. Cloudflare version:
+a5870953-d953-44c5-bb2b-ebfa308b4226. Live HTTP checks confirmed all five section
+redirects and an existing article308, preserved tracking query, member-view200,
+and unchanged member/admin/public-source API200 with noindex. Browser opening
+the old article URL reached the corresponding new-domain article. No real
+member sign-in/out, private download, push or data mutation was performed.
+The final production-checker run passed member/admin/literature/robots checks,
+but the old-host sitemap request exceeded its15second timeout. That run is not
+an all-pass result and does not establish new Search Console sitemap acceptance.
+
+Search Console: opened Add property > Add a website > Domain/URL prefix form
+in the owner's existing account. No property value, ownership verification,
+DNS TXT, sitemap submission or Change of Address was submitted. Owner is being
+guided to enter chms1clc.org in Domain, without a protocol or path.
+Handoff screenshot: test-results/search-console-domain-step-20261018.png (ignored).
