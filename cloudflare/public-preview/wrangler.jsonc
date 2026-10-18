@@ -7,7 +7,7 @@
     { "pattern": "chms1clc.org", "custom_domain": true },
     { "pattern": "www.chms1clc.org", "custom_domain": true }
   ],
-  "vars": { "PUBLIC_SITE_INDEXABLE": "false" },
+  "vars": { "PUBLIC_SITE_INDEXABLE": "true" },
   "assets": {
     "directory": "../../test-results/cloudflare-preview-runtime",
     "binding": "ASSETS",
