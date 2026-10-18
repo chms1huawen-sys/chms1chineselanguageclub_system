@@ -6,7 +6,9 @@ assert.ok(!config.rewrites && !config.headers, 'Advanced routes cannot be combin
 const filesystem = config.routes.findIndex(route => route.handle === 'filesystem')
 const root = config.routes.findIndex(route => !route.continue && route.src && new RegExp(route.src).test('/'))
 assert.ok(root >= 0 && root < filesystem, 'Homepage must override the static index before filesystem routing')
-assert.equal(config.routes[root].dest, '/api/blog')
+assert.equal(config.routes[root].dest, '/legacy-home.html')
+assert.equal(config.routes[root].headers['Cache-Control'], 'no-store')
+assert.equal(config.routes[root].headers['X-Robots-Tag'], 'noindex, follow')
 const admin = config.routes.find(route => !route.continue && route.src && new RegExp(route.src).test('/blog-admin'))
 assert.equal(admin.dest, '/index.html')
 assert.equal(admin.headers['X-Robots-Tag'], 'noindex, nofollow')
@@ -21,7 +23,7 @@ for (const view of ['activities', 'literature', 'news', 'bookroom', 'about']) {
 }
 const article = config.routes.find(route => !route.continue && route.src && new RegExp(route.src).test('/blog/story-2026'))
 assert.equal('/blog/story-2026'.replace(new RegExp(article.src), article.dest), '/api/blog?slug=story-2026')
-for (const asset of ['/assets/index.js', '/manifest.json', '/firebase-messaging-sw.js', '/api/blog-media']) {
+for (const asset of ['/assets/index.js', '/manifest.json', '/firebase-messaging-sw.js', '/api/blog-media', '/api/blog-public', '/home-redirect.js']) {
   assert.ok(!config.routes.slice(0, filesystem).some(route => !route.continue && route.src && new RegExp(route.src).test(asset)), asset)
 }
 assert.ok(config.routes.some(route => route.src && new RegExp(route.src).test('/sitemap.xml')))
