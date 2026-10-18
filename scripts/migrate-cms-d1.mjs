@@ -13,7 +13,7 @@ const sha256 = fingerprint(records)
 const quote = value => "'"+String(value).replaceAll("'","''")+"'"
 const base = 'npx --offline wrangler d1 execute chms1clc-articles --remote --config cloudflare/public-preview/wrangler.jsonc'
 function run(args) {
-  const result=spawnSync('cmd.exe',['/d','/s','/c',base+' '+args],{encoding:'utf8',maxBuffer:10*1024*1024})
+  const result=spawnSync(base+' '+args,{shell:true,encoding:'utf8',maxBuffer:10*1024*1024})
   if(result.status!==0)throw new Error('D1 migration command failed; original source preserved. '+(result.stderr||'').slice(0,1200))
   return result.stdout
 }

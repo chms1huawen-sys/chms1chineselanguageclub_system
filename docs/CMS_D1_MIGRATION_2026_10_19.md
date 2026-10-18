@@ -10,6 +10,8 @@ Status: staged; do not claim cutover until the live checks below are recorded.
   Supabase. Existing photo objects remain intact for compatibility and rollback.
 - New article/site images use authenticated Cloudflare uploads into private R2,
   with MIME signature, dimensions, size and per-account upload rate checks.
+  Limits:10MiB per image,120authenticated requests/uploads per minute and512MiB
+  of image bytes per actor per UTC day. File contents do not pass through Supabase.
 - Public pages continue to read the filtered R2 snapshot, not draft CMS records.
 - Entry is inside Executive Management alongside Finance/Inventory. No public
   gear. Only active teachers and media roles, with no explicit revocation, can

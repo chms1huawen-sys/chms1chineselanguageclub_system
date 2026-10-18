@@ -14,7 +14,8 @@ export async function cmsRequest(command, { file, bucket, owner } = {}) {
   })
   if (!response.ok) {
     const result = await response.json().catch(() => ({}))
-    throw Object.assign(new Error(result.error || 'CMS_UNAVAILABLE'), { status: response.status })
+    const message = response.status === 429 ? '操作或上传较多，请稍后再试。 / Too many requests or uploads. Please retry later.' : result.error || 'CMS_UNAVAILABLE'
+    throw Object.assign(new Error(message), { status: response.status })
   }
   return response
 }

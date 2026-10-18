@@ -96,8 +96,8 @@ export function createCmsHandler({ authenticate = cmsProfile } = {}) {
         if (!extension) fail('INVALID_IMAGE',400)
         const bytes = await readUpload(request,10*1024*1024)
         await validateUpload(bytes,{ mime },{ fileTypeFromBuffer,imageSize })
-        await consumeRate(env.CMS,profile.id,'uploads',30,60)
-        await consumeRate(env.CMS,profile.id,'uploadBytes',200*1024*1024,86400,bytes.byteLength)
+        await consumeRate(env.CMS,profile.id,'uploads',120,60)
+        await consumeRate(env.CMS,profile.id,'uploadBytes',512*1024*1024,86400,bytes.byteLength)
         const path = `${bucket === 'blog-photos' ? owner : 'site'}/r2-${crypto.randomUUID()}.${extension}`
         const sha256 = Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',bytes)), b=>b.toString(16).padStart(2,'0')).join('')
         const key = `photos-v1/${bucket}/${path}`
