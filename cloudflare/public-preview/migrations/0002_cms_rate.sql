@@ -1,0 +1,5 @@
+CREATE TABLE IF NOT EXISTS cms_rate (
+  bucket TEXT PRIMARY KEY,
+  amount INTEGER NOT NULL,
+  expires INTEGER NOT NULL
+);

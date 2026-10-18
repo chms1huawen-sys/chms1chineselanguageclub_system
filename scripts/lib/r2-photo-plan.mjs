@@ -1,3 +1,4 @@
+import { r2SitePath } from '../../src/utils/r2Asset.js'
 const imagePath = (value, bucket = 'blog-photos') => typeof value === 'string' &&
   (bucket === 'blog-site-media' ? /^[a-zA-Z0-9_./-]+\.(?:jpe?g|png|webp|avif)$/i : /^[a-zA-Z0-9_-]+\/[a-zA-Z0-9_./-]+\.(?:jpe?g|png|webp|avif)$/i).test(value) &&
   !value.split('/').some(part => !part || part === '.' || part === '..')
@@ -22,7 +23,8 @@ export function photoCandidates({ posts, albums, media, settings, projectUrl }) 
   }
   const sitePrefix = `${new URL(projectUrl).origin}/storage/v1/object/public/blog-site-media/`
   const visit = value => {
-    if (typeof value === 'string' && value.startsWith(sitePrefix)) {
+    if (r2SitePath(value)) add('blog-site-media',r2SitePath(value))
+    else if (typeof value === 'string' && value.startsWith(sitePrefix)) {
       try { add('blog-site-media', decodeURIComponent(value.slice(sitePrefix.length))) } catch { /* Invalid URL is not migrated. */ }
     } else if (Array.isArray(value)) value.forEach(visit)
     else if (value && typeof value === 'object') Object.values(value).forEach(visit)

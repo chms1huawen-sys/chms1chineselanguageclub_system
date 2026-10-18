@@ -1,7 +1,7 @@
 import ValidatedField from '../components/BlogValidatedField'
 import { useState } from 'react'
 import { Plus, Trash2, Pencil, ArrowUp, ArrowDown, Save } from 'lucide-react'
-import { supabase } from '../supabaseClient'
+import { blogData } from '../utils/blogData'
 import { ordered, safeColor, sections } from '../utils/blogContent'
 
 export function SocialEditor({ value = [], onChange, en, allowEmail = false }) {
@@ -37,7 +37,7 @@ export function CultureTaxonomy({ data, busy, run, reload, en, setDirty }) {
   return <section><div className="bs-quick">{[['categories', '分类', 'Categories'], ['tags', '标签', 'Tags']].map(([id, zh, english]) => <button disabled={busy} key={id} aria-pressed={kind === id} onClick={() => { if (discard()) { setKind(id); reset() } }}>{t(zh, english)}</button>)}</div>
     <form className="bs-editor" onSubmit={e => { e.preventDefault(); run(async () => {
       const values = { name: form.name.trim(), icon: form.icon.trim(), color: form.color, position: Number(form.position), is_visible: form.is_visible, ...(kind === 'categories' ? { section: form.section, parent_id: form.parent_id || null } : { group_name: form.group_name.trim() }) }
-      await checked(form.id ? supabase.from(`blog_${kind}`).update(values).eq('id', form.id) : supabase.from(`blog_${kind}`).insert(values))
+      await checked(form.id ? blogData.from(`blog_${kind}`).update(values).eq('id', form.id) : blogData.from(`blog_${kind}`).insert(values))
       reset(); await reload()
     }) }}><fieldset disabled={busy}><div className="bs-form-grid">
       <label>{t('名称', 'Name')}<input required maxLength={kind === 'tags' ? 60 : 80} value={form.name} onChange={e => change('name', e.target.value)} /></label>
@@ -47,6 +47,6 @@ export function CultureTaxonomy({ data, busy, run, reload, en, setDirty }) {
       <label>{t('排序（小的排前面）', 'Order (lower first)')}<input required type="number" value={form.position} onChange={e => change('position', e.target.value)} /></label>
       <label className="bs-checks"><input type="checkbox" checked={form.is_visible} onChange={e => change('is_visible', e.target.checked)} />{t('公开显示', 'Show publicly')}</label>
     </div><div className="bs-actions"><button className="bs-primary"><Save size={16} />{t('保存', 'Save')}</button>{form.id && <button type="button" onClick={() => { if (discard()) reset() }}>{t('取消', 'Cancel')}</button>}</div></fieldset></form>
-    <div className="bs-table-wrap"><table className="bs-table"><thead><tr><th>{t('名称', 'Name')}</th><th>{t('栏目 / 分组', 'Section / group')}</th><th>{t('排序', 'Order')}</th><th>{t('显示', 'Visible')}</th><th>{t('操作', 'Actions')}</th></tr></thead><tbody>{rows.map(row => <tr key={row.id}><td><span style={{ color: safeColor(row.color) }}>{row.icon}</span> {row.name}</td><td>{kind === 'tags' ? row.group_name : (sections.find(s => s.type === row.section)?.[en ? 'en' : 'zh'] || t('共用', 'Shared'))}{row.parent_id && <small>{data.categories.find(cat => cat.id === row.parent_id)?.name}</small>}</td><td>{row.position || 0}</td><td>{row.is_visible !== false ? t('显示', 'Visible') : t('隐藏', 'Hidden')}</td><td><div className="bs-actions"><button disabled={busy} title={t('编辑', 'Edit')} onClick={() => { if (discard()) { setForm({ ...blank, ...row }); setDirty(false); setChanged(false) } }}><Pencil size={16} /></button><button disabled={busy} title={t('删除', 'Delete')} onClick={() => { if (window.confirm(t(`删除「${row.name}」？文章将保留；下级分类会成为顶级分类。`, `Delete "${row.name}"? Posts remain; child categories become top-level.`))) run(async () => { await checked(supabase.from(`blog_${kind}`).delete().eq('id', row.id)); if (form.id === row.id) reset(); await reload() }) }}><Trash2 size={16} /></button></div></td></tr>)}</tbody></table></div>
+    <div className="bs-table-wrap"><table className="bs-table"><thead><tr><th>{t('名称', 'Name')}</th><th>{t('栏目 / 分组', 'Section / group')}</th><th>{t('排序', 'Order')}</th><th>{t('显示', 'Visible')}</th><th>{t('操作', 'Actions')}</th></tr></thead><tbody>{rows.map(row => <tr key={row.id}><td><span style={{ color: safeColor(row.color) }}>{row.icon}</span> {row.name}</td><td>{kind === 'tags' ? row.group_name : (sections.find(s => s.type === row.section)?.[en ? 'en' : 'zh'] || t('共用', 'Shared'))}{row.parent_id && <small>{data.categories.find(cat => cat.id === row.parent_id)?.name}</small>}</td><td>{row.position || 0}</td><td>{row.is_visible !== false ? t('显示', 'Visible') : t('隐藏', 'Hidden')}</td><td><div className="bs-actions"><button disabled={busy} title={t('编辑', 'Edit')} onClick={() => { if (discard()) { setForm({ ...blank, ...row }); setDirty(false); setChanged(false) } }}><Pencil size={16} /></button><button disabled={busy} title={t('删除', 'Delete')} onClick={() => { if (window.confirm(t(`删除「${row.name}」？文章将保留；下级分类会成为顶级分类。`, `Delete "${row.name}"? Posts remain; child categories become top-level.`))) run(async () => { await checked(blogData.from(`blog_${kind}`).delete().eq('id', row.id)); if (form.id === row.id) reset(); await reload() }) }}><Trash2 size={16} /></button></div></td></tr>)}</tbody></table></div>
   </section>
 }

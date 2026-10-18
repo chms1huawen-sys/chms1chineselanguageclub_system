@@ -5,9 +5,9 @@ import { requestWhenVisible } from '../utils/lazyImageRequest'
 import { richBody, galleryPreview, photoWidth } from '../utils/blogRichText'
 import { publicHomeUrl, isPublicPreview } from '../utils/pwaLaunch'
 import { useEffect, useEffectEvent, useRef, useState } from 'react'
-import { ArrowRight, ArrowLeft, Download, Globe, Search, Menu, X, ChevronLeft, ChevronRight, LogIn, Settings, BookOpen, Camera, ExternalLink } from 'lucide-react'
+import { ArrowRight, ArrowLeft, Download, Globe, Search, Menu, X, ChevronLeft, ChevronRight, LogIn, BookOpen, Camera, ExternalLink } from 'lucide-react'
 import { supabase } from '../supabaseClient'
-import { blogPath, blogLogin, canManageBlog, defaultBlogSettings } from '../utils/blog'
+import { blogPath, blogLogin, defaultBlogSettings } from '../utils/blog'
 import './Blog.css'
 import './BlogPresentation.css'
 import './BlogHome.css'
@@ -25,6 +25,7 @@ import { clubStatistics, matchesPublicSearch, submissionNote, publicationYear } 
 import BlogNavigation, { SocialLinks } from '../components/BlogNavigation'
 import { sections, sectionOf, publicCategories, postTags, safeColor } from '../utils/blogContent'
 import { readPublicSnapshot } from '../utils/publicSnapshotClient'
+import { memberBlogExtras } from '../utils/blogData'
 import { snapshotArticle, snapshotMoments } from '../utils/publicSnapshot'
 
 const localPath = value => typeof value === 'string' && /^\/(?!\/)[^\\\s]*$/.test(value) && !value.includes('..')
@@ -168,8 +169,8 @@ export default function Blog({ profile, lang, setLang }) {
           }
           if (current && readMemberLinks) {
             try {
-              const extra = await rows(supabase.from('blog_links').select('*').eq('post_id', current.post.id).eq('visibility', 'member').order('position'))
-              if (active) setLinks([...(current.links || []), ...extra])
+              const extra = await memberBlogExtras(current.post.id)
+              if (active) setLinks([...(current.links || []), ...extra.links])
             } catch { if (active) setError('extras') }
           }
           return
@@ -267,9 +268,9 @@ export default function Blog({ profile, lang, setLang }) {
     if (!activeMember || !post) return
     setDownloadBusy(true)
     try {
-      const result = await supabase.from('blog_downloads').select('drive_url').eq('post_id', post.id).maybeSingle()
-      if (result.error || !webLink(result.data?.drive_url)) throw new Error('unavailable')
-      setDownload(webLink(result.data.drive_url))
+      const extras = await memberBlogExtras(post.id)
+      if (!webLink(extras.drive_url)) throw new Error('unavailable')
+      setDownload(webLink(extras.drive_url))
     } catch { setError('download') }
     finally { setDownloadBusy(false) }
   }
@@ -308,7 +309,7 @@ export default function Blog({ profile, lang, setLang }) {
   const errorText = error === 'download' ? t('暂时无法取得原图相册，请稍后重试。', 'Original photos are unavailable. Please try again later.') : error === 'album' ? t('这个相册暂时没有公开照片。', 'This album has no public photos yet.') : error === 'extras' ? t('部分相册或相关链接暂时无法载入。', 'Some albums or related links are temporarily unavailable.') : t('学会动态暂时无法载入，会员仍可正常登入系统。', 'Stories are temporarily unavailable. Member login is still available.')
   return <div className={`club-blog blog-public${view === 'home' && !searching && !slug ? ' blog-home' : ' blog-interior'}`}>
     <a className="blog-skip" href="#blog-content">{t('跳至内容', 'Skip to content')}</a>
-    <header className="blog-nav" data-panel={mobilePanel} onKeyDown={event => { if (event.key === 'Escape' && mobilePanel) { setMobilePanel(''); menuToggle.current?.focus() } }}><a className="blog-brand" href={publicHomeUrl()}><img src="/logo-192.png" alt="" /><span>{siteReady ? settings.title : error ? t('公开网站', 'Website') : <span role="status" aria-label={t('载入网站名称', 'Loading website name')}>…</span>}<small>{settings.subtitle}</small></span></a><BlogNavigation categories={categories} pathname={pathname} en={en} /><form className="blog-global-search" role="search" action="/" method="get"><input ref={searchInput} type="search" name="q" defaultValue={search} maxLength={200} aria-label={t('搜索公开文章和书籍', 'Search public stories and books')} placeholder={t('搜索文章、书籍', 'Search stories, books')} /><button type="submit" aria-label={t('搜索', 'Search')}><Search size={18} /></button></form><div className="blog-public-actions">{<button className="blog-home-search-toggle" aria-label={t('展开搜索', 'Open search')} aria-expanded={mobilePanel === 'search'} onClick={() => setMobilePanel(value => value === 'search' ? '' : 'search')}><Search size={19} /></button>}<button title={t('切换语言', 'Switch language')} aria-label={t('切换语言', 'Switch language')} onClick={() => setLang(en ? 'zh' : 'en')}><Globe size={18} /></button>{(isPublicPreview() || canManageBlog(profile)) && <a href="/blog-admin" title={t('文章后台', 'Manage blog')} aria-label={t('文章后台', 'Manage blog')}><Settings size={18} /></a>}<a className="blog-primary" href={profile ? '/member#/' : blogLogin()}>{profile ? <BookOpen size={16} /> : <LogIn size={16} />}{profile ? t('会员系统', 'Members') : t('会员登入', 'Member login')}</a>{<button ref={menuToggle} className="blog-home-menu-toggle" aria-label={mobilePanel === 'menu' ? t('收起菜单', 'Close menu') : t('展开菜单', 'Open menu')} aria-expanded={mobilePanel === 'menu'} onClick={() => setMobilePanel(value => value === 'menu' ? '' : 'menu')}>{mobilePanel === 'menu' ? <X size={20} /> : <Menu size={20} />}</button>}</div>{mobilePanel === 'menu' && <button className="blog-home-language" onClick={() => setLang(en ? 'zh' : 'en')}><Globe size={18} />{en ? '切换中文' : 'Switch to English'}</button>}</header>
+    <header className="blog-nav" data-panel={mobilePanel} onKeyDown={event => { if (event.key === 'Escape' && mobilePanel) { setMobilePanel(''); menuToggle.current?.focus() } }}><a className="blog-brand" href={publicHomeUrl()}><img src="/logo-192.png" alt="" /><span>{siteReady ? settings.title : error ? t('公开网站', 'Website') : <span role="status" aria-label={t('载入网站名称', 'Loading website name')}>…</span>}<small>{settings.subtitle}</small></span></a><BlogNavigation categories={categories} pathname={pathname} en={en} /><form className="blog-global-search" role="search" action="/" method="get"><input ref={searchInput} type="search" name="q" defaultValue={search} maxLength={200} aria-label={t('搜索公开文章和书籍', 'Search public stories and books')} placeholder={t('搜索文章、书籍', 'Search stories, books')} /><button type="submit" aria-label={t('搜索', 'Search')}><Search size={18} /></button></form><div className="blog-public-actions">{<button className="blog-home-search-toggle" aria-label={t('展开搜索', 'Open search')} aria-expanded={mobilePanel === 'search'} onClick={() => setMobilePanel(value => value === 'search' ? '' : 'search')}><Search size={19} /></button>}<button title={t('切换语言', 'Switch language')} aria-label={t('切换语言', 'Switch language')} onClick={() => setLang(en ? 'zh' : 'en')}><Globe size={18} /></button><a className="blog-primary" href={profile ? '/member#/' : blogLogin()}>{profile ? <BookOpen size={16} /> : <LogIn size={16} />}{profile ? t('会员系统', 'Members') : t('会员登入', 'Member login')}</a>{<button ref={menuToggle} className="blog-home-menu-toggle" aria-label={mobilePanel === 'menu' ? t('收起菜单', 'Close menu') : t('展开菜单', 'Open menu')} aria-expanded={mobilePanel === 'menu'} onClick={() => setMobilePanel(value => value === 'menu' ? '' : 'menu')}>{mobilePanel === 'menu' ? <X size={20} /> : <Menu size={20} />}</button>}</div>{mobilePanel === 'menu' && <button className="blog-home-language" onClick={() => setLang(en ? 'zh' : 'en')}><Globe size={18} />{en ? '切换中文' : 'Switch to English'}</button>}</header>
     {!slug && view === 'home' && !searching && siteReady && <BlogHero site={settings} Image={BlogImage} en={en} />}
     <main className="blog-main" id="blog-content">
       {error && <p className="blog-error" role="alert">{errorText}</p>}

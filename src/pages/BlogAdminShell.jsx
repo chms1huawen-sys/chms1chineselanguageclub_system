@@ -1,6 +1,6 @@
 import { publicHomeUrl } from '../utils/pwaLaunch'
 import { useEffect, useState } from 'react'
-import { supabase } from '../supabaseClient'
+import { blogData } from '../utils/blogData'
 import { readBlogBootstrap } from '../utils/blogBootstrap'
 import { Globe, ArrowLeft, LogIn } from 'lucide-react'
 import BlogManagement from './BlogManagement'
@@ -14,7 +14,7 @@ export default function BlogAdminShell({ profile, loading, lang, setLang }) {
   const [failed, setFailed] = useState(false)
   useEffect(() => {
     let active = true
-    supabase.from('blog_settings').select('title,subtitle,content').eq('id', 1).single()
+    blogData.from('blog_settings').select('title,subtitle,content').eq('id', 1).single()
       .then(({ data, error }) => { if (active) { if (error) setFailed(true); else setSite(brandedSettings(data)) } })
       .catch(() => { if (active) setFailed(true) })
     return () => { active = false }

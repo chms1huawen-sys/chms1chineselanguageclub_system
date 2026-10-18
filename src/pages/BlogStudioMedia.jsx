@@ -1,11 +1,13 @@
 import BlogPhotoCrop from '../components/BlogPhotoCrop'
 import { signBlogImage } from '../utils/blogImages'
 import { uploadBlogPhoto } from '../utils/blogPhotoUpload'
-import { secureUpload } from '../utils/secureUpload'
+import { uploadBlogAsset, privateR2Image, removeBlogFiles } from '../utils/blogData'
+import { r2SitePath } from '../utils/r2Asset.js'
 import { cropStyles } from '../utils/photoCrop'
 import { useEffect, useState } from 'react'
 import { Upload, Image, Trash2, ArrowUp, ArrowDown } from 'lucide-react'
 import { supabase } from '../supabaseClient'
+import { blogData } from '../utils/blogData'
 
 async function checked(query) {
   const result = await query
@@ -18,6 +20,11 @@ export function StudioImage({ path, alt = '', publicAsset = false, crop, ...prop
   useEffect(() => {
     let active = true
     if (!path) return
+    const sitePath = r2SitePath(path)
+    if (sitePath) {
+      privateR2Image('blog-site-media',sitePath).then(({data})=>{if(active)setImage({path,url:data.signedUrl})}).catch(()=>{if(active)setImage(null)})
+      return () => { active = false }
+    }
     if (/^https?:\/\//.test(path) || /^\/(?!\/)/.test(path)) {
       Promise.resolve().then(() => { if (active) setImage({ path, url: path }) })
     } else if (publicAsset) {
@@ -46,8 +53,8 @@ export default function StudioMedia({ owner, kind, media, setMedia, changeCover,
       const types = { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp' }
       if (files.some(file => !types[file.type] || file.size > 10 * 1024 * 1024)) throw new Error(t('只支持 JPG、PNG、WEBP，每张最多 10MB。', 'Use JPG, PNG or WEBP, up to 10MB each.'))
       for (const file of files) {
-        const paths = await uploadBlogPhoto({ upload: (path, file) => secureUpload('blog-photos', path, file) }, file, owner.id, types[file.type])
-        const row = await checked(supabase.from('blog_media').insert({ [field]: owner.id, ...paths, caption: '', position: media.length + files.indexOf(file) }).select().single())
+        const paths = await uploadBlogPhoto({ upload: (path, file) => uploadBlogAsset('blog-photos', path, file), remove: removeBlogFiles }, file, owner.id, types[file.type])
+        const row = await checked(blogData.from('blog_media').insert({ [field]: owner.id, ...paths, caption: '', position: media.length + files.indexOf(file) }).select().single())
         setMedia(items => [...items, row])
       }
     }, t('照片已上传。', 'Photos uploaded.'))
@@ -63,7 +70,7 @@ export default function StudioMedia({ owner, kind, media, setMedia, changeCover,
     <div className="bs-media-grid">{media.map((item, index) => <figure key={item.id}><StudioImage path={item.path} alt={item.caption} crop={item.crop} style={{ width: '100%', margin: 'auto' }} /><button type="button" disabled={disabled} onClick={() => setCropping(item)}>{t('裁切照片', 'Crop photo')}</button><label>{t('照片说明', 'Caption')}<input disabled={disabled} value={item.caption || ''} onChange={e => { setMedia(items => items.map(m => m.id === item.id ? { ...m, caption: e.target.value } : m)); setDirty(true) }} /></label><div className="bs-actions">
       <button type="button" disabled={disabled} aria-pressed={owner.cover_path === item.path} onClick={() => changeCover(item.path)}>{t('设为封面', 'Set cover')}</button>
       <button type="button" title={t('前移', 'Move up')} disabled={disabled || !index} onClick={() => move(index, -1)}><ArrowUp size={16} /></button><button type="button" title={t('后移', 'Move down')} disabled={disabled || index === media.length - 1} onClick={() => move(index, 1)}><ArrowDown size={16} /></button>
-      <button type="button" title={t('删除照片', 'Delete photo')} disabled={disabled || item.path === savedCover || item.path === owner.cover_path} onClick={() => { if (window.confirm(t('永久删除这张照片？', 'Permanently delete this photo?'))) run(async () => { await checked(supabase.from('blog_media').delete().eq('id', item.id).eq(field, owner.id)); setMedia(items => items.filter(m => m.id !== item.id)); await checked(supabase.storage.from('blog-photos').remove([item.path])) }) }}><Trash2 size={16} /></button>
+      <button type="button" title={t('删除照片', 'Delete photo')} disabled={disabled || item.path === savedCover || item.path === owner.cover_path} onClick={() => { if (window.confirm(t('永久删除这张照片？', 'Permanently delete this photo?'))) run(async () => { await checked(blogData.from('blog_media').delete().eq('id', item.id).eq(field, owner.id)); setMedia(items => items.filter(m => m.id !== item.id)); await removeBlogFiles([item.path,item.original_path,item.display_path]) }) }}><Trash2 size={16} /></button>
     </div></figure>)}</div>{cropping && <BlogPhotoCrop path={cropping.path} value={cropping.crop} en={en} onClose={() => setCropping(null)} onSave={crop => { setMedia(items => items.map(item => item.id === cropping.id ? { ...item, crop, width_percent: 100 } : item)); setDirty(true) }} />}
   </section>
 }

@@ -31,3 +31,15 @@ test('original upload errors propagate without generating another object', async
   await assert.rejects(uploadBlogPhoto({ upload: async () => ({ error: new Error('Upload failed') }) }, { type: 'image/jpeg' }, 'post', 'jpg', async () => { previewed = true }, () => 'photo'), /Upload failed/)
   assert.equal(previewed, false)
 })
+
+test('direct R2 uploads use returned paths and keep a separate public copy even for small images',async()=>{
+  const owner='10000000-0000-4000-8000-000000000001'
+  const original=owner+'/r2-20000000-0000-4000-8000-000000000001.jpg'
+  const display=owner+'/r2-30000000-0000-4000-8000-000000000001.jpg'
+  let count=0
+  const bucket={upload:async()=>({data:{path:++count===1?original:display}})}
+  assert.deepEqual(await uploadBlogPhoto(bucket,{type:'image/jpeg'},owner,'jpg',async()=>null),{path:display,original_path:original})
+  const removed=[]
+  await assert.rejects(uploadBlogPhoto({upload:async()=>({data:{path:original}}),remove:async paths=>removed.push(...paths)},{type:'image/jpeg'},owner,'jpg',async()=>{throw new Error('Decode failed')}),/Original photos were not published/)
+  assert.deepEqual(removed,[original])
+})

@@ -2,6 +2,7 @@
   "name": "chms1clc-public-preview",
   "main": "worker.js",
   "compatibility_date": "2026-10-16",
+  "compatibility_flags": ["nodejs_compat"],
   "workers_dev": true,
   "routes": [
     { "pattern": "chms1clc.org", "custom_domain": true },
@@ -16,5 +17,6 @@
     "html_handling": "auto-trailing-slash"
   },
   "r2_buckets": [{ "binding": "PUBLIC_SITE", "bucket_name": "chms1clc-photos" }],
+  "d1_databases": [{ "binding": "CMS", "database_name": "chms1clc-articles", "database_id": "c8bc5c2c-6f71-45bf-a938-3d80a7271443", "migrations_dir": "migrations" }],
   "triggers": { "crons": ["* * * * *"] }
 }

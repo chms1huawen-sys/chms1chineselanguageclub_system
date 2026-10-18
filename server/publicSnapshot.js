@@ -7,6 +7,8 @@ import { waitUntil } from '@vercel/functions'
 import { r2PhotoConfig } from './r2Photos.js'
 import { makePublicSnapshot, validPublicSnapshot } from '../src/utils/publicSnapshot.js'
 import { publishedPreview } from './publicPreview.js'
+import { PUBLIC_ORIGIN } from '../src/utils/siteOrigins.js'
+import { createD1SourceReader } from './publicD1Source.js'
 
 export const SNAPSHOT_KEY = 'public-site/v1/current.json'
 export const MAX_SNAPSHOT_BYTES = 3 * 1024 * 1024
@@ -50,10 +52,13 @@ async function rows(makeQuery) {
   throw new Error('Public export row limit exceeded')
 }
 
-export function snapshotSource(env, client = createClient) {
+export function snapshotSource(env, client = createClient, request = fetch) {
   const db = client(env.VITE_SUPABASE_URL, env.VITE_SUPABASE_ANON_KEY, { auth: { persistSession: false, autoRefreshToken: false } })
+  const d1 = createD1SourceReader(env.BLOG_CMS_SOURCE_URL || PUBLIC_ORIGIN + '/api/blog-source',request)
   return {
     async checkDue(current) {
+      const migrated = await d1.read()
+      if (migrated.active) return migrated.revision !== current.cmsRevision
       const result = await db.rpc('blog_publish_due')
       if (result.error) throw new Error('Scheduled publishing unavailable')
       if (Number(result.data) > 0) return true
@@ -64,6 +69,8 @@ export function snapshotSource(env, client = createClient) {
       return revision.count !== current.posts.length || (revision.data || []).some(row => Math.max(Date.parse(row.updated_at) || 0, Date.parse(row.published_at) || 0) > Date.parse(current.generatedAt))
     },
     async build(now) {
+      const migrated = await d1.read({force:true})
+      if (migrated.active) return { ...migrated.snapshot, cmsRevision:migrated.revision, generatedAt: new Date(now).toISOString(), checkedAt: new Date(now).toISOString() }
       const [site, posts, media, links, categories, tags] = await Promise.all([
         db.from('blog_settings').select('*').eq('id', 1).single(),
         rows(() => db.from('blog_posts').select('*').eq('status', 'published').order('published_at', { ascending: false }).order('id')),

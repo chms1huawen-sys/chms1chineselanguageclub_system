@@ -1,5 +1,4 @@
-export const BLOG_MANAGER_ROLES = ['convener_teacher', 'advisor_teacher', 'advisor', 'chairperson', 'media_lead', 'vice_media_lead', 'social_media_editor']
-export const canManageBlog = profile => profile?.is_active === true && (profile.can_manage_blog ?? BLOG_MANAGER_ROLES.includes(profile.role))
+export { BLOG_MANAGER_ROLES, canManageBlog } from './blogAccess.js'
 export const blogPath = slug => `/blog/${encodeURIComponent(slug)}`
 export const blogLogin = (path = window.location.pathname + window.location.search) => path === '/blog-admin' || /^\/blog\/[a-z0-9-]+(?:\?|$)/.test(path)
   ? `/member#/login?return=${encodeURIComponent(safeBlogReturn(path))}` : '/member#/'

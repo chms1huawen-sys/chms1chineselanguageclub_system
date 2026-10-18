@@ -1,3 +1,4 @@
+import { canManageBlog } from './blogAccess.js'
 const ACCOUNT_MANAGER_ROLES = ['convener_teacher', 'advisor_teacher', 'advisor', 'chairperson', 'vice_chairperson']
 const EXECUTIVE_VIEW_ROLES = [
   'convener_teacher',
@@ -55,7 +56,7 @@ export const PERMISSION_FIELDS = [
 export const hasPermission = (profile, permission) => {
   if (!profile) return false
   if (permission === 'can_manage_blog') {
-    return profile.can_manage_blog ?? ['convener_teacher', 'advisor_teacher', 'advisor', 'chairperson', 'media_lead', 'vice_media_lead', 'social_media_editor'].includes(profile.role)
+    return canManageBlog(profile)
   }
   if (profile[permission] === true) return true
 
@@ -77,7 +78,7 @@ export const hasPermission = (profile, permission) => {
 
 export const canViewExecutiveManagement = (profile) => {
   if (!profile) return false
-  return EXECUTIVE_VIEW_ROLES.includes(profile.role) || ['can_manage_executive', 'can_manage_inventory', 'can_approve_inventory', 'can_manage_finance', 'can_approve_finance'].some(permission => hasPermission(profile, permission))
+  return EXECUTIVE_VIEW_ROLES.includes(profile.role) || ['can_manage_blog', 'can_manage_executive', 'can_manage_inventory', 'can_approve_inventory', 'can_manage_finance', 'can_approve_finance'].some(permission => hasPermission(profile, permission))
 }
 
 export const canViewLeaveRecords = (profile) => {

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { loginPresentation } from '../utils/loginPresentation'
+import { PUBLIC_ORIGIN } from '../utils/siteOrigins.js'
 import LoginPhoto from '../components/LoginPhoto'
 import { supabase } from '../supabaseClient'
 import { MEMBER_PROFILE_FIELDS } from '../utils/memberProfile'
@@ -48,9 +49,19 @@ export default function Login({ onLoginSuccess }) {
   const [presentation, setPresentation] = useState(() => loginPresentation())
   useEffect(() => {
     let active = true
-    supabase.from('blog_settings').select('content').eq('id', 1).single().then(({ data, error }) => {
-      if (active && !error && data) setPresentation(loginPresentation(data.content?.member_login))
-    }).catch(() => {})
+    async function loadPresentation() {
+      try {
+        const response = await fetch(PUBLIC_ORIGIN+'/api/blog-login-settings',{signal:AbortSignal.timeout(8000)})
+        if (response.ok) {
+          const result = await response.json()
+          if (active) setPresentation(loginPresentation(result.data))
+          return
+        }
+        const {data,error} = await supabase.from('blog_settings').select('content').eq('id',1).single()
+        if (active && !error && data) setPresentation(loginPresentation(data.content?.member_login))
+      } catch { /* Keep built-in login presentation available during a source outage. */ }
+    }
+    loadPresentation()
     return () => { active = false }
   }, [])
   const en = lang === 'en'

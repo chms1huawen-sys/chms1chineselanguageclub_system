@@ -3,6 +3,8 @@ import { createPortal } from 'react-dom'
 import ReactCrop, { centerCrop, makeAspectCrop } from 'react-image-crop'
 import { Crop, X, RotateCcw } from 'lucide-react'
 import { supabase } from '../supabaseClient'
+import { privateR2Image } from '../utils/blogData'
+import { isDirectR2Photo, r2SitePath } from '../utils/r2Asset.js'
 import 'react-image-crop/dist/ReactCrop.css'
 import './BlogPhotoCrop.css'
 
@@ -20,7 +22,9 @@ export default function BlogPhotoCrop({ path, value, publicAsset = false, onSave
     async function load() {
       try {
         let url = path
-        if (!/^https?:\/\//.test(path) && !/^\/(?!\/)/.test(path)) {
+        if (isDirectR2Photo(path) || r2SitePath(path)) {
+          url = (await privateR2Image(publicAsset ? 'blog-site-media' : 'blog-photos',r2SitePath(path) || path)).data.signedUrl
+        } else if (!/^https?:\/\//.test(path) && !/^\/(?!\/)/.test(path)) {
           if (publicAsset) url = supabase.storage.from('blog-site-media').getPublicUrl(path).data.publicUrl
           else { const result = await supabase.storage.from('blog-photos').createSignedUrl(path, 3600); if (result.error) throw result.error; url = result.data.signedUrl }
         }

@@ -1,11 +1,13 @@
 import BlogArticlePreview from '../components/BlogArticlePreview'
 import { createImagePreview } from '../utils/imagePreview'
-import { secureUpload } from '../utils/secureUpload'
+import { uploadBlogAsset, cmsIsActive } from '../utils/blogData'
+import { r2SiteUrl } from '../utils/r2Asset.js'
 import BlogPhotoCrop from '../components/BlogPhotoCrop'
 import ValidatedField from '../components/BlogValidatedField'
 import { lazy, Suspense, useState } from 'react'
 import { Save, Plus, Trash2, ArrowUp, ArrowDown, Eye, X } from 'lucide-react'
 import { supabase } from '../supabaseClient'
+import { blogData } from '../utils/blogData'
 import { BookEditor, SocialEditor } from './BlogCultureEditors'
 import { submissionNote } from '../utils/blogPresentation'
 import { brandedSettings } from '../utils/siteBrand'
@@ -63,10 +65,10 @@ export function StudioPostEditor({ initial, data, busy, run, reload, setDirty, d
       if ((post.book_details?.purchase_links || []).some(link => !link.label?.trim() || !safeSocialLink(link.url, link.platform))) throw new Error(t('请填写购买联系名称及有效的网址或邮箱地址。', 'Enter a contact name and valid URL or email address.'))
       const payload = { ...post, title: post.title.trim(), category_id: post.category_id || null, event_date: post.event_date || null, event_id: post.event_id || null, content_year: Number(post.content_year), scheduled_at: post.status === 'scheduled' ? new Date(post.scheduled_at).toISOString() : null, tags: adminTagNames(post, data.tags) }
       delete payload.kind
-      const saved = await checked(supabase.rpc('blog_studio_save', { p_post: payload, p_links: links.map((l, position) => ({ ...(l.id ? { id: l.id } : {}), label: l.label.trim(), url: l.url.trim(), visibility: l.visibility, position, type: l.type || 'link' })), p_album_ids: [], p_media: media.map(({ id, caption, crop }, position) => ({ id, caption, position, crop: crop || null, width_percent: 100 })), p_version: post.version ?? null }))
+      const saved = await checked(blogData.rpc('blog_studio_save', { p_post: payload, p_links: links.map((l, position) => ({ ...(l.id ? { id: l.id } : {}), label: l.label.trim(), url: l.url.trim(), visibility: l.visibility, position, type: l.type || 'link' })), p_album_ids: [], p_media: media.map(({ id, caption, crop }, position) => ({ id, caption, position, crop: crop || null, width_percent: 100 })), p_version: post.version ?? null }))
       setPost(saved); setDirty(false)
       // Refresh generated link IDs so a second save updates the same records.
-      setLinks(await checked(supabase.from('blog_links').select('*').eq('post_id', saved.id).order('position')))
+      setLinks(await checked(blogData.from('blog_links').select('*').eq('post_id', saved.id).order('position')))
       onSaved(saved); await reload()
     }, t('内容、链接与照片说明已保存。', 'Content, links and photo captions saved.'))
   }
@@ -111,27 +113,26 @@ export function StudioSettings({ initial, busy, run, reload, en, setDirty }) {
       if (!ext || file.size > 10 * 1024 * 1024) throw new Error(t('仅支持 JPG、PNG、WEBP，每张最多 10MB。', 'Only JPG, PNG, WEBP, up to 10MB each.'))
       const path = `${crypto.randomUUID()}.${ext}`
       const bucket = supabase.storage.from('blog-site-media')
-      await checked(secureUpload('blog-site-media', path, file))
-      let displayPath = path
+      const uploaded = await checked(uploadBlogAsset('blog-site-media', path, file))
+      let displayPath = uploaded.path || path
       try {
         const preview = await createImagePreview(file)
         if (preview) {
           const previewPath = `${path}.preview.webp`
-          await checked(secureUpload('blog-site-media', previewPath, preview))
-          displayPath = previewPath
+          const optimized = await checked(uploadBlogAsset('blog-site-media', previewPath, preview))
+          displayPath = optimized.path || previewPath
         }
       } catch (error) {
         console.warn('Image preview unavailable; keeping original.', error.message)
       }
-      const result = bucket.getPublicUrl(displayPath)
-      assign(result.data.publicUrl)
+      assign(await cmsIsActive() ? r2SiteUrl(displayPath) : bucket.getPublicUrl(displayPath).data.publicUrl)
     }, t('图片已上传；保存设置后公开生效。', 'Image uploaded. Save settings to publish the change.'))
   }
   return <form className="bs-editor" onSubmit={e => { e.preventDefault(); run(async () => {
       const start = Number(content.stats_start_year), end = Number(content.stats_end_year || new Date().getFullYear())
       if (content.stats_start_year && (!Number.isInteger(start) || start < 1 || start > end)) throw new Error(t('开始年份必须小于或等于结束年份。', 'Start year must not exceed the end year.'))
       if (content.hero_link && !safePublicLink(content.hero_link)) throw new Error(t('默认首页链接必须为站内路径或 HTTP(S) 网址。', 'The introduction link must be a local path or HTTP(S) URL.'))
-      if ((content.social_links || []).some(link => !link.label?.trim() || !safeSocialLink(link.url, link.platform))) throw new Error(t('请填写社媒名称和有效的网址或邮箱地址。', 'Enter a social label and valid URL or email address.')); if (slides.some(s => s.link && !safePublicLink(s.link))) throw new Error(t('轮播链接必须为站内路径或 HTTP(S) 网址。', 'Slide links must be local paths or HTTP(S) URLs.')); if (!content.site_name?.trim()) throw new Error(t('请填写网站全名。', 'Enter the full website name.')); const values = Object.fromEntries(['title', 'subtitle', 'intro', 'about', 'contact', 'hero_path', 'content'].map(key => [key, site[key]])); await checked(supabase.from('blog_settings').update(values).eq('id', 1).select().single()); setDirty(false); await reload() }) }}><fieldset disabled={busy}>
+      if ((content.social_links || []).some(link => !link.label?.trim() || !safeSocialLink(link.url, link.platform))) throw new Error(t('请填写社媒名称和有效的网址或邮箱地址。', 'Enter a social label and valid URL or email address.')); if (slides.some(s => s.link && !safePublicLink(s.link))) throw new Error(t('轮播链接必须为站内路径或 HTTP(S) 网址。', 'Slide links must be local paths or HTTP(S) URLs.')); if (!content.site_name?.trim()) throw new Error(t('请填写网站全名。', 'Enter the full website name.')); const values = Object.fromEntries(['title', 'subtitle', 'intro', 'about', 'contact', 'hero_path', 'content'].map(key => [key, site[key]])); await checked(blogData.from('blog_settings').update(values).eq('id', 1).select().single()); setDirty(false); await reload() }) }}><fieldset disabled={busy}>
     <SocialEditor allowEmail value={content.social_links || []} onChange={links => changeContent('social_links', links)} en={en} />
     <LoginSettingsEditor value={content.member_login} onChange={value => changeContent('member_login', value)} upload={upload} onCrop={setCropping} en={en} />
     <section className="bs-section"><h2>{t('首页简介', 'Homepage introduction')}</h2><label>{t('说明栏标题', 'Board title')}<input value={content.about_board_title || ''} onChange={e => changeContent('about_board_title', e.target.value)} /></label><label>{t('首页简短介绍（与关于我们详情分别编辑）', 'Homepage summary (separate from About page)')}<textarea rows={7} value={content.about_notes ?? site.about ?? ''} onChange={e => changeContent('about_notes', e.target.value)} /></label></section>

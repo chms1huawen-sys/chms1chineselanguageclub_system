@@ -183,7 +183,7 @@ test('minute revision check recovers publications whose first R2 write failed, w
   let count = current.posts.length
   let updated = new Date(time - 1000).toISOString()
   const query = { select(fields, options) { assert.equal(fields, 'updated_at,published_at'); assert.equal(options.count, 'exact'); return this }, eq() { return this }, is() { return this }, order() { return this }, async limit(value) { assert.equal(value, 1); return { count, data: [{ updated_at: updated }] } } }
-  const source = snapshotSource({}, () => ({ rpc: async () => ({ data: 0 }), from: table => { assert.equal(table, 'blog_posts'); return query } }))
+  const source = snapshotSource({}, () => ({ rpc: async () => ({ data: 0 }), from: table => { assert.equal(table, 'blog_posts'); return query } }),async()=>Response.json({active:false}))
   assert.equal(await source.checkDue(current), false)
   count++
   assert.equal(await source.checkDue(current), true)

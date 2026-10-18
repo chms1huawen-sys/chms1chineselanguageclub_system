@@ -9,7 +9,7 @@ test('Blog overrides inherit, grant and revoke without changing other permission
   for (const role of [...BLOG_MANAGER_ROLES, 'ordinary_member', 'custom', 'vice_chairperson']) {
     for (const override of [undefined, null, false, true]) {
       const profile = { role, is_active: true, can_manage_blog: override }
-      const expected = override ?? BLOG_MANAGER_ROLES.includes(role)
+      const expected = BLOG_MANAGER_ROLES.includes(role) && override !== false
       assert.equal(hasPermission(profile, 'can_manage_blog'), expected)
       assert.equal(canManageBlog(profile), expected)
       assert.equal(canManageBlog({ ...profile, is_active: false }), false)
@@ -61,12 +61,14 @@ test('Blog SQL overrides and guarded profile writes', async () => {
     const sql = await readFile(new URL('../supabase_migration_2026_09_25_blog_permissions.sql', import.meta.url), 'utf8')
     await db.exec(sql)
     await db.exec(sql)
+    const cutover = await readFile(new URL('../supabase_migration_2026_10_18_blog_d1_cutover.sql', import.meta.url), 'utf8')
+    await db.exec(cutover.slice(cutover.indexOf('create or replace function public.blog_manager()'),cutover.indexOf('comment on column')))
     for (const role of [...BLOG_MANAGER_ROLES, 'ordinary_member', 'custom', 'vice_chairperson']) {
       for (const override of [null, true, false]) {
         await as('authenticated', manager)
         await db.query('update users set role=$1, can_manage_blog=$2 where id=$3', [role, override, member])
         await as('authenticated', member)
-        const expected = override ?? BLOG_MANAGER_ROLES.includes(role)
+        const expected = BLOG_MANAGER_ROLES.includes(role) && override !== false
         assert.equal(await effective(), expected, `${role}/${override}`)
         const write = () => db.query('insert into blog_categories(name) values($1)', [`${role}/${override}`])
         if (expected) await write()
@@ -90,7 +92,7 @@ test('Blog SQL overrides and guarded profile writes', async () => {
     await as('authenticated', inactive)
     assert.equal(await effective(), false)
     await as('authenticated', member)
-    assert.equal(await effective(), true)
+    assert.equal(await effective(), false)
     await as('anon')
     assert.equal(await effective(), false)
     await assert.rejects(db.query('update users set can_manage_blog=false where id=$1', [member]), /BLOG_PERMISSION_FORBIDDEN/)

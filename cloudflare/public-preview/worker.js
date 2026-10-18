@@ -1,5 +1,6 @@
 import { securityHeaders } from './securityHeaders.js'
 import { SOURCE_ORIGIN, PUBLIC_ORIGIN } from '../../src/utils/siteOrigins.js'
+import { createCmsHandler, publishDueCms } from './cms.js'
 
 const SNAPSHOT_KEY = 'public-site/v1/current.json'
 const ORIGIN = SOURCE_ORIGIN
@@ -11,6 +12,7 @@ const headers = {
 const reply = (body, status = 200, type = 'text/html; charset=utf-8', extra = {}) => new Response(body, { status, headers: { ...headers, 'Content-Type': type, ...extra } })
 
 export function createPreviewWorker({ now = Date.now, fetchOrigin = fetch } = {}) {
+  const cms = createCmsHandler()
   let cached
   let until = 0
   let pending
@@ -36,6 +38,8 @@ export function createPreviewWorker({ now = Date.now, fetchOrigin = fetch } = {}
   }
   return {
     async fetch(request, env) {
+      const cmsResponse = await cms(request, env)
+      if (cmsResponse) return cmsResponse
       const url = new URL(request.url)
       const formal = url.origin === PUBLIC_ORIGIN
       const indexable = formal && env.PUBLIC_SITE_INDEXABLE === 'true'
@@ -94,6 +98,7 @@ export function createPreviewWorker({ now = Date.now, fetchOrigin = fetch } = {}
     },
     async scheduled(_controller, _env, ctx) {
       const task = (async () => {
+        await publishDueCms(_env)
         const response = await fetchOrigin(ORIGIN + '/api/blog-public?refresh=1', { method: 'HEAD', redirect: 'manual', signal: AbortSignal.timeout(55000) })
         if (!response.ok) throw new Error('Scheduled public synchronization failed')
         const checkedAt = Date.parse(response.headers.get('X-Public-Site-Checked-At'))

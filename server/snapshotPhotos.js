@@ -1,4 +1,5 @@
 import { validPhotoTarget } from './r2Photos.js'
+import { r2SitePath } from '../src/utils/r2Asset.js'
 
 export function snapshotPhotoPath(snapshot, bucket, path, projectUrl) {
   if (!validPhotoTarget(bucket, path)) return null
@@ -14,6 +15,7 @@ export function snapshotPhotoPath(snapshot, bucket, path, projectUrl) {
   const prefix = `${new URL(projectUrl).origin}/storage/v1/object/public/blog-site-media/`
   function visit(value) {
     if (typeof value === 'string') {
+      if (bucket === 'blog-site-media' && r2SitePath(value) === path) match = true
       if (bucket === 'blog-photos' && value === path) match = true
       if (bucket === 'blog-site-media' && value.startsWith(prefix)) {
         try { if (decodeURIComponent(value.slice(prefix.length)) === path) match = true } catch { /* Ignore invalid paths. */ }
