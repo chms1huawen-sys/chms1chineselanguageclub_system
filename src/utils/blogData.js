@@ -14,7 +14,8 @@ export async function cmsRequest(command, { file, bucket, owner } = {}) {
   })
   if (!response.ok) {
     const result = await response.json().catch(() => ({}))
-    const message = response.status === 429 ? '操作或上传较多，请稍后再试。 / Too many requests or uploads. Please retry later.' : result.error || 'CMS_UNAVAILABLE'
+    const messages={401:'登入已过期，请重新登入。 / Please sign in again.',403:'没有文章管理权限。 / Article management access is restricted.',413:'文件或内容超过大小限制。 / File or content exceeds the size limit.',429:'操作或上传较多，请稍后再试。 / Too many requests or uploads. Please retry later.',503:'文章服务暂时不可用，请稍后再试；不要重复提交。 / Article service unavailable. Retry later without resubmitting.'}
+    const message = messages[response.status] || result.error || 'CMS_UNAVAILABLE'
     throw Object.assign(new Error(message), { status: response.status })
   }
   return response
@@ -68,7 +69,9 @@ export async function uploadBlogAsset(bucket,path,file) {
 }
 export async function privateR2Image(bucket,path) {
   const response = await cmsRequest({action:'image',bucket,path})
-  return {data:{signedUrl:URL.createObjectURL(await response.blob())}}
+  const url=URL.createObjectURL(await response.blob())
+  setTimeout(()=>URL.revokeObjectURL(url),5*60*1000)
+  return {data:{signedUrl:url}}
 }
 export async function memberBlogExtras(postId) {
   const {data,error} = await supabase.auth.getSession()

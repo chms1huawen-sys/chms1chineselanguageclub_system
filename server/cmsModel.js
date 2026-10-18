@@ -28,7 +28,8 @@ export function validateCms(data) {
   for (const post of data.blog_posts) {
     if (!uuid(post.id) || !post.title?.trim() || !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(post.slug) || slugs.has(post.slug)) fail('CMS_INVALID_POST')
     if (!['draft', 'review', 'published', 'scheduled', 'hidden', 'trash'].includes(post.status) || !['article', 'event', 'publication', 'notice'].includes(post.content_type)) fail('CMS_INVALID_POST')
-    if (originals.has(post.cover_path) || [...originals].some(path=>JSON.stringify(post.body_document || {}).includes(path))) fail('CMS_PRIVATE_ORIGINAL_REFERENCE')
+    const document = JSON.stringify(post.body_document || {})
+    if (originals.has(post.cover_path) || [...originals].some(path=>document.includes(path))) fail('CMS_PRIVATE_ORIGINAL_REFERENCE')
     slugs.add(post.slug)
   }
   for (const row of data.blog_media) if ((!posts.has(row.post_id) && !albums.has(row.album_id)) || (row.post_id && row.album_id)) fail('CMS_ORPHAN_MEDIA')
@@ -62,11 +63,12 @@ const editableFields = {
 
 export function cmsOperation(source, command, profile, now = new Date().toISOString(), randomId = () => crypto.randomUUID()) {
   if (!canManageBlog(profile)) fail('BLOG_FORBIDDEN', 403)
-  const data = structuredClone(source)
+  const data = command.action === 'select' ? source : structuredClone(source)
   if (command.rpc === 'blog_studio_save') {
     const args = command.args || {}
     const supplied = args.p_post || {}
     const old = data.blog_posts.find(row => row.id === supplied.id)
+    if (supplied.id && !old) fail('BLOG_EDIT_CONFLICT',409)
     if (old && old.version !== args.p_version) fail('BLOG_EDIT_CONFLICT', 409)
     editable(data, 'blog_posts', old)
     const post = { ...(old || { id: randomId(), created_by: profile.id, created_at: now, status: 'draft', content_type: 'article', published_at: null }), ...limited(supplied, postFields), version: (old?.version || 0) + 1, updated_at: now, updated_by: profile.id }

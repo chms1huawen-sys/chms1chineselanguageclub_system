@@ -34,6 +34,7 @@ test('D1 saves preserve fields, reject conflicting versions and cross-post media
   assert.equal(saved.result.author,'Writer')
   assert.equal(saved.data.blog_media[0].caption,'Caption')
   assert.throws(()=>cmsOperation(data,{rpc:'blog_studio_save',args:{...args,p_version:0}},profile),/BLOG_EDIT_CONFLICT/)
+  assert.throws(()=>cmsOperation(data,{rpc:'blog_studio_save',args:{...args,p_post:{...post,id:mediaId}}},profile),/BLOG_EDIT_CONFLICT/)
   assert.throws(()=>cmsOperation(data,{rpc:'blog_studio_save',args:{...args,p_media:[{id:'other'}]}},profile),/CMS_MEDIA_OWNER_MISMATCH/)
   assert.throws(()=>cmsOperation(data,{rpc:'blog_studio_save',args:{...args,p_links:[{label:'Bad',url:'javascript:alert(1)',visibility:'public'}]}},profile),/CMS_INVALID_LINK/)
 })

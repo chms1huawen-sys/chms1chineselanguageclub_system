@@ -109,6 +109,18 @@ export function createCmsHandler({ authenticate = cmsProfile } = {}) {
       if (!request.headers.get('content-type')?.startsWith('application/json')) fail('JSON_REQUIRED',400)
       const body = new TextDecoder().decode(await readUpload(request,1000000))
       const command = JSON.parse(body)
+      if (url.pathname !== '/api/blog-member' && ['status','select','sync'].includes(command.action)) {
+        const state = await env.CMS.prepare('SELECT active,revision FROM cms_state WHERE id=1').first()
+        if (command.action === 'status') return json({active:!!state?.active,revision:state?.revision||0},200,cors)
+        if (!state?.active) fail('CMS_MIGRATION_PENDING',503)
+        if (command.action === 'sync') return json({data:{synced:true,revision:state.revision}},200,cors)
+        if (!CMS_TABLES.includes(command.table)) fail('CMS_UNKNOWN_TABLE',400)
+        const rows=await env.CMS.prepare('SELECT data FROM cms_records WHERE collection=? LIMIT 10001').bind(command.table).all()
+        if(rows.results.length>10000)fail('CMS_ROW_LIMIT',503)
+        const partial=Object.fromEntries(CMS_TABLES.map(table=>[table,[]]))
+        partial[command.table]=rows.results.map(row=>JSON.parse(row.data))
+        return json({data:cmsOperation(partial,command,profile).result,provider:'cloudflare-d1'},200,cors)
+      }
       const current = await loadCms(env.CMS)
       if (url.pathname === '/api/blog-member') {
         if (!current.state?.active) return json({active:false},200,cors)
@@ -116,7 +128,6 @@ export function createCmsHandler({ authenticate = cmsProfile } = {}) {
         if (!post) fail('POST_NOT_FOUND',404)
         return json({active:true,links:current.data.blog_links.filter(row=>row.post_id===post.id && row.visibility==='member'),drive_url:current.data.blog_downloads.find(row=>row.post_id===post.id)?.drive_url || null},200,cors)
       }
-      if (command.action === 'status') return json({ active: !!current.state?.active, revision: current.state?.revision || 0 },200,cors)
       if (!current.state?.active) fail('CMS_MIGRATION_PENDING',503)
       if (command.action === 'image') {
         if (command.bucket === 'blog-photos' ? !isDirectR2Photo(command.path) : command.bucket !== 'blog-site-media' || !r2SitePath(r2SiteUrl(command.path))) fail('INVALID_IMAGE_PATH',400)
@@ -132,7 +143,6 @@ export function createCmsHandler({ authenticate = cmsProfile } = {}) {
         }
         return json({data:{removed:command.paths.length}},200,cors)
       }
-      if (command.action === 'sync') return json({ data: { synced: true, revision: current.state.revision } },200,cors)
       if (command.table === 'blog_media' && command.action === 'insert') {
         for (const path of [command.values?.path,command.values?.original_path].filter(Boolean)) {
           if (!isDirectR2Photo(path)) fail('NEW_IMAGES_REQUIRE_R2',400)
@@ -142,7 +152,7 @@ export function createCmsHandler({ authenticate = cmsProfile } = {}) {
         }
       }
       const outcome = cmsOperation(current.data,command,profile)
-      if (outcome.write) await commitCms(env.CMS,current,validateCms(outcome.data),new Date().toISOString())
+      if (outcome.write) await commitCms(env.CMS,current,outcome.data,new Date().toISOString())
       return json({ data: outcome.result, provider: 'cloudflare-d1' },200,cors)
     } catch (error) {
       const status = [400,401,403,404,409,413,429,503].includes(error?.status) ? error.status : 503
