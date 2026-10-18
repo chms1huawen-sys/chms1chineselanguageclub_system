@@ -4,14 +4,15 @@ import process from 'node:process'
 import { staticPublicSnapshot } from './staticPublicSnapshot.js'
 import { renderSnapshotPage } from './snapshotPage.js'
 import { withPublicStyles } from './publicStyles.js'
+import { PUBLIC_ORIGIN } from '../src/utils/siteOrigins.js'
 
 export const PUBLIC_SECTIONS = ['', 'literature', 'activities', 'bookroom', 'news', 'about']
 
-export function buildPublicPreview(snapshot, template, projectUrl, origin) {
+export function buildPublicPreview(snapshot, template, projectUrl, origin, { sourceOrigin = origin, publicOrigin } = {}) {
   const local = staticPublicSnapshot(snapshot, projectUrl)
   // Only site-owned public navigation is localized; external links are preserved.
   for (const slide of local.snapshot.settings.content?.hero_slides || []) {
-    if (typeof slide.link === 'string' && slide.link.startsWith(origin + '/')) {
+    if (typeof slide.link === 'string' && [origin, sourceOrigin].some(host => slide.link.startsWith(host + '/'))) {
       const url = new URL(slide.link)
       if (/^\/(?:activities|literature|bookroom|news|about|blog\/[a-z0-9-]+)?\/?$/.test(url.pathname)) slide.link = url.pathname + url.search + url.hash
     }
@@ -23,7 +24,9 @@ export function buildPublicPreview(snapshot, template, projectUrl, origin) {
   for (const [path, request] of routes) {
     pages[path] = renderSnapshotPage(previewTemplate, local.snapshot, request, origin).html.replaceAll(origin + '/public-media/', '/public-media/')
   }
-  return { schemaVersion: 1, generatedAt: snapshot.generatedAt, snapshot: local.snapshot, pages, photos: local.candidates.map(file => ({ url: `/public-media/${file.bucket}/${file.path}`, key: file.targetKey, bucket: file.bucket, path: file.path })) }
+  return { schemaVersion: 1, generatedAt: snapshot.generatedAt, snapshot: local.snapshot, pages,
+    ...(publicOrigin ? { publicSite: { origin: publicOrigin, pages: buildPublicPreview(snapshot, template, projectUrl, publicOrigin, { sourceOrigin }).pages } } : {}),
+    photos: local.candidates.map(file => ({ url: `/public-media/${file.bucket}/${file.path}`, key: file.targetKey, bucket: file.bucket, path: file.path })) }
 }
 
 export async function publishedPreview(snapshot, env) {
@@ -31,5 +34,5 @@ export async function publishedPreview(snapshot, env) {
     readFile(join(process.cwd(), 'dist/index.html'), 'utf8'),
     readFile(join(process.cwd(), 'dist/.vite/manifest.json'), 'utf8'),
   ])
-  return buildPublicPreview(snapshot, withPublicStyles(html, JSON.parse(manifest)), env.VITE_SUPABASE_URL, new URL(env.BLOG_SITE_URL || 'https://chms1chineselanguageclubsystem.vercel.app').origin)
+  return buildPublicPreview(snapshot, withPublicStyles(html, JSON.parse(manifest)), env.VITE_SUPABASE_URL, new URL(env.BLOG_SITE_URL || 'https://chms1chineselanguageclubsystem.vercel.app').origin, { publicOrigin: PUBLIC_ORIGIN })
 }

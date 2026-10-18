@@ -3,6 +3,11 @@
   "main": "worker.js",
   "compatibility_date": "2026-10-16",
   "workers_dev": true,
+  "routes": [
+    { "pattern": "chms1clc.org", "custom_domain": true },
+    { "pattern": "www.chms1clc.org", "custom_domain": true }
+  ],
+  "vars": { "PUBLIC_SITE_INDEXABLE": "false" },
   "assets": {
     "directory": "../../test-results/cloudflare-preview-runtime",
     "binding": "ASSETS",

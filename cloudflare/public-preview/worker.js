@@ -1,7 +1,8 @@
 import { securityHeaders } from './securityHeaders.js'
+import { SOURCE_ORIGIN, PUBLIC_ORIGIN } from '../../src/utils/siteOrigins.js'
 
 const SNAPSHOT_KEY = 'public-site/v1/current.json'
-const ORIGIN = 'https://chms1chineselanguageclubsystem.vercel.app'
+const ORIGIN = SOURCE_ORIGIN
 const headers = {
   ...securityHeaders,
   'X-Robots-Tag': 'noindex, nofollow',
@@ -36,15 +37,23 @@ export function createPreviewWorker({ now = Date.now, fetchOrigin = fetch } = {}
   return {
     async fetch(request, env) {
       const url = new URL(request.url)
+      const formal = url.origin === PUBLIC_ORIGIN
+      const indexable = formal && env.PUBLIC_SITE_INDEXABLE === 'true'
+      const respond = (body, status = 200, type = 'text/html; charset=utf-8', extra = {}) => reply(body, status, type, {
+        ...(indexable && status < 400 ? { 'X-Robots-Tag': url.searchParams.has('q') ? 'noindex, follow' : 'index, follow' } : {}), ...extra,
+      })
       if (!['GET', 'HEAD'].includes(request.method)) return reply(null, 405)
+      if (url.hostname === 'www.chms1clc.org') return reply(null, 308, 'text/plain', { Location: PUBLIC_ORIGIN + url.pathname + url.search })
       let path
       try { path = decodeURIComponent(url.pathname).replace(/\/$/, '') || '/' } catch { return reply(null, 400) }
       if (/^\/(member|blog-admin)(\/|$)/.test(path)) return reply(null, 302, 'text/plain', { Location: ORIGIN + url.pathname + url.search })
-      if (path === '/robots.txt') return reply('User-agent: *\nAllow: /\n', 200, 'text/plain')
+      if (path === '/robots.txt') return respond(request.method === 'HEAD' ? null : 'User-agent: *\nAllow: /\n' + (indexable ? `Disallow: /member\nDisallow: /blog-admin\nSitemap: ${PUBLIC_ORIGIN}/sitemap.xml\n` : ''), 200, 'text/plain')
       if (path === '/index.html') return reply(null, 302, 'text/plain', { Location: '/' + url.search })
       if (/^\/(?:manifest[^/]*\.json|firebase-messaging-sw\.js)$/.test(path)) return reply(null, 404)
       try {
         const { preview, checkedAt, json, photos } = await current(env)
+        const pages = formal ? preview.publicSite?.origin === PUBLIC_ORIGIN && preview.publicSite.pages : preview.pages
+        if (!pages?.['/']) return reply('公开网站配置同步中，请稍后重试。', 503)
         const version = { 'X-Public-Preview-Version': preview.generatedAt }
         if (path === '/api/preview-status') return reply(request.method === 'HEAD' ? null : JSON.stringify({ automatic: true, generatedAt: preview.generatedAt, checkedAt, posts: preview.snapshot.posts.length }), 200, 'application/json', version)
         if (path === '/api/blog-public') return reply(request.method === 'HEAD' ? null : json, 200, 'application/json; charset=utf-8', version)
@@ -70,10 +79,11 @@ export function createPreviewWorker({ now = Date.now, fetchOrigin = fetch } = {}
           return reply(request.method === 'HEAD' ? null : image.body, 200, type, imageHeaders)
         }
         if (path === '/sitemap.xml') {
-          const xml = '<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">' + Object.keys(preview.pages).map(route => `<url><loc>${ORIGIN}${route}</loc></url>`).join('') + '</urlset>'
-          return reply(request.method === 'HEAD' ? null : xml, 200, 'application/xml; charset=utf-8', version)
+          const escapeXml = value => value.replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&apos;' }[char]))
+          const xml = '<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">' + Object.keys(pages).map(route => `<url><loc>${escapeXml((formal ? PUBLIC_ORIGIN : ORIGIN) + route)}</loc></url>`).join('') + '</urlset>'
+          return respond(request.method === 'HEAD' ? null : xml, 200, 'application/xml; charset=utf-8', version)
         }
-        if (Object.hasOwn(preview.pages, path)) return reply(request.method === 'HEAD' ? null : preview.pages[path], 200, 'text/html; charset=utf-8', version)
+        if (Object.hasOwn(pages, path)) return respond(request.method === 'HEAD' ? null : pages[path], 200, 'text/html; charset=utf-8', version)
         if (path.startsWith('/api/') || path.startsWith('/blog/')) return reply(null, 404)
         const asset = await env.ASSETS.fetch(request)
         if (asset.status === 404 && /^\/assets\/[a-zA-Z0-9_.-]+\.(js|css)$/.test(path)) return reply(null, 302, 'text/plain', { Location: ORIGIN + path })

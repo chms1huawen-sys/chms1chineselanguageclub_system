@@ -19,7 +19,7 @@ const input = {
 }
 const pack = (data, now) => {
   const snapshot = makePublicSnapshot(data, now)
-  return { ...snapshot, publicPreview: buildPublicPreview(snapshot, template, project, origin) }
+  return { ...snapshot, publicPreview: buildPublicPreview(snapshot, template, project, origin, { publicOrigin: 'https://chms1clc.org' }) }
 }
 function setup() {
   let clock = Date.parse('2026-10-16T14:00:00Z')
@@ -109,6 +109,51 @@ test('preview stays noindex, rejects writes, and keeps member/admin/PWA on the o
   assert.equal((await state.request('/manifest.json')).status, 404)
   assert.equal((await state.request('/firebase-messaging-sw.js')).status, 404)
   assert.equal((await state.worker.fetch(new Request('https://preview.example/api/blog-public', { method: 'POST' }), state.env)).status, 405)
+})
+
+test('formal host has independent SEO pages and retains the source/member boundaries', async () => {
+  const state = setup()
+  const get = (path, indexable = 'false', host = 'chms1clc.org') => state.worker.fetch(new Request('https://' + host + path), { ...state.env, PUBLIC_SITE_INDEXABLE: indexable })
+  let response = await get('/')
+  assert.equal(response.headers.get('x-robots-tag'), 'noindex, nofollow')
+  const html = await response.text()
+  assert.match(html, /rel="canonical" href="https:\/\/chms1clc.org\/"/)
+  assert.match(html, /"@type":"WebSite"[^<]*"url":"https:\/\/chms1clc.org\/"/)
+  assert.ok(!html.includes(origin + '/activities'), 'Source-owned hero navigation stays on the public site')
+  assert.doesNotMatch(html, /rel="manifest"/)
+  response = await get('/', 'true')
+  assert.equal(response.headers.get('x-robots-tag'), 'index, follow')
+  assert.equal((await get('/?q=test', 'true')).headers.get('x-robots-tag'), 'noindex, follow')
+  const sitemap = await (await get('/sitemap.xml', 'true')).text()
+  assert.ok(sitemap.includes('<loc>https://chms1clc.org/blog/one</loc>'))
+  assert.ok(!sitemap.includes(origin))
+  assert.ok((await (await get('/robots.txt', 'true')).text()).includes('Sitemap: https://chms1clc.org/sitemap.xml'))
+  for (const path of ['/member', '/blog-admin']) {
+    response = await get(path, 'true')
+    assert.equal(response.headers.get('location'), origin + path)
+    assert.equal(response.headers.get('x-robots-tag'), 'noindex, nofollow')
+  }
+  assert.equal((await get('/blog/missing', 'true')).headers.get('x-robots-tag'), 'noindex, nofollow')
+  assert.equal((await get('/', 'true', 'preview.workers.dev')).headers.get('x-robots-tag'), 'noindex, nofollow')
+})
+
+test('www redirects preserve path and query without redirecting source refresh or changing preview', async () => {
+  const state = setup()
+  const response = await state.worker.fetch(new Request('https://www.chms1clc.org/blog/one?tag=a%26b'), state.env)
+  assert.equal(response.status, 308)
+  assert.equal(response.headers.get('location'), 'https://chms1clc.org/blog/one?tag=a%26b')
+  assert.equal((await state.request('/blog/one')).status, 200)
+})
+
+test('formal host fails closed until its independently rendered bundle is published', async () => {
+  const snapshot = pack(input, Date.now())
+  delete snapshot.publicPreview.publicSite
+  const body = JSON.stringify(snapshot)
+  const worker = createPreviewWorker()
+  const env = { PUBLIC_SITE: { get: async () => ({ size: body.length, text: async () => body,
+    customMetadata: { sha256: createHash('sha256').update(body).digest('hex') } }) } }
+  assert.equal((await worker.fetch(new Request('https://chms1clc.org/'), env)).status, 503)
+  assert.equal((await worker.fetch(new Request('https://preview.example/'), env)).status, 200)
 })
 
 test('preview security headers cover HTML, data, static fallback, redirects and errors', async () => {
