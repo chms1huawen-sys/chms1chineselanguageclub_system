@@ -22,9 +22,17 @@ test('production checks detect security and SEO regressions without credentials'
   assert.ok(checkPage('/sitemap.xml', { status: 200, headers }, '<urlset><loc>https://club.example/member</loc></urlset>', 'https://club.example').includes('Private entry in sitemap'))
   await assert.rejects(checkProduction('https://secret@club.example'), /without credentials/)
   const results = await checkProduction('https://club.example', async (_url, options) => {
-    assert.equal(options.redirect, 'error')
+    assert.equal(options.redirect, 'manual')
     throw new Error('Failure with private details')
   })
   assert.equal(results.length, 5)
   assert.equal(JSON.stringify(results).includes('private details'), false)
+})
+
+test('original-host public redirect is accepted only for the fixed new domain', () => {
+  const redirectHeaders = new Headers(headers)
+  redirectHeaders.set('location', 'https://chms1clc.org/literature')
+  assert.deepEqual(checkPage('/literature', { status: 308, headers: redirectHeaders }, '', 'https://chms1chineselanguageclubsystem.vercel.app'), [])
+  redirectHeaders.set('location', 'https://other.example/literature')
+  assert.ok(checkPage('/literature', { status: 308, headers: redirectHeaders }, '', 'https://chms1chineselanguageclubsystem.vercel.app').includes('Public redirect origin/path mismatch'))
 })

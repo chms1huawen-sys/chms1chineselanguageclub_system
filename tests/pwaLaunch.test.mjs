@@ -35,6 +35,13 @@ for (const preview of [true, false]) for (const suffix of ['', '#/login?return=%
   } else if (suffix === '?app=blog') assert.deepEqual(events, ['/manifest-blog.json'])
 }
 const main = readFileSync(new URL('../src/main.jsx', import.meta.url), 'utf8')
+for (const suffix of ['member#/login', 'blog/story#/tasks']) {
+  const events = []
+  const href = 'https://chms1clc.org/' + suffix
+  prepareAppLaunch({ location: { href, replace: value => events.push(value) } },
+    { querySelector: selector => selector.startsWith('meta') ? {} : { remove() {} } })
+  assert.equal(events[0], 'https://chms1chineselanguageclubsystem.vercel.app/member' + new URL(href).hash)
+}
 assert.match(main, /'serviceWorker' in navigator && !isPublicPreview\(\)/)
 const app = readFileSync(new URL('../src/App.jsx', import.meta.url), 'utf8')
 const logout = app.slice(app.indexOf('const handleLogout ='), app.indexOf("if (window.location.pathname === '/blog-admin'", app.indexOf('const handleLogout =')))

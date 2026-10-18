@@ -18,6 +18,7 @@
     } },
     { "src": "^/(blog-admin|member)/?$", "dest": "/index.html", "headers": { "X-Robots-Tag": "noindex, nofollow" } },
     { "src": "^/$", "dest": "/legacy-home.html", "headers": { "Cache-Control": "no-store", "X-Robots-Tag": "noindex, follow" } },
+    { "src": "^/blog/[^/]+/?$", "has": [{ "type": "query", "key": "member_view", "value": "1" }], "dest": "/index.html", "headers": { "Cache-Control": "no-store", "X-Robots-Tag": "noindex, nofollow" } },
     { "handle": "filesystem" },
     { "src": "^/(activities|literature|news|bookroom|about)/?$", "dest": "/api/blog?view=$1" },
     { "src": "^/blog/([^/]+)/?$", "dest": "/api/blog?slug=$1" },

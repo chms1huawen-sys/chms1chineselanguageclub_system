@@ -19,9 +19,9 @@ export function prepareAppLaunch(browserWindow = window, doc = document) {
   const destination = memberLaunchUrl(browserWindow.location.href)
   if (isPublicPreview(doc)) {
     doc.querySelector('link[rel="manifest"]')?.remove()
-    if (destination) {
-      const url = new URL(destination)
-      browserWindow.location.replace(new URL(url.pathname + url.search + url.hash, 'https://chms1chineselanguageclubsystem.vercel.app').href)
+    const url = new URL(browserWindow.location.href)
+    if (destination || url.hash.startsWith('#/')) {
+      browserWindow.location.replace(new URL('/member' + url.search + (url.hash || '#/'), SOURCE_ORIGIN).href)
     }
     return
   }

@@ -1,11 +1,16 @@
 export const BLOG_MANAGER_ROLES = ['convener_teacher', 'advisor_teacher', 'advisor', 'chairperson', 'media_lead', 'vice_media_lead', 'social_media_editor']
 export const canManageBlog = profile => profile?.is_active === true && (profile.can_manage_blog ?? BLOG_MANAGER_ROLES.includes(profile.role))
 export const blogPath = slug => `/blog/${encodeURIComponent(slug)}`
-export const blogLogin = (path = window.location.pathname + window.location.search) => `/member#/login?return=${encodeURIComponent(path === '/' ? '/?view=blog' : path)}`
+export const blogLogin = (path = window.location.pathname + window.location.search) => path === '/blog-admin' || /^\/blog\/[a-z0-9-]+(?:\?|$)/.test(path)
+  ? `/member#/login?return=${encodeURIComponent(safeBlogReturn(path))}` : '/member#/'
 export function safeBlogReturn(value) {
   try {
     const url = new URL(value, 'https://club.invalid')
-    return url.origin === 'https://club.invalid' && (['/', '/blog-admin', '/activities', '/literature', '/news', '/bookroom', '/about'].includes(url.pathname) || /^\/blog\/[a-z0-9-]+$/.test(url.pathname)) ? url.pathname + url.search : '/'
+    if (url.origin !== 'https://club.invalid' || url.hash) return '/'
+    const article = /^\/blog\/[a-z0-9-]+$/.test(url.pathname)
+    if (!article && !['/', '/blog-admin', '/activities', '/literature', '/news', '/bookroom', '/about'].includes(url.pathname)) return '/'
+    if (article) url.searchParams.set('member_view', '1')
+    return url.pathname + url.search
   } catch { return '/' }
 }
 export const validDriveLink = value => !value || /^https:\/\/drive\.google\.com\/(?:drive\/folders\/|file\/d\/)[A-Za-z0-9_-]+(?:[/?#].*)?$/.test(value)

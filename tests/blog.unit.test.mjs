@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { readFile } from 'node:fs/promises'
-import { canManageBlog, validDriveLink, safeBlogReturn, defaultBlogSettings } from '../src/utils/blog.js'
+import { canManageBlog, validDriveLink, safeBlogReturn, defaultBlogSettings, blogLogin } from '../src/utils/blog.js'
 import { renderBlogHtml } from '../server/blogSeo.js'
 assert.equal(canManageBlog({ role: 'ordinary_member', is_active: true }), false)
 assert.equal(canManageBlog({ role: 'media_lead', is_active: true }), true)
@@ -8,9 +8,14 @@ assert.equal(canManageBlog({ role: 'chairperson', is_active: false }), false)
 assert.equal(validDriveLink('https://drive.google.com.evil.com/drive/folders/a'), false)
 assert.equal(validDriveLink('https://drive.google.com/drive/folders/abc?usp=sharing'), true)
 assert.equal(safeBlogReturn('//evil.com'), '/')
-assert.equal(safeBlogReturn('/blog/abc?x=1'), '/blog/abc?x=1')
+assert.equal(safeBlogReturn('/blog/abc?x=1'), '/blog/abc?x=1&member_view=1')
 assert.equal(safeBlogReturn('/blog-admin'), '/blog-admin')
 assert.equal(safeBlogReturn('/#/tasks'), '/')
+assert.equal(blogLogin('/'), '/member#/')
+assert.equal(blogLogin('/activities'), '/member#/')
+assert.equal(blogLogin('/blog-admin'), '/member#/login?return=%2Fblog-admin')
+assert.equal(new URLSearchParams(blogLogin('/blog/abc').split('?')[1]).get('return'), '/blog/abc?member_view=1')
+assert.equal(safeBlogReturn('/blog/abc?member_view=0&member_view=0'), '/blog/abc?member_view=1')
 const template = await readFile(new URL('../index.html', import.meta.url), 'utf8')
 const result = renderBlogHtml(template, defaultBlogSettings, [{ slug: 'hello', title: '<script>alert(1)</script>', summary: 'Description', body: 'Hello\n\nWorld', tags: [], drive_url: 'SECRET' }], [], 'hello', 'https://example.com')
 assert.ok(result.includes('<p>Hello</p><p><br/></p><p>World</p>'))

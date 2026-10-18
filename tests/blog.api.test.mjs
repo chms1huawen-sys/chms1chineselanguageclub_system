@@ -72,5 +72,20 @@ try {
   res = response(); await imageHandler({ method: 'GET', query: { path: '10000000-0000-0000-0000-000000000001/20000000-0000-0000-0000-000000000001.jpg' } }, res)
   assert.equal(res.code, 404)
   res = response(); await pageHandler({ method: 'POST', query: {} }, res); assert.equal(res.code, 405)
+  for (const [query, expected] of [
+    [{ view: 'literature', tag: '茶 & 诗', utm_source: 'facebook' }, 'https://chms1clc.org/literature?tag=%E8%8C%B6+%26+%E8%AF%97&utm_source=facebook'],
+    [{ slug: 'published', q: 'poetry' }, 'https://chms1clc.org/blog/published?q=poetry'],
+  ]) {
+    const before = databaseRequests
+    res = response()
+    await pageHandler({ method: 'GET', headers: { host: 'chms1chineselanguageclubsystem.vercel.app' }, query }, res)
+    assert.equal(res.code, 308)
+    assert.equal(res.headers.Location, expected)
+    assert.equal(databaseRequests, before, 'Moved public pages must not query Supabase')
+  }
+  res = response()
+  await pageHandler({ method: 'HEAD', headers: { host: 'chms1chineselanguageclubsystem.vercel.app' }, query: { view: 'about', code: 'fixture' } }, res)
+  assert.equal(res.code, 302)
+  assert.equal(res.headers.Location, 'https://chms1chineselanguageclubsystem.vercel.app/member?code=fixture')
   console.log('Production handlers: anonymous-only data, built asset references, SSR text, hidden 404, sitemap and private photo denial passed.')
 } finally { await new Promise(resolve => mock.close(resolve)) }

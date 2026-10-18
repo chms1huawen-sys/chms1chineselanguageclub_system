@@ -21,7 +21,10 @@ for (const view of ['activities', 'literature', 'news', 'bookroom', 'about']) {
   const route = config.routes.find(route => !route.continue && route.src && new RegExp(route.src).test(`/${view}`))
   assert.equal(`/${view}`.replace(new RegExp(route.src), route.dest), `/api/blog?view=${view}`)
 }
-const article = config.routes.find(route => !route.continue && route.src && new RegExp(route.src).test('/blog/story-2026'))
+const memberArticle = config.routes.find(route => route.has?.some(condition => condition.key === 'member_view'))
+assert.equal(memberArticle.dest, '/index.html')
+assert.equal(memberArticle.headers['X-Robots-Tag'], 'noindex, nofollow')
+const article = config.routes.find(route => !route.continue && !route.has && route.src && new RegExp(route.src).test('/blog/story-2026'))
 assert.equal('/blog/story-2026'.replace(new RegExp(article.src), article.dest), '/api/blog?slug=story-2026')
 for (const asset of ['/assets/index.js', '/manifest.json', '/firebase-messaging-sw.js', '/api/blog-media', '/api/blog-public', '/home-redirect.js']) {
   assert.ok(!config.routes.slice(0, filesystem).some(route => !route.continue && route.src && new RegExp(route.src).test(asset)), asset)

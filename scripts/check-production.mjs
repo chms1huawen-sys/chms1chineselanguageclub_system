@@ -1,9 +1,12 @@
 import process from 'node:process'
 import { pathToFileURL } from 'node:url'
+import { SOURCE_ORIGIN, PUBLIC_ORIGIN } from '../src/utils/siteOrigins.js'
 
 export function checkPage(path, response, body, origin) {
   const errors = []
-  if (response.status !== 200) errors.push(`HTTP ${response.status}`)
+  const moved = origin === SOURCE_ORIGIN && ['/literature', '/activities', '/bookroom', '/news', '/about'].includes(path)
+  if (response.status !== (moved ? 308 : 200)) errors.push(`HTTP ${response.status}`)
+  if (moved && response.headers.get('location') !== PUBLIC_ORIGIN + path) errors.push('Public redirect origin/path mismatch')
   for (const [header, expected] of [
     ['x-content-type-options', 'nosniff'], ['x-frame-options', 'DENY'],
   ]) if (response.headers.get(header) !== expected) errors.push(`Missing ${header}`)
@@ -13,7 +16,7 @@ export function checkPage(path, response, body, origin) {
     if (!/noindex/i.test(response.headers.get('x-robots-tag') || '')) errors.push('Private entry is indexable')
     if (!body.includes('/app-launch.js')) errors.push('Missing launch guard')
   }
-  if (path === '/literature' && !body.includes(`href="${origin}/literature"`)) errors.push('Canonical origin mismatch')
+  if (path === '/literature' && !moved && !body.includes(`href="${origin}/literature"`)) errors.push('Canonical origin mismatch')
   if (path === '/sitemap.xml') {
     if (!body.includes('<urlset')) errors.push('Invalid sitemap')
     if (!body.includes(`<loc>${origin}/literature</loc>`)) errors.push('Missing public section')
@@ -32,7 +35,7 @@ export async function checkProduction(input, fetcher = fetch) {
   for (const path of ['/member', '/blog-admin', '/literature', '/robots.txt', '/sitemap.xml']) {
     const start = performance.now()
     try {
-      const response = await fetcher(url.origin + path, { signal: AbortSignal.timeout(15000), redirect: 'error' })
+      const response = await fetcher(url.origin + path, { signal: AbortSignal.timeout(15000), redirect: 'manual' })
       const body = await response.text()
       results.push({ path, milliseconds: Math.round(performance.now() - start), errors: checkPage(path, response, body, url.origin) })
     } catch {

@@ -10,6 +10,7 @@ import { postTags } from '../src/utils/blogContent.js'
 import { FEATURED_STORY_COUNT, MOMENT_COUNT } from '../src/utils/blogFeed.js'
 import { getPublicSnapshot } from '../server/publicSnapshot.js'
 import { renderSnapshotPage } from '../server/snapshotPage.js'
+import { PUBLIC_ORIGIN, SOURCE_ORIGIN } from '../src/utils/siteOrigins.js'
 
 const feedFields = 'id,slug,title,author,summary,cover_path,featured,is_sticky,published_at,content_type,content_year,book_details'
 
@@ -25,6 +26,19 @@ export default async function handler(req, res) {
   const { slug, view, search } = request
   if (!['home', 'activities', 'bookroom', 'about', 'literature', 'news'].includes(view)) return res.status(404).send('Not found')
   if (slug && !/^[a-z0-9]+(-[a-z0-9]+)*$/.test(slug)) return res.status(404).send('Not found')
+  if (req.headers?.host === new URL(SOURCE_ORIGIN).host && req.query.member_view !== '1') {
+    const authReturn = ['code', 'token_hash', 'token', 'access_token', 'refresh_token', 'error', 'error_code', 'error_description'].some(key => Object.hasOwn(req.query, key))
+    const target = authReturn ? new URL('/member', SOURCE_ORIGIN) : new URL(slug ? '/blog/' + slug : view === 'home' ? '/' : '/' + view, PUBLIC_ORIGIN)
+    for (const [key, value] of Object.entries(req.query)) {
+      if (['view', 'slug', 'member_view'].includes(key)) continue
+      for (const item of Array.isArray(value) ? value : [value]) {
+        if (typeof item !== 'string') return res.status(400).send('Invalid request')
+        target.searchParams.append(key, item)
+      }
+    }
+    return res.redirect(authReturn ? 302 : 308, target.href)
+  }
+  if (req.query.member_view === '1') res.setHeader('X-Robots-Tag', 'noindex, nofollow')
   try {
     const template = withPublicStyles(
       readFileSync(join(process.cwd(), 'dist', 'index.html'), 'utf8'),
