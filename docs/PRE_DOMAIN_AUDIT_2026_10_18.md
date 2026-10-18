@@ -54,6 +54,7 @@
 - `test-results/predomain-suite-20261018-fixed.log`
 - `test-results/predomain-live-20261018-fixed.json`
 - `test-results/predomain-browser-20261018.json`
+- `test-results/predomain-loaded-pages-20261018.json`（12组正文完成后的追加确认，均 loading=false、无溢出/可见坏图）
 - `test-results/predomain-home-360.png`
 - `test-results/predomain-home-1440.png`
 
