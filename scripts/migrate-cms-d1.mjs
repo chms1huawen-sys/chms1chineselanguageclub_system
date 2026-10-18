@@ -47,5 +47,6 @@ if(mode==='prepare') {
     const state=select('SELECT active,revision FROM cms_state WHERE id=1')[0]
     if(state.active!==1)throw new Error('D1 activation not confirmed')
   }
-  console.log(JSON.stringify({verified:true,active:mode==='activate',rows:actual.length,sha256}))
+  const observed=select('SELECT active,revision FROM cms_state WHERE id=1')[0]
+  console.log(JSON.stringify({verified:true,active:observed.active===1,revision:observed.revision,rows:actual.length,sha256}))
 }else throw new Error('Unknown migration mode')

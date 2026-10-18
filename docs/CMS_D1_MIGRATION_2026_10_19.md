@@ -60,10 +60,17 @@ They must never be committed, copied into the public runtime or uploaded publicl
 - Deployment commits fc8e6fe and ccd5d5b were pushed. Vercel served the new entry
   bundle and explicit Cloudflare connect CSP. Latest Worker version is recorded
   in the deployment tool output; do not infer a deployment from Git alone.
--54focused tests passed before activation, followed by additional direct-R2
-  upload/private-read/delete-boundary and small-image copy regressions.
+-56focused tests passed, including direct-R2 upload/private-read/delete-boundary
+  and small-image copy regressions. Targeted lint, build and secret scan passed.
 - No live article edits, deletions, publications, account changes or real photo
   uploads were performed to manufacture an acceptance result.
+- Final Worker deployment: cc6b4af4-8832-48d3-b76a-1f97cd2800fb. The source and
+  public runtime both served index-BPBrUr_k.js after deployment completion.
+- Live audit: test-results/cms-live-acceptance-20261019.json (ignored).19public
+  routes returned200 with new-domain canonical; three anonymous protected
+  endpoints returned401; untrusted origin403; member/login-presentation200.
+  An earlier asset probe ran during deployment and did not pass; the complete
+  post-deployment audit passed after the actual deployment completed.
 
 ## Remaining Boundaries
 
