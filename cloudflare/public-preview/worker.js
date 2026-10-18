@@ -1,10 +1,10 @@
+import { securityHeaders } from './securityHeaders.js'
+
 const SNAPSHOT_KEY = 'public-site/v1/current.json'
 const ORIGIN = 'https://chms1chineselanguageclubsystem.vercel.app'
 const headers = {
+  ...securityHeaders,
   'X-Robots-Tag': 'noindex, nofollow',
-  'X-Content-Type-Options': 'nosniff',
-  'X-Frame-Options': 'DENY',
-  'Referrer-Policy': 'strict-origin-when-cross-origin',
   'Cache-Control': 'no-store',
 }
 const reply = (body, status = 200, type = 'text/html; charset=utf-8', extra = {}) => new Response(body, { status, headers: { ...headers, 'Content-Type': type, ...extra } })

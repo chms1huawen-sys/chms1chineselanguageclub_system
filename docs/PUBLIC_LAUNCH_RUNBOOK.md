@@ -1,0 +1,137 @@
+# Public-domain launch and rollback
+
+Status: prepared on 2026-10-18, Asia/Kuala_Lumpur. NOT executed.
+Chosen domain: chms1clc.org, ownership/registration not verified here.
+No DNS changes, purchase, indexing changes or production redirects are authorized
+by this document. Obtain the owner's cutover decision before applying them.
+
+## Fixed ownership boundaries
+
+- Cloudflare serves the public site and authorized compressed public images.
+- Supabase remains the authoritative database, authentication and member backend.
+- Vercel retains /member, /blog-admin, member PWA, Firebase push integration and
+  source publishing/media fallback endpoints. A public URL change does not move
+  the member app or require a new Firebase project/push registration.
+- Existing member links stay on the original Vercel origin. Member subdomain and
+  PWA migration are a separate later project.
+- Public preview remains noindex until a formal host is explicitly activated.
+
+## Before DNS
+
+1. Recheck Supabase's quota warning; do not promise a cycle reset resolves it.
+2. Prepare a recent encrypted data backup on the owner's connected disk. Do not
+   export member data to Git or use a temporary plaintext C-drive copy. Verify
+   checksums and archive integrity, retaining the older verified archives.
+3. Include source database/Storage, current code and controlled configuration
+   recovery material. R2 published snapshots/photos are mutable serving copies,
+   not independent database backups. Record R2 bucket/bindings, Worker config,
+   platform variable names and where encrypted credential material is kept;
+   never put recoverable secrets into this repository or logs.
+4. The owner deferred an independent cloud backup on Oct 18. It is not a technical
+   dependency for binding a domain, but the single-disk loss risk remains. Full
+   isolated database/platform restoration is also not verified by archive tests.
+5. Confirm domain ownership, annual renewal, recovery email and account security.
+   Do not automatically change credentials, sharing or payment arrangements.
+
+## Stage the formal public host
+
+1. Keep current preview and original Vercel deployment available for rollback.
+   Record their deployed versions before changes.
+2. Configure the formal Cloudflare public host and TLS. Choose one canonical
+   hostname (apex recommended); redirect www to it without dropping path/query.
+   Do not invent DNS records: use the actual host-binding instructions returned
+   by the deployment platform. Do not delete unrelated MX/TXT records.
+3. Separate public and private origins in configuration. The current Worker ORIGIN
+   is reused for member/admin redirects, scheduled source refresh, missing-image
+   gateway and sitemap links: a global replace to the new domain would create
+   loops or break source refresh. Keep private/source paths on Vercel.
+4. Update public rendering origin/canonical, WebSite/Organization data, Open Graph
+   URLs, sitemap locations and source settings consistently. Rebuild and verify
+   the R2 HTML/JSON bundle after configuration changes; changing DNS alone does
+   not update server-rendered canonical or cached published HTML.
+5. Remove noindex only on the formal public host after acceptance. Keep the
+   workers.dev preview noindex. Review current snapshot marker: it also disables
+   public statistics and routes member links to Vercel. Do not blindly remove it
+   merely to enable indexing, or unintentionally enable analytics/preview PWA.
+6. Ensure public aliases and member login return paths do not send users back to
+   an obsolete public site. Preserve member hash routes and existing PWA identity.
+
+## Acceptance gate
+
+- GET root, literature, activities, bookroom, news, about and article URLs directly
+  as well as through client navigation; check CSS/JS and browser console.
+- Check desktop/mobile layout, search, images, gallery, contacts and missing404.
+- Compare current published posts/categories/tags, not just total counts.
+- Check publish/edit/withdraw synchronization with disposable approved content;
+  drafts and private media must remain unavailable to anonymous requests.
+- Check /member and /blog-admin buttons and direct URLs still reach Vercel.
+- Check headers, canonical, robots, sitemap and public/private indexing policy.
+- Keep rollback ready; a few functional requests are not a large-load guarantee.
+
+## SEO and old public routes
+
+After the formal host is approved, verify domain ownership in Search Console,
+submit its sitemap and request appropriate recrawling. Leave old verification
+available. Search-result site names and sitelinks remain Google's decision.
+
+Use explicit public-route redirects preserving article slugs and queries, only
+after new targets succeed. Never use a blanket old-host redirect: exclude member,
+admin, APIs, assets, service workers, manifests, notification destinations and
+the scheduled source endpoint. Avoid /?app=blog and legacy member hash entry
+redirects without browser/PWA testing: HTTP servers cannot see URL fragments.
+No implementation for these legacy launch decisions has been activated yet.
+
+Start with limited sharing and observe errors/usage before wider promotion.
+Indexing is not required for visiting a correctly functioning HTTPS URL.
+
+## Rollback order
+
+1. Disable the old-public-route redirect first, avoiding loops back to a failed
+   new host. Restore the recorded Vercel public configuration/deployment if needed.
+2. Roll the formal Worker back to its verified version, or show a controlled
+   maintenance response. Keep preview private from search and source API alive.
+3. Recheck member login/PWA/push and public synchronization; do not delete R2 or
+   original Storage objects and do not restore a database over production.
+4. DNS caches and search updates are not instantaneous. Restore canonical/robots
+   consistently with the chosen fallback and record the incident.
+
+## Oct 18 read-only observations
+
+- Production readiness: all five checks passed (member, admin, literature,
+  robots and sitemap, including expected security/indexing headers).
+- Preview bounded normal audit: 12 requests, 424,674 decoded bytes, 13 published
+  posts; image revalidation304; withdrawn test article404. First data response
+  took 6.145 seconds; this observation is not a new performance benchmark.
+- Supabase cycle Sep24-Oct24: uncached egress7.778/5GB; cached0.268/5GB;
+  Storage average0.221/1GB; database summary0.088/0.5GB; functions27,644/500,000.
+  Grace warning remains, potentially restricting requests from Oct30 if still
+  over quota. Increase since the Oct16 observation: about0.017GB uncached and
+  0.010GB cached. These are lagging aggregate differences, not visitor costs.
+- R2 refreshed dashboard, cycle Oct15-Nov15: 187 objects,16.29MB, ClassA1.66k,
+  ClassB6.6k, displayed bill$0.00. This does not assert all services cost nothing.
+- D: backup drive was not present; no archive was rechecked or created, and no
+  cloud upload, secrets export or plaintext member-data staging was performed.
+- Automatic alerts have not been configured. Suggested thresholds in old docs
+  are operational guidance, not an existing monitoring system.
+
+## Oct 18 completed hardening (preview only)
+
+The preview was missing CSP, HSTS and Permissions-Policy. It now uses a shared
+security header definition for Worker responses and Cloudflare static _headers,
+including asset errors that bypass the Worker. CSP retains the fixed original
+Vercel asset fallback and existing font/Firebase/Supabase sources, disallows
+inline/eval scripts and objects, and denies framing. Device permissions are
+disabled. Normal static caching, noindex and the minute schedule are unchanged.
+
+Final deployed Worker version: 40231873-644f-43b5-a5f6-c0547c688d52. This supersedes
+the first Worker-only header deployment a1fed0f9-53fb-459e-8212-c2d5d1f92dd5.
+Live checks verified headers on home200, public JSON200, app-launch.js200 and
+missing static asset404. Edge search returned the expected public article with
+no in-viewport broken images or horizontal overflow. No CSP violation appeared
+in the captured logs; a pre-existing preview ServiceWorker404 registration
+message remains because that endpoint is intentionally not offered by preview.
+This is not a claim of full console-error freedom or a push regression on Vercel.
+
+Forty focused tests and targeted lint passed. Screenshot evidence is local and
+ignored by Git: test-results/security-search-20261018.png. No real member data,
+credentials, Firebase configuration, formal domain or paid plan was changed.

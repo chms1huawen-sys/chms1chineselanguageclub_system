@@ -6,6 +6,7 @@ import { makePublicSnapshot } from '../src/utils/publicSnapshot.js'
 import { buildPublicPreview } from '../server/publicPreview.js'
 import { createPreviewWorker } from '../cloudflare/public-preview/worker.js'
 import { snapshotStore, MAX_SNAPSHOT_BYTES } from '../server/publicSnapshot.js'
+import { securityHeaders } from '../cloudflare/public-preview/securityHeaders.js'
 
 const origin = 'https://chms1chineselanguageclubsystem.vercel.app'
 const project = 'https://example.supabase.co'
@@ -107,6 +108,30 @@ test('preview stays noindex, rejects writes, and keeps member/admin/PWA on the o
   assert.equal((await state.request('/manifest.json')).status, 404)
   assert.equal((await state.request('/firebase-messaging-sw.js')).status, 404)
   assert.equal((await state.worker.fetch(new Request('https://preview.example/api/blog-public', { method: 'POST' }), state.env)).status, 405)
+})
+
+test('preview security headers cover HTML, data, static fallback, redirects and errors', async () => {
+  const state = setup()
+  for (const path of ['/', '/api/blog-public', '/logo-192.png', '/member', '/blog/missing']) {
+    const response = await state.request(path)
+    assert.equal(response.headers.get('strict-transport-security'), 'max-age=31536000')
+    assert.equal(response.headers.get('permissions-policy'), 'camera=(), microphone=(), geolocation=()')
+    const csp = response.headers.get('content-security-policy')
+    assert.match(csp, /object-src 'none'/)
+    assert.match(csp, /frame-ancestors 'none'/)
+    assert.match(csp, /base-uri 'self'/)
+    const script = csp.split('; ').find(rule => rule.startsWith('script-src '))
+    assert.ok(script.includes(origin), 'Existing fixed-origin asset fallback remains supported')
+    assert.ok(!script.includes('unsafe-inline') && !script.includes('unsafe-eval') && !script.includes('*'))
+    assert.equal(response.headers.get('x-robots-tag'), 'noindex, nofollow')
+  }
+})
+
+test('static asset preparation uses the same policy as dynamic responses', async () => {
+  const prepare = await readFile(new URL('../scripts/prepare-cloudflare-runtime.mjs', import.meta.url), 'utf8')
+  assert.match(prepare, /import \{ securityHeaders \} from/)
+  assert.match(prepare, /Object\.entries\(securityHeaders\)/)
+  assert.ok(!Object.hasOwn(securityHeaders, 'Cache-Control'), 'Do not disable normal asset caching')
 })
 
 test('scheduler runs without a visitor, exposes failures, and only refreshes the fixed public endpoint', async () => {
