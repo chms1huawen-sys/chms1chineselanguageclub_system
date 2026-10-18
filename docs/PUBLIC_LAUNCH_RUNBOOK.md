@@ -111,6 +111,11 @@ Indexing is not required for visiting a correctly functioning HTTPS URL.
   ClassB6.6k, displayed bill$0.00. This does not assert all services cost nothing.
 - D: backup drive was not present; no archive was rechecked or created, and no
   cloud upload, secrets export or plaintext member-data staging was performed.
+  This was only the earlier observation: the owner's disk was subsequently found
+  as E:, with the same CHMS1-Backups folder. The Oct18 full data archive
+  CHMS1-20261018-143106-83921fae.7z was created and encrypted archive verification
+  passed. Its SHA-256 was independently matched and its plaintext staging removed.
+  The older archives remain. This is not a full isolated restoration.
 - Automatic alerts have not been configured. Suggested thresholds in old docs
   are operational guidance, not an existing monitoring system.
 
@@ -135,3 +140,25 @@ This is not a claim of full console-error freedom or a push regression on Vercel
 Forty focused tests and targeted lint passed. Screenshot evidence is local and
 ignored by Git: test-results/security-search-20261018.png. No real member data,
 credentials, Firebase configuration, formal domain or paid plan was changed.
+
+## Platform configuration supplement preparation
+
+The live metadata inventory is in PLATFORM_RECOVERY_INVENTORY_2026_10_18.json.
+It records 14 Vercel Production variable names/scopes and the current Supabase
+site URL, redirects, signup/provider toggles. Only ten variables exist locally;
+the R2 ID/private key are not present in .env.local. Bucket/endpoint are recorded
+as configuration, not claimed as recovered credentials.
+
+scripts/backup-platform-to-harddisk.ps1 prepares an explicitly PARTIAL supplement
+on the owner's E: disk. It captures filtered current Supabase secret names and
+function metadata, Worker deployment IDs, configuration/source and the existing
+local environment and validated Firebase service-account JSON. It verifies the
+prior database/Storage and Firebase archive hashes. It does not read browser/CLI
+login token stores, reveal remote Secret values, reset keys or change settings.
+Source Firebase JSON equality with the live server secret remains unverified.
+
+The user must enter an archive encryption password directly into 7-Zip and verify
+it. Only after archive verification and SHA-256 creation is the uniquely owned
+plaintext staging directory removed. Starting this tool is not backup completion;
+check its status log, archive checksum and staging cleanup afterward. Complete
+remote secret/Vault material and full platform recovery remain outstanding.
