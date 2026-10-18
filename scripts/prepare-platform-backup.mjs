@@ -72,7 +72,7 @@ export async function prepare(stage, root) {
     'cloudflare/public-preview/worker.js', 'cloudflare/public-preview/securityHeaders.js', 'public/manifest.json',
     'public/manifest-blog.json', 'public/firebase-messaging-sw.js', 'docs/PUBLIC_LAUNCH_RUNBOOK.md',
     'scripts/backup-to-harddisk.ps1', 'scripts/backup-storage.mjs', 'scripts/backup-platform-to-harddisk.ps1',
-    'scripts/prepare-platform-backup.mjs']
+    'scripts/prepare-platform-backup.mjs', 'scripts/backup-vault.mjs']
   for (const file of files) {
     const destination = path.join(stage, 'configuration', file)
     await mkdir(path.dirname(destination), { recursive: true })

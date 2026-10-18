@@ -1,4 +1,5 @@
-param([string]$BackupRoot = 'E:\CHMS1-Backups', [switch]$IncludeR2Credentials, [string]$ResumeStage)
+param([string]$BackupRoot = 'E:\CHMS1-Backups', [switch]$IncludeR2Credentials, [string]$ResumeStage,
+  [switch]$IncludeVault, [string]$PgBin = 'E:\CHMS1-Backups\tools\pgsql\bin')
 $ErrorActionPreference = 'Stop'
 $stage = $null
 $log = $null
@@ -28,12 +29,26 @@ try {
     if (!(Test-Path -LiteralPath $archive -PathType Leaf) -or !(Test-Path -LiteralPath (Join-Path $stage 'inventory.json') -PathType Leaf)) { throw 'Existing archive or inventory is missing.' }
     $inventory = Get-Content -LiteralPath (Join-Path $stage 'inventory.json') -Raw | ConvertFrom-Json
     $IncludeR2Credentials = [bool]$inventory.r2OriginalCredentialBackup.included
+    $IncludeVault = [bool]$inventory.vaultRecovery.included
     'RESUMING: Only verifying existing archive; no redownload or overwrite.' | Add-Content -LiteralPath $log
   } else {
   if ((Test-Path -LiteralPath $stage) -or (Test-Path -LiteralPath $archive)) { throw 'Refusing to overwrite existing files.' }
   New-Item -ItemType Directory -Path $stage | Out-Null
   & node (Join-Path $PSScriptRoot 'prepare-platform-backup.mjs') $stage $root
   if ($LASTEXITCODE -ne 0) { throw 'Configuration preparation did not complete.' }
+  if ($IncludeVault) {
+    if (!(Test-Path -LiteralPath (Join-Path $PgBin 'psql.exe'))) { throw 'PostgreSQL client is missing.' }
+    'PREPARED: Awaiting database password for read-only Vault export.' | Set-Content -LiteralPath $log
+    Write-Host 'Enter your Supabase DATABASE password for a small read-only recovery export.'
+    Write-Host 'This is NOT the backup encryption password. Input is hidden. Do not send it in chat.'
+    $oldDatabasePassword = $env:PGPASSWORD
+    try {
+      $env:PGPASSWORD = Read-HiddenValue 'Supabase database password (hidden)'
+      & node (Join-Path $PSScriptRoot 'backup-vault.mjs') $stage $root $PgBin
+      if ($LASTEXITCODE -ne 0) { throw 'Vault export failed. Existing archives were not changed.' }
+    } finally { $env:PGPASSWORD = $oldDatabasePassword }
+    'VAULT EXPORTED: Required named secret validated; awaiting archive encryption.' | Add-Content -LiteralPath $log
+  }
   if ($IncludeR2Credentials) {
     'PREPARED: Awaiting original R2 credentials, then encryption.' | Set-Content -LiteralPath $log
     Write-Host 'Enter the original R2 Access Key ID and Secret Access Key below. Input is hidden.'
@@ -71,6 +86,7 @@ try {
   if ([IO.Path]::GetDirectoryName($resolvedStage) -ne $root -or (Split-Path $resolvedStage -Leaf) -notmatch '^config-staging-[0-9]{8}-[0-9]{6}-[a-f0-9]{8}$') { throw 'Cleanup path is outside the expected staging area.' }
   Remove-Item -LiteralPath $resolvedStage -Recurse -Force
   "VERIFIED: $archive" | Add-Content -LiteralPath $log
+  if ($IncludeVault) { 'VAULT INCLUDED: Named cron secret and scheduler definitions exported read-only and validated; Edge Secret equality and complete restore remain unverified.' | Add-Content -LiteralPath $log }
   if ($IncludeR2Credentials) {
     'R2 ORIGINAL CREDENTIALS INCLUDED: Read-only bucket verification passed. Other custom secrets and complete recovery remain outstanding.' | Add-Content -LiteralPath $log
   } else {
@@ -79,8 +95,10 @@ try {
   Write-Host "Encrypted configuration supplement verified: $archive"
   Write-Host 'Unencrypted staging removed. Original credential files and older backups were not deleted.'
 } catch {
+  $global:LASTEXITCODE = 1
   if ($log) { "NOT COMPLETED at $phase. Preserve existing files; review staging before disconnecting." | Add-Content -LiteralPath $log }
   Write-Host 'CONFIGURATION BACKUP NOT COMPLETED. Existing files were preserved.'
   if ($stage) { Write-Host "Unencrypted credentials may remain at: $stage" }
   Write-Host 'Do not share the staging directory. Ask for review before disconnecting the disk.'
+  exit 1
 }
