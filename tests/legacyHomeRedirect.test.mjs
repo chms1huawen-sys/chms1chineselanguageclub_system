@@ -3,6 +3,7 @@ import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import { runInNewContext } from 'node:vm'
 import { PUBLIC_ORIGIN, SOURCE_ORIGIN } from '../src/utils/siteOrigins.js'
+import { publicSitemapPaths } from '../api/sitemap.js'
 
 const script = readFileSync(new URL('../public/home-redirect.js', import.meta.url), 'utf8')
 function redirect(suffix) {
@@ -38,4 +39,10 @@ test('auth callbacks never leak query or hash tokens to the public domain', () =
     assert.equal(target.pathname, '/member')
     assert.equal(target.search + target.hash, suffix)
   }
+})
+
+test('old sitemap omits its retired root while new-host sitemap keeps its homepage', () => {
+  assert.ok(!publicSitemapPaths(SOURCE_ORIGIN).includes('/'))
+  assert.ok(publicSitemapPaths(SOURCE_ORIGIN).includes('/literature'))
+  assert.ok(publicSitemapPaths(PUBLIC_ORIGIN).includes('/'))
 })
