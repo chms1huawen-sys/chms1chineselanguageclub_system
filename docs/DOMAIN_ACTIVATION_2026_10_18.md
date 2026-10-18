@@ -1,7 +1,8 @@
 # Domain Activation: chms1clc.org
 
 Last observation: 2026-10-18 21:48 MYT. Binding and HTTPS acceptance completed;
-public apex indexing enabled. Search Console and old-public redirects remain pending.
+public apex indexing enabled. UPDATE: old root homepage now retired as described
+below; Search Console and remaining old public-section/article redirects are pending.
 
 ## Ownership And Boundaries
 
@@ -104,3 +105,34 @@ No real member sign-out was triggered during agent verification; the auth error
 guard/navigation wiring was checked by tests/source assertions. Existing open
 member documents must reload to run the new client code; no reinstall is needed.
 Screenshot: test-results/member-return-new-home-20261018.png (ignored).
+
+## Old Homepage Retired
+
+Owner authorized closing the old homepage. Commit2c993d2 replaces only Vercel's
+root public renderer with legacy-home.html plus home-redirect.js. It no longer
+loads old homepage content, React, or the public-source database at that route.
+Normal browsers immediately replace the root URL with https://chms1clc.org/,
+preserving query/anchor. With JavaScript disabled, a plain link points to the
+new site; the old content is still absent.
+
+This is intentionally a200/noindex browser bridge, NOT a blanket HTTP301/308.
+Servers cannot inspect URL fragments: old /#/member-route links and auth tokens
+must first be identified in the browser and stay on /member at the source origin.
+An unconditional root HTTP redirect could move such PWA/auth launches to the
+public origin. The bridge uses an external same-origin script under existing CSP,
+no-store/noindex,follow, and a canonical to the new homepage. Auth token values
+are never forwarded to the public host. Synthetic callbacks were tested only in
+an isolated JS VM; no real auth link was submitted.
+
+Commit72465f5 also removes the retired old root from the old sitemap, retaining
+the not-yet-migrated old sections/articles. Both commits observed Production
+Ready (16seconds each).14focused tests, build and targeted lint passed.
+Browser verified old root -> new domain and old /#/login -> source/member#/login,
+with the actual login button visible. Member/admin, manifest, Firebase worker,
+source-public API and redirect script all returned200. No account sign-in or
+sign-out, push delivery, private data mutation or Cloudflare redeploy occurred.
+The new site's live sitemap continues to include its own root.
+
+Only the old homepage is retired in this step; old public sections/articles still
+work until a separately scoped migration. Do not close the source Vercel project.
+Proof: test-results/old-home-retired-20261018.png (ignored).
