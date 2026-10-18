@@ -1,4 +1,5 @@
 export const isInstalledApp = () => window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true
+export const isPublicPreview = (doc = document) => !!doc.querySelector('meta[name="public-static-preview"]')
 
 export function memberLaunchUrl(href) {
   const url = new URL(href)
@@ -12,10 +13,18 @@ export function memberLaunchUrl(href) {
 
 export const publicHomeUrl = () => isInstalledApp() ? '/?view=blog' : '/'
 
-export function prepareAppLaunch() {
-  const destination = memberLaunchUrl(window.location.href)
-  if (destination) window.history.replaceState(window.history.state, '', destination)
-  if (new URLSearchParams(window.location.search).get('app') === 'blog') {
-    document.querySelector('link[rel="manifest"]')?.setAttribute('href', '/manifest-blog.json')
+export function prepareAppLaunch(browserWindow = window, doc = document) {
+  const destination = memberLaunchUrl(browserWindow.location.href)
+  if (isPublicPreview(doc)) {
+    doc.querySelector('link[rel="manifest"]')?.remove()
+    if (destination) {
+      const url = new URL(destination)
+      browserWindow.location.replace(new URL(url.pathname + url.search + url.hash, 'https://chms1chineselanguageclubsystem.vercel.app').href)
+    }
+    return
+  }
+  if (destination) browserWindow.history.replaceState(browserWindow.history.state, '', destination)
+  if (new URLSearchParams(browserWindow.location.search).get('app') === 'blog') {
+    doc.querySelector('link[rel="manifest"]')?.setAttribute('href', '/manifest-blog.json')
   }
 }

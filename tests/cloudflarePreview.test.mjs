@@ -10,7 +10,7 @@ import { securityHeaders } from '../cloudflare/public-preview/securityHeaders.js
 
 const origin = 'https://chms1chineselanguageclubsystem.vercel.app'
 const project = 'https://example.supabase.co'
-const template = '<html><head></head><body><div id="root"></div></body></html>'
+const template = '<html><head><link rel="manifest" href="/manifest.json"></head><body><div id="root"></div></body></html>'
 const input = {
   settings: { title: 'Club', content: { hero_slides: [{ path: project + '/storage/v1/object/public/blog-site-media/banner.jpg', link: origin + '/activities' }] } },
   posts: [{ id: 'one', slug: 'one', title: 'Public article', body: 'Public body', status: 'published', cover_path: 'one/original.jpg', tags: ['tag'], category_id: 'category' }, { id: 'draft', slug: 'draft', title: 'Secret draft', status: 'draft' }],
@@ -99,6 +99,7 @@ test('integrity failure fails closed instead of serving an obsolete static artic
 
 test('preview stays noindex, rejects writes, and keeps member/admin/PWA on the original site', async () => {
   const state = setup()
+  assert.doesNotMatch(await (await state.request('/')).text(), /rel="manifest"/)
   assert.equal((await state.request('/')).headers.get('x-robots-tag'), 'noindex, nofollow')
   for (const path of ['/member', '/blog-admin']) {
     const result = await state.request(path)

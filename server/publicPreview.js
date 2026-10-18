@@ -19,7 +19,7 @@ export function buildPublicPreview(snapshot, template, projectUrl, origin) {
   const pages = {}
   const routes = PUBLIC_SECTIONS.map(path => [path ? '/' + path : '/', { view: path || 'home', slug: '', search: '' }])
   for (const post of snapshot.posts) routes.push(['/blog/' + post.slug, { view: 'home', slug: post.slug, search: '' }])
-  const previewTemplate = template.replace('</head>', '<meta name="public-static-preview" content="true"></head>')
+  const previewTemplate = template.replace(/<link\b(?=[^>]*\brel=["']manifest["'])[^>]*>/gi, '').replace('</head>', '<meta name="public-static-preview" content="true"></head>')
   for (const [path, request] of routes) {
     pages[path] = renderSnapshotPage(previewTemplate, local.snapshot, request, origin).html.replaceAll(origin + '/public-media/', '/public-media/')
   }
