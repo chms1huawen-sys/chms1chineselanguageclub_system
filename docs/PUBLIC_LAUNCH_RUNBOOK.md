@@ -171,3 +171,11 @@ through local hidden prompts, writes them only into the disk staging area,
 checks HeadBucket against the fixed account/bucket, then encrypts a NEW supplement.
 It never changes remote credentials or tests writes/deletes. Do not mark this
 second supplement complete until its log, checksum and cleanup have been checked.
+
+The second supplement Platform-Config-20261018-163952-e8bb8308.7z contains the
+owner-entered original R2 credentials, which passed HeadBucket at 08:41:48 UTC.
+The initial archive verification did not complete; verification-only resume
+succeeded at 16:43 Malaysia time without redownload or archive overwrite.
+Its SHA-256 independently matched and the plaintext staging directory was removed.
+Other custom Supabase secret values, Vault material and full recovery remain
+outstanding; the historical name-only inventory is not a complete secrets export.
