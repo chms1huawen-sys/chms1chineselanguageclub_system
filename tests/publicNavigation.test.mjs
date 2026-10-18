@@ -45,6 +45,15 @@ test('private routes, explicit installed app launches and external links keep na
   }
 })
 
+test('new public home is a full cross-origin navigation from the member host', () => {
+  const result = navigation('https://chms1clc.org/', {}, navigatePublicLink,
+    { origin: 'https://chms1chineselanguageclubsystem.vercel.app', pathname: '/member' })
+  assert.deepEqual(result, { handled: false, prevented: false, pushes: [] })
+  assert.deepEqual(navigation('https://chms1clc.org/', {}, navigatePublicLink,
+    { origin: 'https://chms1clc.org', pathname: '/literature', hash: '' }),
+  { handled: true, prevented: true, pushes: ['/'] })
+})
+
 test('new tabs, downloads, modified clicks and already handled clicks are untouched', () => {
   for (const options of [{ target: '_blank' }, { download: true }, { ctrlKey: true }, { metaKey: true }, { shiftKey: true }, { altKey: true }, { button: 1 }, { defaultPrevented: true }]) {
     assert.deepEqual(navigation('/', options), { handled: false, prevented: false, pushes: [] })

@@ -1,3 +1,5 @@
+import { PUBLIC_ORIGIN, SOURCE_ORIGIN } from './siteOrigins.js'
+
 export const isInstalledApp = () => window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true
 export const isPublicPreview = (doc = document) => !!doc.querySelector('meta[name="public-static-preview"]')
 
@@ -11,7 +13,7 @@ export function memberLaunchUrl(href) {
   return url.href
 }
 
-export const publicHomeUrl = () => isInstalledApp() ? '/?view=blog' : '/'
+export const publicHomeUrl = (origin = window.location.origin) => origin === SOURCE_ORIGIN ? PUBLIC_ORIGIN + '/' : '/'
 
 export function prepareAppLaunch(browserWindow = window, doc = document) {
   const destination = memberLaunchUrl(browserWindow.location.href)
@@ -28,3 +30,4 @@ export function prepareAppLaunch(browserWindow = window, doc = document) {
     doc.querySelector('link[rel="manifest"]')?.setAttribute('href', '/manifest-blog.json')
   }
 }
+

@@ -1,8 +1,12 @@
 import assert from 'node:assert/strict'
-import { memberLaunchUrl, prepareAppLaunch, isPublicPreview } from '../src/utils/pwaLaunch.js'
+import { memberLaunchUrl, prepareAppLaunch, isPublicPreview, publicHomeUrl } from '../src/utils/pwaLaunch.js'
 import { readFileSync } from 'node:fs'
 
 const root = 'https://club.example/'
+assert.equal(publicHomeUrl('https://chms1chineselanguageclubsystem.vercel.app'), 'https://chms1clc.org/', 'Member home uses the new public domain, including installed PWA')
+for (const host of ['https://chms1clc.org', 'https://preview.workers.dev', 'http://localhost:5173']) {
+  assert.equal(publicHomeUrl(host), '/', 'Public, preview and local navigation stay on their own host')
+}
 assert.equal(memberLaunchUrl(root, true), null)
 assert.equal(memberLaunchUrl(root, false), null)
 for (const suffix of ['#access_token=test', '?code=test', '?app=blog', '?view=blog', '?tag=culture#articles', 'blog/story', 'blog-admin', 'activities']) {
@@ -32,3 +36,8 @@ for (const preview of [true, false]) for (const suffix of ['', '#/login?return=%
 }
 const main = readFileSync(new URL('../src/main.jsx', import.meta.url), 'utf8')
 assert.match(main, /'serviceWorker' in navigator && !isPublicPreview\(\)/)
+const app = readFileSync(new URL('../src/App.jsx', import.meta.url), 'utf8')
+const logout = app.slice(app.indexOf('const handleLogout ='), app.indexOf("if (window.location.pathname === '/blog-admin'", app.indexOf('const handleLogout =')))
+assert.match(logout, /if \(error\) throw error/)
+assert.match(logout, /window\.location\.assign\(publicHomeUrl\(\)\)/)
+assert.ok(logout.indexOf('if (error) throw error') < logout.indexOf('window.location.assign'), 'Failed sign-out must not navigate as if it succeeded')

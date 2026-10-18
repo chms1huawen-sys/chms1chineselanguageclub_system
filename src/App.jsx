@@ -10,6 +10,7 @@ import { safeBlogReturn } from './utils/blog'
 import PageLoading from './components/PageLoading'
 import { showForegroundPush, withPushTimeout } from './utils/pushRuntime'
 import { navigateMemberLink, navigatePublicLink } from './utils/publicNavigation'
+import { publicHomeUrl } from './utils/pwaLaunch'
 const MemberShell = lazy(loadMemberShell)
 
 export default function App() {
@@ -185,10 +186,17 @@ export default function App() {
 
   const handleLogout = async () => {
     setLoading(true)
-    await supabase.auth.signOut()
-    setUser(null)
-    setProfile(null)
-    setLoading(false)
+    try {
+      const { error } = await supabase.auth.signOut()
+      if (error) throw error
+      setUser(null)
+      setProfile(null)
+      window.location.assign(publicHomeUrl())
+    } catch {
+      window.alert(lang === 'zh' ? '退出失败，请检查网络后重试。' : 'Could not sign out. Check your connection and try again.')
+    } finally {
+      setLoading(false)
+    }
   }
 
   if (window.location.pathname === '/blog-admin' || hash === '#/blog-management') return <Suspense fallback={<PageLoading lang={lang} fullPage />}><BlogAdminShell profile={profile} loading={loading} lang={lang} setLang={setLang} /></Suspense>
