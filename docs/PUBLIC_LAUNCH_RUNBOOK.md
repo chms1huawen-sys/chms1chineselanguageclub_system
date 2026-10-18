@@ -162,3 +162,12 @@ it. Only after archive verification and SHA-256 creation is the uniquely owned
 plaintext staging directory removed. Starting this tool is not backup completion;
 check its status log, archive checksum and staging cleanup afterward. Complete
 remote secret/Vault material and full platform recovery remain outstanding.
+
+The initial supplement Platform-Config-20261018-163530-7cf2e98a.7z was verified,
+its SHA-256 independently matched and its plaintext staging removed. It is still
+partial and has no original R2 credentials. The owner subsequently confirmed
+having the originals. The optional -IncludeR2Credentials mode takes both values
+through local hidden prompts, writes them only into the disk staging area,
+checks HeadBucket against the fixed account/bucket, then encrypts a NEW supplement.
+It never changes remote credentials or tests writes/deletes. Do not mark this
+second supplement complete until its log, checksum and cleanup have been checked.

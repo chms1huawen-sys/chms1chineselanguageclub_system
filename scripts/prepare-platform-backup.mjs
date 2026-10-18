@@ -19,6 +19,29 @@ export function deploymentMetadata(rows) {
 export function validateStage(stage, root) {
   if (path.dirname(path.resolve(stage)) !== path.resolve(root) || !/^config-staging-\d{8}-\d{6}-[a-f0-9]{8}$/.test(path.basename(stage))) throw new Error('Invalid configuration staging path')
 }
+export function r2Configuration(data) {
+  if (data.endpoint !== 'https://311949335986723af9a0a8b5bd76ebd4.r2.cloudflarestorage.com' || data.bucket !== 'chms1clc-photos' ||
+      !/^[A-Za-z0-9/+_=.-]{16,256}$/.test(data.accessKeyId || '') || !/^[A-Za-z0-9/+_=.-]{16,256}$/.test(data.secretAccessKey || '')) throw new Error('Invalid R2 backup configuration')
+  return { endpoint: data.endpoint, region: 'auto', credentials: { accessKeyId: data.accessKeyId, secretAccessKey: data.secretAccessKey } }
+}
+export async function verifyR2(stage, root) {
+  validateStage(stage, root)
+  validateStage(await realpath(stage), await realpath(root))
+  const data = JSON.parse((await readFile(path.join(stage, 'credentials/r2-credentials.json'), 'utf8')).replace(/^\uFEFF/, ''))
+  const { S3Client, HeadBucketCommand } = await import('@aws-sdk/client-s3')
+  const client = new S3Client({ ...r2Configuration(data), maxAttempts: 1 })
+  try { await client.send(new HeadBucketCommand({ Bucket: data.bucket }), { abortSignal: AbortSignal.timeout(15000) }) }
+  finally { client.destroy() }
+  const inventoryFile = path.join(stage, 'inventory.json')
+  const inventory = JSON.parse(await readFile(inventoryFile, 'utf8'))
+  inventory.r2OriginalCredentialBackup = { included: true, verifiedAt: new Date().toISOString(), check: 'HeadBucket read-only; write/delete permissions not tested' }
+  inventory.scope.outstanding = inventory.scope.outstanding.filter(item => !item.startsWith('Original R2_ACCESS_KEY_ID'))
+  await writeFile(inventoryFile, JSON.stringify(inventory, null, 2))
+  const notes = path.join(stage, 'RESTORE-NOTES.txt')
+  await writeFile(notes, (await readFile(notes, 'utf8')).replace('R2 endpoint/bucket and configuration are recorded; the two original R2 credential values remain missing.',
+    'Original R2 credentials are included in credentials/r2-credentials.json and passed a read-only bucket check. This does not test write/delete permissions.'))
+  console.log('R2 credentials passed the read-only bucket check. No objects, permissions or keys were changed.')
+}
 function jsonCommand(command) {
   return JSON.parse(execFileSync('powershell.exe', ['-NoProfile', '-Command', command + '; exit $LASTEXITCODE'],
     { cwd: repo, windowsHide: true, encoding: 'utf8', timeout: 120000, maxBuffer: 2 * 1024 * 1024, stdio: ['ignore', 'pipe', 'pipe'] }))
@@ -78,6 +101,9 @@ export async function prepare(stage, root) {
   console.log('Configuration supplement prepared. Missing remote secrets remain explicitly listed. No credential values were printed.')
 }
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
-  try { await prepare(process.argv[2], process.argv[3]) }
+  try {
+    if (process.argv[2] === '--verify-r2') await verifyR2(process.argv[3], process.argv[4])
+    else await prepare(process.argv[2], process.argv[3])
+  }
   catch { console.error('Configuration preparation failed. Staging may contain unencrypted credentials; do not share or disconnect before review.'); process.exitCode = 1 }
 }

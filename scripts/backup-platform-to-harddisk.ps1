@@ -1,7 +1,13 @@
-param([string]$BackupRoot = 'E:\CHMS1-Backups')
+param([string]$BackupRoot = 'E:\CHMS1-Backups', [switch]$IncludeR2Credentials)
 $ErrorActionPreference = 'Stop'
 $stage = $null
 $log = $null
+function Read-HiddenValue([string]$Prompt) {
+  $secure = Read-Host $Prompt -AsSecureString
+  $pointer = [Runtime.InteropServices.Marshal]::SecureStringToBSTR($secure)
+  try { return [Runtime.InteropServices.Marshal]::PtrToStringBSTR($pointer) }
+  finally { [Runtime.InteropServices.Marshal]::ZeroFreeBSTR($pointer); $secure.Dispose() }
+}
 try {
   if (!(Test-Path -LiteralPath $BackupRoot -PathType Container)) { throw 'Backup disk is not connected.' }
   $root = [IO.Path]::GetFullPath($BackupRoot).TrimEnd('\')
@@ -15,6 +21,21 @@ try {
   New-Item -ItemType Directory -Path $stage | Out-Null
   & node (Join-Path $PSScriptRoot 'prepare-platform-backup.mjs') $stage $root
   if ($LASTEXITCODE -ne 0) { throw 'Configuration preparation did not complete.' }
+  if ($IncludeR2Credentials) {
+    'PREPARED: Awaiting original R2 credentials, then encryption.' | Set-Content -LiteralPath $log
+    Write-Host 'Enter the original R2 Access Key ID and Secret Access Key below. Input is hidden.'
+    Write-Host 'Do not enter an API token or a Supabase/database password. No keys will be rotated.'
+    $r2 = @{
+      endpoint = 'https://311949335986723af9a0a8b5bd76ebd4.r2.cloudflarestorage.com'
+      bucket = 'chms1clc-photos'
+      accessKeyId = Read-HiddenValue 'R2 Access Key ID (hidden)'
+      secretAccessKey = Read-HiddenValue 'R2 Secret Access Key (hidden)'
+    }
+    $r2 | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $stage 'credentials/r2-credentials.json') -Encoding UTF8
+    $r2 = $null
+    & node (Join-Path $PSScriptRoot 'prepare-platform-backup.mjs') --verify-r2 $stage $root
+    if ($LASTEXITCODE -ne 0) { throw 'R2 read-only verification failed; do not treat this as a verified credential backup.' }
+  }
   'PREPARED: Partial configuration/local credentials. Awaiting archive encryption.' | Set-Content -LiteralPath $log
   Write-Host 'This supplement does NOT contain all remote secret values. Missing values are listed inside.'
   Write-Host 'At Enter password, enter your backup ENCRYPTION password, not your database password.'
@@ -33,7 +54,11 @@ try {
   if ([IO.Path]::GetDirectoryName($resolvedStage) -ne $root -or (Split-Path $resolvedStage -Leaf) -notmatch '^config-staging-[0-9]{8}-[0-9]{6}-[a-f0-9]{8}$') { throw 'Cleanup path is outside the expected staging area.' }
   Remove-Item -LiteralPath $resolvedStage -Recurse -Force
   "VERIFIED: $archive" | Add-Content -LiteralPath $log
-  'PARTIAL SCOPE: Original R2/custom secret values and complete platform recovery remain outstanding.' | Add-Content -LiteralPath $log
+  if ($IncludeR2Credentials) {
+    'R2 ORIGINAL CREDENTIALS INCLUDED: Read-only bucket verification passed. Other custom secrets and complete recovery remain outstanding.' | Add-Content -LiteralPath $log
+  } else {
+    'PARTIAL SCOPE: Original R2/custom secret values and complete platform recovery remain outstanding.' | Add-Content -LiteralPath $log
+  }
   Write-Host "Encrypted configuration supplement verified: $archive"
   Write-Host 'Unencrypted staging removed. Original credential files and older backups were not deleted.'
 } catch {
