@@ -43,7 +43,7 @@ export function createPreviewWorker({ now = Date.now, fetchOrigin = fetch } = {}
         ...(indexable && status < 400 ? { 'X-Robots-Tag': url.searchParams.has('q') ? 'noindex, follow' : 'index, follow' } : {}), ...extra,
       })
       if (!['GET', 'HEAD'].includes(request.method)) return reply(null, 405)
-      if (url.hostname === 'www.chms1clc.org') return reply(null, 308, 'text/plain', { Location: PUBLIC_ORIGIN + url.pathname + url.search })
+      if (url.hostname === 'www.chms1clc.org' || (url.hostname === 'chms1clc.org' && url.protocol !== 'https:')) return reply(null, 308, 'text/plain', { Location: PUBLIC_ORIGIN + url.pathname + url.search })
       let path
       try { path = decodeURIComponent(url.pathname).replace(/\/$/, '') || '/' } catch { return reply(null, 400) }
       if (/^\/(member|blog-admin)(\/|$)/.test(path)) return reply(null, 302, 'text/plain', { Location: ORIGIN + url.pathname + url.search })
@@ -71,12 +71,12 @@ export function createPreviewWorker({ now = Date.now, fetchOrigin = fetch } = {}
           const type = image.httpMetadata?.contentType
           if (!/^image\/(jpeg|png|webp|avif)$/.test(type || '') || image.size > 10 * 1024 * 1024) return reply(null, 503)
           const imageHeaders = { ...version, 'Cache-Control': 'private, max-age=30', ETag: image.httpEtag }
-          if (condition && condition.split(',').some(value => value.trim() === '*' || value.trim().replace(/^W\//, '') === image.httpEtag?.replace(/^W\//, ''))) return reply(null, 304, type, imageHeaders)
+          if (condition && condition.split(',').some(value => value.trim() === '*' || value.trim().replace(/^W\//, '') === image.httpEtag?.replace(/^W\//, ''))) return respond(null, 304, type, imageHeaders)
           if (condition && request.method !== 'HEAD') {
             image = await env.PUBLIC_SITE.get(photo.key)
             if (!image || image.httpEtag !== imageHeaders.ETag) return reply(null, 503)
           }
-          return reply(request.method === 'HEAD' ? null : image.body, 200, type, imageHeaders)
+          return respond(request.method === 'HEAD' ? null : image.body, 200, type, imageHeaders)
         }
         if (path === '/sitemap.xml') {
           const escapeXml = value => value.replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&apos;' }[char]))

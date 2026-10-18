@@ -142,6 +142,9 @@ test('www redirects preserve path and query without redirecting source refresh o
   const response = await state.worker.fetch(new Request('https://www.chms1clc.org/blog/one?tag=a%26b'), state.env)
   assert.equal(response.status, 308)
   assert.equal(response.headers.get('location'), 'https://chms1clc.org/blog/one?tag=a%26b')
+  const insecure = await state.worker.fetch(new Request('http://chms1clc.org/about?q=hello'), state.env)
+  assert.equal(insecure.status, 308)
+  assert.equal(insecure.headers.get('location'), 'https://chms1clc.org/about?q=hello')
   assert.equal((await state.request('/blog/one')).status, 200)
 })
 

@@ -1,7 +1,10 @@
 # Public-domain launch and rollback
 
-Status: prepared on 2026-10-18, Asia/Kuala_Lumpur. NOT executed.
-Chosen domain: chms1clc.org, ownership/registration not verified here.
+Status: initial checklist prepared on 2026-10-18, Asia/Kuala_Lumpur.
+UPDATE: Owner purchased chms1clc.org; Cloudflare registration Active verified.
+Custom-domain binding is deployed, but HTTPS validation is pending and indexing
+remains disabled. See DOMAIN_ACTIVATION_2026_10_18.md for the authoritative latest
+stage, versions and resume gate. Earlier sections below include historical status.
 No DNS changes, purchase, indexing changes or production redirects are authorized
 by this document. Obtain the owner's cutover decision before applying them.
 
