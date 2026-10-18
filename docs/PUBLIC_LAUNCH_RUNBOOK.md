@@ -18,7 +18,11 @@ by this document. Obtain the owner's cutover decision before applying them.
 
 ## Before DNS
 
-1. Recheck Supabase's quota warning; do not promise a cycle reset resolves it.
+1. Recheck both quota usage and actual request availability. A persistent past-overage
+   notice alone is not evidence of an active restriction. Quota-based restrictions
+   lift after the next cycle refills (possibly with a short delay), while grace
+   notices can persist across multiple compliant cycles. Repeated overages may
+   have no new grace period. See https://supabase.com/docs/guides/platform/billing-faq#fair-use-policy.
 2. Prepare a recent encrypted data backup on the owner's connected disk. Do not
    export member data to Git or use a temporary plaintext C-drive copy. Verify
    checksums and archive integrity, retaining the older verified archives.
@@ -179,3 +183,40 @@ succeeded at 16:43 Malaysia time without redownload or archive overwrite.
 Its SHA-256 independently matched and the plaintext staging directory was removed.
 Other custom Supabase secret values, Vault material and full recovery remain
 outstanding; the historical name-only inventory is not a complete secrets export.
+
+## Latest owner decisions and pre-domain check (Oct 18, 18:40 MYT)
+
+This section supersedes earlier outstanding-status statements, not their historical observations.
+
+- The owner reports Android background notifications worked normally over recent
+  days. Record this as owner-observed acceptance, not an agent-run matrix of every
+  notification type, role and device. No further real notifications were sent.
+- Full Docker/Supabase restoration is explicitly deferred by the owner. Docker
+  was not installed; no backup was decrypted in that environment check. The local
+  Windows 10 Home machine has only about23.2GiB free on C:, WSL did not report a
+  working status, and external E: is exFAT. Do not silently install onto C:,
+  format/repartition the backup disk, or label this a completed restore drill.
+- The owner also continues to defer an independent cloud backup.
+- Platform-Config-20261018-171302-b16f7282.7z contains the named Vault cron secret
+  and five scheduler definitions. Its archive test passed, SHA-256 independently
+  matched and plaintext staging was removed. Original R2 credentials remain in
+  the separately verified earlier supplement. Current Edge Secret equality and
+  complete platform restoration are still unverified.
+- Public audit script now asserts HTTP status, private-entry destinations,
+  noindex protection, sitemap source origin, authorized image fallback and old
+  withdrawn-test cleanup. A failed check produces a nonzero CLI exit instead of
+  merely printing apparently successful request statistics.
+- Live result: 16 sequential GET/HEAD requests, 440994 decoded response bytes,
+  13 published posts, six public sections and one article200, image200/304,
+  member/admin302 to the exact original Vercel paths, withdrawn test404, no
+  private/preview-host sitemap entries, noindex retained. All checks passed.
+- Original Vercel entry/security/SEO baseline: all five checks passed. Targeted
+  tests:17 passed; no website runtime or domain binding was changed in this step.
+- Evidence: test-results/domain-preparation-20261018.json (ignored, no credentials).
+
+Remaining cutover gate: owner purchases/controls the chosen domain, then approve
+the actual binding and origin separation, rebuild public SEO/sitemap, validate
+TLS and new-domain routes before enabling indexing or old-public-route redirects.
+The current Worker deliberately still uses the original Vercel origin for its
+preview sitemap as well as private/source endpoints. A global hostname replacement
+is not a migration implementation. No formal-domain deployment is activated yet.
