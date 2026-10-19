@@ -16,10 +16,10 @@ function fixture() {
   data.blog_links=[{id:'link',post_id:id,label:'Private',url:'https://example.com/private',visibility:'member'}]
   return data
 }
-test('D1 enforces teacher/media roles, revocations and archive permissions',()=>{
+test('D1 enforces chair/teacher/media roles, revocations and archive permissions',()=>{
   const data=fixture(), command={table:'blog_posts',action:'select'}
-  for(const role of ['ordinary_member','chairperson','vice_chairperson','treasurer','custom']) assert.throws(()=>cmsOperation(data,command,{...profile,role,can_manage_blog:true}),/BLOG_FORBIDDEN/)
-  for(const role of ['convener_teacher','advisor_teacher','advisor','media_lead','vice_media_lead','social_media_editor']) assert.equal(cmsOperation(data,command,{...profile,role}).result.length,1)
+  for(const role of ['ordinary_member','vice_chairperson','treasurer','custom']) assert.throws(()=>cmsOperation(data,command,{...profile,role,can_manage_blog:true}),/BLOG_FORBIDDEN/)
+  for(const role of ['chairperson','convener_teacher','advisor_teacher','advisor','media_lead','vice_media_lead','social_media_editor']) assert.equal(cmsOperation(data,command,{...profile,role}).result.length,1)
   assert.throws(()=>cmsOperation(data,command,{...profile,is_active:false}),/BLOG_FORBIDDEN/)
   assert.throws(()=>cmsOperation(data,command,{...profile,can_manage_blog:false}),/BLOG_FORBIDDEN/)
   assert.throws(()=>cmsOperation(data,{table:'blog_years',action:'upsert',values:{year:2026,is_archived:true}},profile),/BLOG_ARCHIVE_FORBIDDEN/)
@@ -69,8 +69,11 @@ test('D1 commits are atomic, stale revisions cannot partially overwrite records'
     assert.equal((await loadCms(db)).data.blog_posts[0].title,'First')
   }finally{sql.close()}
 })
-test('Authentication verifies real user and role, rejects inactive and chair overrides',async()=>{
-  for(const override of [{role:'chairperson',can_manage_blog:true},{role:'media_lead',is_active:false},{role:'media_lead',can_manage_blog:false}]){
+test('Authentication verifies chair access and rejects vice-chair, inactive and revoked accounts',async()=>{
+  const chairRequest=async url=>Response.json(String(url).includes('/auth/v1/user')?{id}:[{...profile,role:'chairperson'}])
+  const chair=await cmsProfile(new Request('https://chms1clc.org/api/blog-admin',{headers:{Authorization:'Bearer test'}}),{CMS_AUTH_URL:'https://example.supabase.co',CMS_AUTH_ANON_KEY:'anon'},chairRequest)
+  assert.equal(chair.role,'chairperson')
+  for(const override of [{role:'vice_chairperson',can_manage_blog:true},{role:'chairperson',is_active:false},{role:'chairperson',can_manage_blog:false},{role:'media_lead',is_active:false},{role:'media_lead',can_manage_blog:false}]){
     let calls=0
     const request=async()=>Response.json(++calls===1?{id}:[{...profile,...override}])
     await assert.rejects(cmsProfile(new Request('https://chms1clc.org/api/blog-admin',{headers:{Authorization:'Bearer test'}}),{CMS_AUTH_URL:'https://example.supabase.co',CMS_AUTH_ANON_KEY:'anon'},request),/BLOG_FORBIDDEN/)

@@ -3,7 +3,7 @@
 Status: D1 activated on2026-10-19 (Malaysia). All124CMS records verified against
 the frozen original source. The public R2 snapshot reports cmsRevision1 with13
 published posts; original-photo fields are absent. Browser connection failed
-during final UI validation, so a real teacher/media click/upload check remains.
+during final UI validation, so a real chair/teacher/media click/upload check remains.
 
 ## Boundaries
 
@@ -17,8 +17,8 @@ during final UI validation, so a real teacher/media click/upload check remains.
   of image bytes per actor per UTC day. File contents do not pass through Supabase.
 - Public pages continue to read the filtered R2 snapshot, not draft CMS records.
 - Entry is inside Executive Management alongside Finance/Inventory. No public
-  gear. Only active teachers and media roles, with no explicit revocation, can
-  use the entry or API; chair/vice-chair and custom overrides cannot bypass it.
+  gear. Active chairperson, teachers and media roles, with no explicit revocation,
+  can use the entry or API; vice-chair and custom overrides cannot bypass it.
 - Supabase legacy blog_manager is narrowed to the same roles. A provider flag
   rejects legacy CMS writes after cutover without deleting the original data.
 
@@ -53,7 +53,8 @@ They must never be committed, copied into the public runtime or uploaded publicl
 - A second Supabase export after write freeze was byte-identical to the imported
   source. No article state, text, media record or original object was deleted.
 - Supabase provider flag is cloudflare-d1; all10legacy CMS tables have the write
-  guard. Live function definition excludes chairperson and includes media roles.
+  guard. The initial cutover excluded chairperson; the owner's correction on
+  2026-10-19 adds chairperson via a separate migration, retaining vice-chair denial.
 - D1 storage after import:372736bytes (about0.36MiB), including CMS metadata.
 - Anonymous admin POST returned401; public D1 source and filtered R2 snapshot
   returned200, revision1,13published posts and87media rows with no original paths.

@@ -63,6 +63,7 @@ test('Blog SQL overrides and guarded profile writes', async () => {
     await db.exec(sql)
     const cutover = await readFile(new URL('../supabase_migration_2026_10_18_blog_d1_cutover.sql', import.meta.url), 'utf8')
     await db.exec(cutover.slice(cutover.indexOf('create or replace function public.blog_manager()'),cutover.indexOf('comment on column')))
+    await db.exec(await readFile(new URL('../supabase_migration_2026_10_19_blog_chairperson_access.sql', import.meta.url), 'utf8'))
     for (const role of [...BLOG_MANAGER_ROLES, 'ordinary_member', 'custom', 'vice_chairperson']) {
       for (const override of [null, true, false]) {
         await as('authenticated', manager)
