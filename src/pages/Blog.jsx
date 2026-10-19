@@ -298,7 +298,7 @@ export default function Blog({ profile, lang, setLang }) {
   const about = <section className="blog-community" id="about">
     <div className="blog-community-intro"><AboutHeading>{override('about_title', settings.title)}</AboutHeading><p>{settings.intro}</p>
       {content.about_image && <BlogImage className="blog-community-photo" path={content.about_image} crop={content.about_image_crop} alt={settings.title} loading="lazy" />}
-      <dl className="blog-community-counts">{statistics.map(({ key, value, label, range }) => <div key={key}><dt>{label}</dt><dd>{value}</dd>{range && <small>{range}</small>}</div>)}</dl>
+      <dl className="blog-community-counts">{statistics.map(({ key, value, label, range }) => <div key={key} data-nosnippet=""><dt>{label}</dt><dd>{value}</dd>{range && <small>{range}</small>}</div>)}</dl>
     </div>
     <div className="blog-community-board"><div className="blog-community-board-heading"><BookOpen size={19} aria-hidden="true" /><h3>{override('about_board_title', t('关于我们的故事', 'Our story'))}</h3></div>
       <ol>{aboutNotes.map((note, index) => <li key={index}><span className="blog-note-number" aria-hidden="true">{String(index + 1).padStart(2, '0')}</span><p>{note}</p></li>)}</ol>
