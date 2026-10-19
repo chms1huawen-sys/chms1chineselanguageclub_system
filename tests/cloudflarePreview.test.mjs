@@ -257,6 +257,29 @@ test('concurrent cold reads share one R2 snapshot and failures can be retried', 
   assert.equal(reads, 3)
 })
 
+test('formal favicons are indexable without opening preview or private routes', async () => {
+  const worker = createPreviewWorker()
+  const config = JSON.parse(await readFile(new URL('../cloudflare/public-preview/wrangler.jsonc', import.meta.url), 'utf8'))
+  for (const path of ['/logo-192.png','/logo-512.png']) {
+    assert.ok(config.assets.run_worker_first.includes(path))
+    for (const [origin,enabled,expected] of [['https://chms1clc.org',true,'index, follow'],['https://chms1clc.org',false,'noindex, nofollow'],['https://preview.example',true,'noindex, nofollow']]) {
+      for (const method of ['GET','HEAD']) {
+        const response = await worker.fetch(new Request(origin+path,{method}),{PUBLIC_SITE_INDEXABLE:String(enabled),ASSETS:{fetch:async()=>new Response(method==='HEAD'?null:'png',{headers:{'Content-Type':'image/png','X-Robots-Tag':'noindex, nofollow'}})}})
+        assert.equal(response.status,200)
+        assert.equal(response.headers.get('x-robots-tag'),expected)
+        assert.equal(response.headers.get('x-content-type-options'),'nosniff')
+      }
+    }
+  }
+  const missing = await worker.fetch(new Request('https://chms1clc.org/logo-192.png'),{PUBLIC_SITE_INDEXABLE:'true',ASSETS:{fetch:async()=>new Response(null,{status:404})}})
+  assert.equal(missing.headers.get('x-robots-tag'),'noindex, nofollow')
+  for (const path of ['/member','/blog-admin']) {
+    const response = await worker.fetch(new Request('https://chms1clc.org'+path),{PUBLIC_SITE_INDEXABLE:'true'})
+    assert.equal(response.status,302)
+    assert.equal(response.headers.get('x-robots-tag'),'noindex, nofollow')
+  }
+})
+
 test('conditional images return body-free 304 only after public authorization and verification', async () => {
   const state = setup()
   const key = 'photos-v1/blog-photos/one/display.webp'

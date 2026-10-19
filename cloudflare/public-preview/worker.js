@@ -54,6 +54,13 @@ export function createPreviewWorker({ now = Date.now, fetchOrigin = fetch } = {}
       if (path === '/robots.txt') return respond(request.method === 'HEAD' ? null : 'User-agent: *\nAllow: /\n' + (indexable ? `Disallow: /member\nDisallow: /blog-admin\nSitemap: ${PUBLIC_ORIGIN}/sitemap.xml\n` : ''), 200, 'text/plain')
       if (path === '/index.html') return reply(null, 302, 'text/plain', { Location: '/' + url.search })
       if (/^\/(?:manifest[^/]*\.json|firebase-messaging-sw\.js)$/.test(path)) return reply(null, 404)
+      if (['/logo-192.png', '/logo-512.png'].includes(path)) {
+        const asset = await env.ASSETS.fetch(request)
+        const result = new Response(asset.body, asset)
+        for (const [key, value] of Object.entries(headers)) result.headers.set(key, value)
+        if (indexable && asset.status === 200 && asset.headers.get('Content-Type')?.startsWith('image/png')) result.headers.set('X-Robots-Tag', 'index, follow')
+        return result
+      }
       try {
         const { preview, checkedAt, json, photos } = await current(env)
         const pages = formal ? preview.publicSite?.origin === PUBLIC_ORIGIN && preview.publicSite.pages : preview.pages
