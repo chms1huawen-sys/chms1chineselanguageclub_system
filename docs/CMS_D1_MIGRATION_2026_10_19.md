@@ -75,6 +75,14 @@ They must never be committed, copied into the public runtime or uploaded publicl
 
 ## Remaining Boundaries
 
+- 2026-10-19 authenticated overview failure: Workers rejects fetch redirect:error.
+  The auth bridge now uses manual redirects and refuses all 3xx responses without
+  forwarding credentials. A live invalid-token probe changed from503 to401 after
+  repair. Regression tests cover auth redirects and full-handler overview reads.
+  Failed initial loads no longer present zero counts as if data were empty.
+  Permission and workspace labels are consistently Manage Blog / 可管理博客.
+  Real signed-in browser acceptance still requires the owner's refresh.
+
 - New image bytes travel through the authenticated Cloudflare Worker into R2,
   not Supabase Storage. This is not a public bucket or a browser-held R2 key.
 - Existing Supabase objects remain as historical originals/fallbacks; do not

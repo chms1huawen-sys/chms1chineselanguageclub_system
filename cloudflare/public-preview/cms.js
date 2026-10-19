@@ -36,17 +36,21 @@ export async function commitCms(db, previous, next, timestamp) {
   ])
   if (result[2].meta.changes !== 1) fail('BLOG_EDIT_CONFLICT', 409)
 }
-export async function cmsProfile(request, env, requestOrigin = fetch, managerRequired = true) {
+export async function cmsProfile(request, env, requestOrigin = (...args) => globalThis.fetch(...args), managerRequired = true) {
   const authorization = request.headers.get('Authorization')
   if (!authorization?.startsWith('Bearer ') || authorization.length > 8192) fail('LOGIN_REQUIRED', 401)
-  const project = new URL(env.CMS_AUTH_URL)
+  let project
+  try { project = new URL(env.CMS_AUTH_URL?.trim()) } catch { fail('AUTH_CONFIGURATION_INVALID',503) }
   if (project.protocol !== 'https:' || !project.hostname.endsWith('.supabase.co')) fail('AUTH_UNAVAILABLE',503)
-  const options = { headers: { apikey: env.CMS_AUTH_ANON_KEY, Authorization: authorization }, redirect: 'error', signal: AbortSignal.timeout(10000) }
+  // Workers does not support redirect:error; reject redirects without forwarding credentials.
+  const options = { headers: { apikey: env.CMS_AUTH_ANON_KEY?.trim(), Authorization: authorization }, redirect: 'manual', signal: AbortSignal.timeout(10000) }
   const userResponse = await requestOrigin(project.origin + '/auth/v1/user', options)
+  if (userResponse.status >= 300 && userResponse.status < 400) fail('AUTH_REDIRECT_REFUSED',503)
   if (!userResponse.ok) fail('LOGIN_REQUIRED',401)
   const user = await userResponse.json()
   if (!/^[a-f0-9-]{36}$/.test(user.id || '')) fail('LOGIN_REQUIRED',401)
   const profileResponse = await requestOrigin(project.origin + '/rest/v1/users?' + new URLSearchParams({ id: `eq.${user.id}`, select: 'id,role,is_active,can_manage_blog' }), options)
+  if (profileResponse.status >= 300 && profileResponse.status < 400) fail('AUTH_REDIRECT_REFUSED',503)
   if (!profileResponse.ok) fail('BLOG_FORBIDDEN',403)
   const rows = await profileResponse.json()
   if (rows.length !== 1 || rows[0].is_active !== true || (managerRequired && !canManageBlog(rows[0]))) fail('BLOG_FORBIDDEN',403)
@@ -80,7 +84,7 @@ export function createCmsHandler({ authenticate = cmsProfile } = {}) {
       }
       if (request.method !== 'POST') fail('METHOD_NOT_ALLOWED',405)
       if (origin && !cors.Vary) fail('ORIGIN_NOT_ALLOWED',403)
-      const profile = url.pathname === '/api/blog-member' ? await cmsProfile(request,env,fetch,false) : await authenticate(request,env)
+      const profile = url.pathname === '/api/blog-member' ? await cmsProfile(request,env,undefined,false) : await authenticate(request,env)
       await consumeRate(env.CMS,profile.id,'requests',120,60)
       if (url.pathname === '/api/blog-admin/upload') {
         const current = await loadCms(env.CMS)
@@ -156,6 +160,7 @@ export function createCmsHandler({ authenticate = cmsProfile } = {}) {
       return json({ data: outcome.result, provider: 'cloudflare-d1' },200,cors)
     } catch (error) {
       const status = [400,401,403,404,409,413,429,503].includes(error?.status) ? error.status : 503
+      if (status === 503) console.error('CMS_FAILURE', JSON.stringify({name:error?.name,code:error?.status===503?error.message:'UNEXPECTED'}))
       return json({ error: status === 503 ? 'CMS_UNAVAILABLE' : error.message },status,cors)
     }
   }

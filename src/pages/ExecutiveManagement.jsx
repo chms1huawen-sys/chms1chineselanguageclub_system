@@ -359,7 +359,7 @@ export default function ExecutiveManagement({ currentUserProfile, lang = 'zh', n
         <h2 className="text-lg font-black mb-4">{lang === 'zh' ? '岗位管理工作台' : 'Role Management Workspace'}</h2>
         <nav className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4" aria-label={lang === 'zh' ? '管理入口' : 'Management'}>
           {[
-            { path: '/blog-management', title: ['文章管理', 'Article Management'], description: ['文章、照片、分类与网站设置', 'Articles, photos, taxonomy and site settings'], icon: Files, permissions: ['can_manage_blog'], color: '#254e70', background: '#e7f3ff' },
+            { path: '/blog-management', title: ['可管理博客', 'Manage Blog'], description: ['文章、照片、分类与网站设置', 'Articles, photos, taxonomy and site settings'], icon: Files, permissions: ['can_manage_blog'], color: '#254e70', background: '#e7f3ff' },
             { path: '/finance-management', title: ['财政管理', 'Finance Management'], description: ['收入登记、账簿与报销审批', 'Income, ledger and claim reviews'], icon: Wallet, permissions: ['can_manage_finance', 'can_approve_finance'], color: '#913451', background: '#fff0f5' },
             { path: '/leave', title: ['请假申请', 'Leave Applications'], description: ['查看会员请假记录与请假信', 'Member leave records and letters'], icon: ClipboardList, permissions: ['can_view_leave_records'], color: '#27614b', background: '#e6f5ee' },
             { path: '/inventory-management', title: ['物品管理', 'Inventory Management'], description: ['物品库存、借用与归还', 'Stock, borrowing and returns'], icon: Package, permissions: ['can_manage_inventory', 'can_approve_inventory'], color: '#254e70', background: '#e7f3ff' },

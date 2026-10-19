@@ -85,6 +85,42 @@ test('Authentication verifies chair access and rejects vice-chair, inactive and 
   assert.equal(badOrigin.status,403)
 })
 
+test('Worker auth uses manual redirects and refuses credential forwarding',async()=>{
+  const request=new Request('https://chms1clc.org/api/blog-admin',{headers:{Authorization:'Bearer test'}})
+  const env={CMS_AUTH_URL:'https://example.supabase.co',CMS_AUTH_ANON_KEY:'anon'}
+  for(const redirectAt of [0,1]){
+    let calls=0
+    await assert.rejects(cmsProfile(request,env,async(url,options)=>{
+      assert.equal(options.redirect,'manual')
+      return calls++===redirectAt?new Response(null,{status:302,headers:{Location:'https://untrusted.example'}}):Response.json({id})
+    }),/AUTH_REDIRECT_REFUSED/)
+    assert.equal(calls,redirectAt+1)
+  }
+  await assert.rejects(cmsProfile(request,env,async(url,options)=>{
+    assert.equal(options.redirect,'manual')
+    return Response.json({error:'Invalid token'},{status:401})
+  }),/LOGIN_REQUIRED/)
+})
+
+test('Worker status and overview selects use the full authenticated handler',async()=>{
+  const sql=new DatabaseSync(':memory:')
+  try{
+    sql.exec(await readFile(new URL('../cloudflare/public-preview/migrations/0001_cms.sql',import.meta.url),'utf8'))
+    sql.exec(await readFile(new URL('../cloudflare/public-preview/migrations/0002_cms_rate.sql',import.meta.url),'utf8'))
+    sql.exec('UPDATE cms_state SET active=1 WHERE id=1')
+    const db=d1Adapter(sql)
+    await commitCms(db,await loadCms(db),fixture(),new Date().toISOString())
+    const handler=createCmsHandler({authenticate:async()=>({...profile,role:'chairperson'})})
+    for(const command of [{action:'status'},...['blog_posts','blog_categories','blog_tags','blog_years','blog_settings'].map(table=>({action:'select',table,columns:'*',filters:[],orders:[],start:0,end:99}))]){
+      const response=await handler(new Request('https://chms1clc.org/api/blog-admin',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(command)}),{CMS:db})
+      assert.equal(response.status,200)
+      const result=await response.json()
+      if(command.action==='status')assert.equal(result.active,true)
+      else assert.ok(Array.isArray(result.data))
+    }
+  }finally{sql.close()}
+})
+
 test('R2 upload validates bytes, stays private until referenced, and refuses deleting referenced media',async()=>{
   const sql=new DatabaseSync(':memory:'), objects=new Map()
   try{

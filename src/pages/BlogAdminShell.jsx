@@ -28,7 +28,7 @@ export default function BlogAdminShell({ profile, loading, lang, setLang }) {
       <nav><button onClick={() => setLang(en ? 'zh' : 'en')}><Globe size={17} />{en ? '中文' : 'English'}</button><a href={publicHomeUrl()}><ArrowLeft size={17} />{en ? 'Blog home' : '返回 Blog 首页'}</a></nav>
     </header>
     <main className="blog-main">
-      {loading ? <div className="blog-skeleton" aria-label={en ? 'Loading' : '载入中'} /> : !profile ? <section className="blog-empty"><h1>{en ? 'Administrator login required' : '请先登入管理账号'}</h1><a className="blog-primary" href={blogLogin('/blog-admin')}><LogIn size={18} />{en ? 'Log in' : '登入'}</a></section> : canManageBlog(profile) ? <BlogManagement profile={profile} lang={lang} onSiteChange={value => setSite(brandedSettings(value))} /> : <section className="blog-empty"><h1>{en ? 'Access restricted' : '没有文章后台管理权限'}</h1><a href={publicHomeUrl()}>{en ? 'Return to Blog' : '返回 Blog 首页'}</a></section>}
+      {loading ? <div className="blog-skeleton" aria-label={en ? 'Loading' : '载入中'} /> : !profile ? <section className="blog-empty"><h1>{en ? 'Administrator login required' : '请先登入管理账号'}</h1><a className="blog-primary" href={blogLogin('/blog-admin')}><LogIn size={18} />{en ? 'Log in' : '登入'}</a></section> : canManageBlog(profile) ? <BlogManagement profile={profile} lang={lang} onSiteChange={value => setSite(brandedSettings(value))} /> : <section className="blog-empty"><h1>{en ? 'Manage Blog access is restricted' : '没有可管理博客权限'}</h1><a href={publicHomeUrl()}>{en ? 'Return to Blog' : '返回 Blog 首页'}</a></section>}
     </main>
   </div>
 }

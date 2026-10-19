@@ -14,7 +14,7 @@ export async function cmsRequest(command, { file, bucket, owner } = {}) {
   })
   if (!response.ok) {
     const result = await response.json().catch(() => ({}))
-    const messages={401:'登入已过期，请重新登入。 / Please sign in again.',403:'没有文章管理权限。 / Article management access is restricted.',413:'文件或内容超过大小限制。 / File or content exceeds the size limit.',429:'操作或上传较多，请稍后再试。 / Too many requests or uploads. Please retry later.',503:'文章服务暂时不可用，请稍后再试；不要重复提交。 / Article service unavailable. Retry later without resubmitting.'}
+    const messages={401:'登入已过期，请重新登入。 / Please sign in again.',403:'没有可管理博客权限。 / Manage Blog access is restricted.',413:'文件或内容超过大小限制。 / File or content exceeds the size limit.',429:'操作或上传较多，请稍后再试。 / Too many requests or uploads. Please retry later.',503:'博客服务暂时不可用，请稍后刷新；若刚才正在保存，请勿重复提交。 / Blog service unavailable. Refresh later; do not resubmit a pending save.'}
     const message = messages[response.status] || result.error || 'CMS_UNAVAILABLE'
     throw Object.assign(new Error(message), { status: response.status })
   }
