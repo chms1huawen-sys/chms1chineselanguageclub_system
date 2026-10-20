@@ -1,7 +1,8 @@
-import { useEffect, useMemo, useState, useEffectEvent } from 'react'
+import { useEffect, useMemo, useState, useEffectEvent, useRef } from 'react'
 import { supabase } from '../supabaseClient'
 import { createNotificationsAndPush } from '../utils/pushNotifications'
 import { canViewLeaveRecords } from '../utils/permissions'
+import { canEditOwnLeave, leaveEditValues } from '../utils/leaveEditing'
 import UserAvatar from '../components/UserAvatar'
 import AvatarPreviewModal from '../components/AvatarPreviewModal'
 import {
@@ -13,6 +14,7 @@ import {
   FileText,
   Loader,
   Plus,
+  Pencil,
   Save,
   Search,
   User,
@@ -88,9 +90,14 @@ export default function LeaveApplications({ currentUserProfile, lang = 'zh', not
   const [applications, setApplications] = useState([])
   const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
+  const submittingRef = useRef(false)
+  const formRef = useRef(null)
+  const [editingApplication, setEditingApplication] = useState(null)
   const [errorMsg, setErrorMsg] = useState('')
   const [successMsg, setSuccessMsg] = useState('')
-  const [selectedApplication, setSelectedApplication] = useState(null)
+  const [selectedApplicationId, setSelectedApplicationId] = useState(null)
+  const selectedApplication = applications.find(application => application.id === selectedApplicationId) || null
+  const setSelectedApplication = application => setSelectedApplicationId(application?.id || null)
   const [avatarPreviewUser, setAvatarPreviewUser] = useState(null)
   const [searchTerm, setSearchTerm] = useState('')
   const [typeFilter, setTypeFilter] = useState('all')
@@ -108,6 +115,27 @@ export default function LeaveApplications({ currentUserProfile, lang = 'zh', not
   })
 
   const isManager = canViewLeaveRecords(currentUserProfile)
+  const hasUnsavedEdit = !!editingApplication && JSON.stringify(leaveEditValues(formData)) !== JSON.stringify(leaveEditValues({...editingApplication,custom_leave_type:editingApplication.custom_leave_type || '',drive_file_url:editingApplication.drive_file_url || ''}))
+  useEffect(() => {
+    if (!hasUnsavedEdit) return
+    const warn = event => { event.preventDefault(); event.returnValue = '' }
+    window.addEventListener('beforeunload',warn)
+    return () => window.removeEventListener('beforeunload',warn)
+  },[hasUnsavedEdit])
+
+  const resetForm = () => {
+    setEditingApplication(null)
+    setFormData({leave_type:'sick',custom_leave_type:'',leave_date:getLocalDate(),reason:'',drive_file_url:'',attachment_uploaded:false})
+  }
+  const startEditing = application => {
+    if (submittingRef.current || !canEditOwnLeave(currentUserProfile, application)) return
+    if ((formData.reason || formData.drive_file_url) && !window.confirm(lang === 'zh' ? '放弃表单中尚未提交的内容，修改这份请假吗？' : 'Discard the current form and edit this leave record?')) return
+    setEditingApplication(application)
+    setFormData({leave_type:application.leave_type,custom_leave_type:application.custom_leave_type || '',leave_date:application.leave_date,reason:application.reason || '',drive_file_url:application.drive_file_url || '',attachment_uploaded:application.attachment_uploaded === true})
+    setSelectedApplication(null)
+    setErrorMsg(''); setSuccessMsg('')
+    formRef.current?.scrollIntoView({block:'start'})
+  }
 
   const notifySuccessMsg = useEffectEvent(() => {
     if (successMsg) notify?.({ type: 'success', title: lang === 'zh' ? '操作成功' : 'Success', message: successMsg })
@@ -254,6 +282,7 @@ export default function LeaveApplications({ currentUserProfile, lang = 'zh', not
 
   const handleSubmit = async (event) => {
     event.preventDefault()
+    if (submittingRef.current) return
     setErrorMsg('')
     setSuccessMsg('')
 
@@ -266,17 +295,29 @@ export default function LeaveApplications({ currentUserProfile, lang = 'zh', not
       return
     }
 
+    if (editingApplication && !canEditOwnLeave(currentUserProfile, editingApplication)) {
+      setErrorMsg(lang === 'zh' ? '只有提交者本人可以修改这份请假。' : 'Only the original submitter can edit this leave record.')
+      return
+    }
+    submittingRef.current = true
     setSubmitting(true)
     try {
+      const values = leaveEditValues(formData)
+      if (editingApplication) {
+        const {data,error} = await supabase.from('leave_applications').update(values)
+          .eq('id',editingApplication.id).eq('user_id',currentUserProfile.id).eq('version',editingApplication.version)
+          .select('*').maybeSingle()
+        if (error) throw error
+        if (!data) throw new Error(lang === 'zh' ? '修改未保存：记录已更新、已删除或权限已变更。请保留修改，重新打开记录后再试。' : 'Not saved: the record changed, was deleted, or access changed. Keep your changes and reopen the record.')
+        resetForm()
+        setSuccessMsg(lang === 'zh' ? '请假资料已更新，负责人可查看最新内容。' : 'Leave record updated. Managers can view the latest details.')
+        await fetchApplications(true)
+        return
+      }
       const payload = {
+        ...values,
         user_id: currentUserProfile.id,
-        leave_type: formData.leave_type,
-        custom_leave_type: formData.leave_type === 'custom' ? formData.custom_leave_type.trim() : null,
-        leave_date: formData.leave_date,
-        reason: formData.reason.trim(),
         drive_folder_url: driveFolderUrl || null,
-        drive_file_url: formData.drive_file_url.trim() || null,
-        attachment_uploaded: true,
       }
 
       const { data, error } = await supabase
@@ -290,18 +331,12 @@ export default function LeaveApplications({ currentUserProfile, lang = 'zh', not
 
       await notifyManagers(insertedApplication)
       setSuccessMsg(lang === 'zh' ? '请假申请已记录，并已通知负责老师与执委。' : 'Leave application recorded and managers notified.')
-      setFormData({
-        leave_type: 'sick',
-        custom_leave_type: '',
-        leave_date: getLocalDate(),
-        reason: '',
-        drive_file_url: '',
-        attachment_uploaded: false,
-      })
+      resetForm()
       fetchApplications(true)
     } catch (err) {
       setErrorMsg(err.message || (lang === 'zh' ? '提交请假申请失败' : 'Failed to submit leave application.'))
     } finally {
+      submittingRef.current = false
       setSubmitting(false)
     }
   }
@@ -355,14 +390,15 @@ export default function LeaveApplications({ currentUserProfile, lang = 'zh', not
       )}
 
       <div className="grid grid-cols-1 xl:grid-cols-[420px_1fr] gap-6">
-        <form onSubmit={handleSubmit} className="p-6 space-y-5" style={cardStyle}>
+        <form ref={formRef} onSubmit={handleSubmit} className="p-6 space-y-5" style={cardStyle}>
           <div className="flex items-center gap-2">
-            <Plus size={18} style={{ color: '#95CBFF' }} />
+            {editingApplication ? <Pencil size={18} style={{ color: '#95CBFF' }} /> : <Plus size={18} style={{ color: '#95CBFF' }} />}
             <h2 className="font-black text-base" style={{ color: '#1a1a1a' }}>
-              {lang === 'zh' ? '填写请假申请' : 'Submit Leave'}
+              {editingApplication ? (lang === 'zh' ? '修改我的请假' : 'Edit My Leave') : (lang === 'zh' ? '填写请假申请' : 'Submit Leave')}
             </h2>
           </div>
 
+          <fieldset disabled={submitting} className="min-w-0 space-y-5">
           <div>
             <label className="block text-xs font-black uppercase tracking-wider mb-2" style={{ color: '#6b7280' }}>
               {lang === 'zh' ? '请假类型' : 'Leave Type'}
@@ -492,8 +528,10 @@ export default function LeaveApplications({ currentUserProfile, lang = 'zh', not
             disabled={submitting}
             className="w-full flex items-center justify-center gap-2 px-5 py-3 rounded-2xl text-sm font-black transition cursor-pointer"
             style={{ background: submitting ? '#b8deff' : '#95CBFF', color: '#244c67' }}>
-            {submitting ? <><Loader size={15} className="animate-spin" /> {lang === 'zh' ? '提交中...' : 'Submitting...'}</> : lang === 'zh' ? '提交请假申请' : 'Submit Leave'}
+            {submitting ? <><Loader size={15} className="animate-spin" /> {lang === 'zh' ? '保存中...' : 'Saving...'}</> : editingApplication ? <><Save size={15} />{lang === 'zh' ? '保存修改' : 'Save Changes'}</> : lang === 'zh' ? '提交请假申请' : 'Submit Leave'}
           </button>
+          {editingApplication && <button type="button" onClick={() => { if (window.confirm(lang === 'zh' ? '取消本次修改？尚未保存的修改将丢失。' : 'Cancel editing and discard unsaved changes?')) { resetForm(); setErrorMsg('') } }} className="w-full inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-bold"><X size={15} />{lang === 'zh' ? '取消修改' : 'Cancel Editing'}</button>}
+          </fieldset>
         </form>
 
         <div className="space-y-4">
@@ -677,6 +715,7 @@ export default function LeaveApplications({ currentUserProfile, lang = 'zh', not
               <button type="button" aria-label={lang === 'zh' ? '关闭详情' : 'Close details'} onClick={() => setSelectedApplication(null)} className="member-close rounded-xl" style={{ color: '#526779' }}><X size={20} /></button>
             </div>
             <div className="p-6 space-y-4">
+              {canEditOwnLeave(currentUserProfile, selectedApplication) && <button type="button" disabled={submitting} onClick={() => startEditing(selectedApplication)} className="inline-flex items-center gap-2 px-4 py-2.5 rounded-2xl text-sm font-black" style={{background:'#95CBFF',color:'#244c67'}}><Pencil size={15} />{lang === 'zh' ? '修改我的请假' : 'Edit My Leave'}</button>}
               {[
                 { label: lang === 'zh' ? '申请人' : 'Applicant', value: selectedApplication.applicant?.name || '-' },
                 { label: lang === 'zh' ? '请假类型' : 'Leave Type', value: getLeaveLabel(selectedApplication, lang) },
@@ -705,6 +744,7 @@ export default function LeaveApplications({ currentUserProfile, lang = 'zh', not
                   {lang === 'zh' ? '打开请假信 Google Drive 文件夹' : 'Open Leave Letter Google Drive Folder'}
                 </a>
               )}
+              {selectedApplication.updated_at && <p className="text-xs font-semibold" style={{color:'#526779'}}>{lang === 'zh' ? '最后修改：' : 'Last edited: '}{new Date(selectedApplication.updated_at).toLocaleString(lang === 'zh' ? 'zh-CN' : 'en-US')}</p>}
               {selectedApplication.drive_file_url && (
                 <a
                   href={selectedApplication.drive_file_url}
