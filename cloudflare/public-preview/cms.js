@@ -159,7 +159,7 @@ export function createCmsHandler({ authenticate = cmsProfile } = {}) {
       if (outcome.write) await commitCms(env.CMS,current,outcome.data,new Date().toISOString())
       return json({ data: outcome.result, provider: 'cloudflare-d1' },200,cors)
     } catch (error) {
-      const status = [400,401,403,404,409,413,429,503].includes(error?.status) ? error.status : 503
+      const status = [400,401,403,404,405,409,413,429,503].includes(error?.status) ? error.status : 503
       if (status === 503) console.error('CMS_FAILURE', JSON.stringify({name:error?.name,code:error?.status===503?error.message:'UNEXPECTED'}))
       return json({ error: status === 503 ? 'CMS_UNAVAILABLE' : error.message },status,cors)
     }

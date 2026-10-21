@@ -5,8 +5,10 @@ import { SOURCE_ORIGIN, PUBLIC_ORIGIN } from '../src/utils/siteOrigins.js'
 export function checkPage(path, response, body, origin) {
   const errors = []
   const moved = origin === SOURCE_ORIGIN && ['/literature', '/activities', '/bookroom', '/news', '/about'].includes(path)
-  if (response.status !== (moved ? 308 : 200)) errors.push(`HTTP ${response.status}`)
+  const privateMoved = origin === PUBLIC_ORIGIN && ['/member', '/blog-admin'].includes(path)
+  if (response.status !== (moved ? 308 : privateMoved ? 302 : 200)) errors.push(`HTTP ${response.status}`)
   if (moved && response.headers.get('location') !== PUBLIC_ORIGIN + path) errors.push('Public redirect origin/path mismatch')
+  if (privateMoved && response.headers.get('location') !== SOURCE_ORIGIN + path) errors.push('Member redirect origin/path mismatch')
   for (const [header, expected] of [
     ['x-content-type-options', 'nosniff'], ['x-frame-options', 'DENY'],
   ]) if (response.headers.get(header) !== expected) errors.push(`Missing ${header}`)
@@ -14,7 +16,7 @@ export function checkPage(path, response, body, origin) {
   if (!response.headers.get('strict-transport-security')) errors.push('Missing HSTS')
   if (path === '/member' || path === '/blog-admin') {
     if (!/noindex/i.test(response.headers.get('x-robots-tag') || '')) errors.push('Private entry is indexable')
-    if (!body.includes('/app-launch.js')) errors.push('Missing launch guard')
+    if (!privateMoved && !body.includes('/app-launch.js')) errors.push('Missing launch guard')
   }
   if (path === '/literature' && !moved && !body.includes(`href="${origin}/literature"`)) errors.push('Canonical origin mismatch')
   if (path === '/sitemap.xml') {

@@ -1,6 +1,8 @@
 import process from 'node:process'
 import { Buffer } from 'node:buffer'
 import { createHash } from 'node:crypto'
+import { readFileSync } from 'node:fs'
+import { join } from 'node:path'
 import { createClient } from '@supabase/supabase-js'
 import { S3Client, GetObjectCommand, PutObjectCommand } from '@aws-sdk/client-s3'
 import { waitUntil } from '@vercel/functions'
@@ -140,12 +142,20 @@ export function createSnapshotService({ store, source, now = Date.now, defer = t
 }
 
 let service
+export function versionedSnapshotSource(source, runtimeVersion) {
+  return {
+    checkDue: current => current.runtimeVersion !== runtimeVersion ? Promise.resolve(true) : source.checkDue(current),
+    build: async now => ({ ...await source.build(now), runtimeVersion }),
+  }
+}
+
 export function getPublicSnapshot(options) {
   if (process.env.PUBLIC_SITE_DISABLED === 'true') return Promise.reject(new Error('Public snapshots disabled'))
   if (!service) {
     const config = r2PhotoConfig(process.env)
     if (!config) return Promise.reject(new Error('Public snapshot storage not configured'))
-    service = createSnapshotService({ store: snapshotStore(config), source: snapshotSource(process.env), defer: waitUntil })
+    const runtimeVersion = createHash('sha256').update(readFileSync(join(process.cwd(), 'dist/index.html'))).digest('hex')
+    service = createSnapshotService({ store: snapshotStore(config), source: versionedSnapshotSource(snapshotSource(process.env), runtimeVersion), defer: waitUntil })
   }
   return service.get(options)
 }
