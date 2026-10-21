@@ -36,7 +36,7 @@ export async function readVisit(request) {
 
 export function createVisitHandler({ createClient, env }) {
   return async request => {
-    const headers = pushCors(request.headers.get('origin'), env('ALLOWED_ORIGINS') || '')
+    const headers = pushCors(request.headers.get('origin'), [env('ALLOWED_ORIGINS') || '', 'https://chms1clc.org'].join(','))
     if (!headers) return Response.json({ error: 'Origin not allowed.' }, { status: 403 })
     const json = (body, status = 200, extra = {}) => Response.json(body, { status, headers: { ...headers, ...extra } })
     if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers })

@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict'
-import { memberLaunchUrl, prepareAppLaunch, isPublicPreview, publicHomeUrl } from '../src/utils/pwaLaunch.js'
+import { memberLaunchUrl, prepareAppLaunch, isPublicPreview, isStatisticsPreview, publicHomeUrl } from '../src/utils/pwaLaunch.js'
 import { readFileSync } from 'node:fs'
 
 const root = 'https://club.example/'
@@ -27,6 +27,8 @@ for (const preview of [true, false]) for (const suffix of ['', '#/login?return=%
   } }
   const browser = { location: { href: url.href, search: url.search, replace: value => events.push(value) }, history: { replaceState: (_state, _title, value) => events.push(value) } }
   assert.equal(isPublicPreview(doc), preview)
+  assert.equal(isStatisticsPreview(doc, 'https://chms1clc.org'), false, 'Formal site keeps its privacy controls')
+  assert.equal(isStatisticsPreview(doc, 'https://preview.workers.dev'), preview, 'Preview visits remain excluded')
   prepareAppLaunch(browser, doc)
   if (preview) {
     assert.equal(events[0], 'remove-manifest')

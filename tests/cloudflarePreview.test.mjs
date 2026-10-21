@@ -211,7 +211,44 @@ test('deployed public routes invoke the worker rather than the static 404 fallba
   }
   assert.ok(config.assets.run_worker_first.includes('/blog/*'))
   assert.ok(config.assets.run_worker_first.includes('/public-media/*'))
+  assert.ok(config.assets.run_worker_first.includes('/assets/*'))
   assert.equal(config.triggers.crons[0], '* * * * *')
+})
+
+test('new build modules stay same-origin and work without the R2 snapshot', async () => {
+  let calls = 0
+  const worker = createPreviewWorker({ fetchOrigin: async (url, options) => {
+    calls++
+    assert.equal(url, origin + '/assets/new-build.js')
+    assert.equal(options.redirect, 'manual')
+    assert.equal(options.headers, undefined, 'Never forward cookies or authorization')
+    return new Response(options.method === 'HEAD' ? null : 'export const ready=true', { headers: { 'Content-Type': 'application/javascript', 'Set-Cookie': 'do-not-forward=1' } })
+  } })
+  const env = { ASSETS: { fetch: async () => new Response(null, { status: 404 }) } }
+  for (const method of ['GET', 'HEAD']) {
+    const response = await worker.fetch(new Request('https://chms1clc.org/assets/new-build.js?x=1', { method, headers: { Cookie: 'private=1', Authorization: 'Bearer secret' } }), env)
+    assert.equal(response.status, 200)
+    assert.equal(response.headers.get('location'), null)
+    assert.equal(response.headers.get('set-cookie'), null)
+    assert.match(response.headers.get('content-type'), /javascript/)
+    assert.equal(await response.text(), method === 'HEAD' ? '' : 'export const ready=true')
+  }
+  assert.equal(calls, 2)
+  const local = await worker.fetch(new Request('https://chms1clc.org/assets/local.css'), { ASSETS: { fetch: async () => new Response('body{}', { headers: { 'Content-Type': 'text/css' } }) } })
+  assert.equal(local.status, 200)
+  assert.equal(calls, 2, 'Local files do not consume Vercel traffic')
+})
+
+test('module fallback rejects redirects, HTML, upstream failures and non-module paths', async () => {
+  const env = { ASSETS: { fetch: async () => new Response(null, { status: 404 }) } }
+  for (const [status, type, expected] of [[302, 'text/javascript', 503], [200, 'text/html', 503], [404, 'text/html', 404], [500, 'text/html', 503]]) {
+    const worker = createPreviewWorker({ fetchOrigin: async () => new Response('not a module', { status, headers: { 'Content-Type': type, Location: 'https://untrusted.example' } }) })
+    assert.equal((await worker.fetch(new Request('https://chms1clc.org/assets/new.js'), env)).status, expected)
+  }
+  let calls = 0
+  const worker = createPreviewWorker({ fetchOrigin: async () => { calls++; throw new Error('Must not fetch') } })
+  await worker.fetch(new Request('https://chms1clc.org/assets/private.json'), env)
+  assert.equal(calls, 0)
 })
 
 test('R2 publishes pages and JSON atomically, protects the revision and omits HTML from the public API data', async () => {

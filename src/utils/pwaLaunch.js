@@ -2,6 +2,7 @@ import { PUBLIC_ORIGIN, SOURCE_ORIGIN } from './siteOrigins.js'
 
 export const isInstalledApp = () => window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true
 export const isPublicPreview = (doc = document) => !!doc.querySelector('meta[name="public-static-preview"]')
+export const isStatisticsPreview = (doc = document, origin = window.location.origin) => isPublicPreview(doc) && origin !== PUBLIC_ORIGIN
 
 export function memberLaunchUrl(href) {
   const url = new URL(href)

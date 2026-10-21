@@ -61,6 +61,24 @@ export function createPreviewWorker({ now = Date.now, fetchOrigin = fetch } = {}
         if (indexable && asset.status === 200 && asset.headers.get('Content-Type')?.startsWith('image/png')) result.headers.set('X-Robots-Tag', 'index, follow')
         return result
       }
+      // Snapshot HTML can reference a newer Vercel build than the local asset bundle.
+      // Serve its public modules on this origin, without forwarding visitor credentials.
+      if (/^\/assets\/[a-zA-Z0-9_.-]+\.(js|css)$/.test(path)) {
+        try {
+          let asset = await env.ASSETS.fetch(request)
+          if (asset.status === 404) {
+            asset = await fetchOrigin(ORIGIN + path, {
+              method: request.method, redirect: 'manual', signal: AbortSignal.timeout(15000),
+            })
+          }
+          if (asset.status !== 200) return reply(null, asset.status === 404 ? 404 : 503)
+          const type = asset.headers.get('Content-Type') || ''
+          if (!(path.endsWith('.js') ? /^(?:application|text)\/(?:javascript|ecmascript)\b/i : /^text\/css\b/i).test(type)) return reply(null, 503)
+          return reply(request.method === 'HEAD' ? null : asset.body, 200, type, {
+            'Cache-Control': 'public, max-age=3600',
+          })
+        } catch { return reply(null, 503) }
+      }
       try {
         const { preview, checkedAt, json, photos } = await current(env)
         const pages = formal ? preview.publicSite?.origin === PUBLIC_ORIGIN && preview.publicSite.pages : preview.pages
@@ -97,7 +115,6 @@ export function createPreviewWorker({ now = Date.now, fetchOrigin = fetch } = {}
         if (Object.hasOwn(pages, path)) return respond(request.method === 'HEAD' ? null : pages[path], 200, 'text/html; charset=utf-8', version)
         if (path.startsWith('/api/') || path.startsWith('/blog/')) return reply(null, 404)
         const asset = await env.ASSETS.fetch(request)
-        if (asset.status === 404 && /^\/assets\/[a-zA-Z0-9_.-]+\.(js|css)$/.test(path)) return reply(null, 302, 'text/plain', { Location: ORIGIN + path })
         const result = new Response(asset.body, asset)
         for (const [key, value] of Object.entries(headers)) result.headers.set(key, value)
         return result

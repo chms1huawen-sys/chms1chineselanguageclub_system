@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../supabaseClient'
+import { isStatisticsPreview } from '../utils/pwaLaunch'
 import './BlogAnalyticsConsent.css'
 
 const CHOICE = 'clc_blog_statistics'
@@ -21,7 +22,7 @@ export default function BlogAnalyticsConsent({ lang = 'zh', disabled = false, al
   const [open, setOpen] = useState(false)
   const en = lang === 'en'
   const optedOut = navigator.globalPrivacyControl === true || navigator.doNotTrack === '1'
-  const preview = !!document.querySelector('meta[name="public-static-preview"]')
+  const preview = isStatisticsPreview()
   const path = window.location.pathname
   useEffect(() => {
     if (disabled || preview || choice !== 'allowed' || optedOut || (!allowLocal && ['localhost', '127.0.0.1'].includes(location.hostname))) return
