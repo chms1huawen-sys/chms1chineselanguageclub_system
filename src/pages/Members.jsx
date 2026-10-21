@@ -77,6 +77,7 @@ const PermissionControls = ({ formData, setFormData, lang, disabled = false }) =
         const hasDefaultPermission = hasPermission({ ...formData, [field]: isBlogPermission ? null : false }, field)
         const hasManualPermission = Boolean(formData[field])
         const checked = isBlogPermission ? hasPermission(formData, field) : hasDefaultPermission || hasManualPermission
+        const inheritsDefault = hasDefaultPermission && (!isBlogPermission || formData[field] == null)
         return (
           <label key={field} className="flex items-center gap-2 text-xs font-bold rounded-xl px-2 py-1.5"
             style={{ background: 'white', color: '#4b5563', border: '1px solid #e0f1ff' }}>
@@ -85,10 +86,10 @@ const PermissionControls = ({ formData, setFormData, lang, disabled = false }) =
               disabled={disabled || (!isBlogPermission && hasDefaultPermission)}
               checked={checked}
               onChange={(event) => setFormData(prev => ({ ...prev, [field]: event.target.checked }))}
-              style={{ accentColor: '#95CBFF' }}
+              style={{ accentColor: inheritsDefault ? '#767676' : '#95CBFF' }}
             />
             <span className="flex-1">{PERMISSION_LABELS[field][lang]}</span>
-            {hasDefaultPermission && (!isBlogPermission || formData[field] == null) && (
+            {inheritsDefault && (
               <span className="px-1.5 py-0.5 rounded-full text-[10px] font-black"
                 style={{ background: '#e0f1ff', color: '#2E86C1' }}>
                 {lang === 'zh' ? '默认' : 'Default'}

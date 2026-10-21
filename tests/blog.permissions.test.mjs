@@ -4,6 +4,17 @@ import { readFile } from 'node:fs/promises'
 import { canManageBlog, BLOG_MANAGER_ROLES } from '../src/utils/blog.js'
 import { hasPermission, PERMISSION_FIELDS } from '../src/utils/permissions.js'
 
+test('Inherited blog permissions use the default gray without locking revocation', async () => {
+  const source = await readFile(new URL('../src/pages/Members.jsx', import.meta.url), 'utf8')
+  assert.match(source, /const inheritsDefault = hasDefaultPermission && \(!isBlogPermission \|\| formData\[field\] == null\)/)
+  assert.match(source, /accentColor: inheritsDefault \? '#767676' : '#95CBFF'/)
+  assert.match(source, /disabled=\{disabled \|\| \(!isBlogPermission && hasDefaultPermission\)\}/)
+  for (const role of BLOG_MANAGER_ROLES) {
+    assert.equal(hasPermission({ role, is_active: true, can_manage_blog: null }, 'can_manage_blog'), true)
+    assert.equal(hasPermission({ role, is_active: true, can_manage_blog: false }, 'can_manage_blog'), false)
+  }
+})
+
 test('Blog overrides inherit, grant and revoke without changing other permissions', () => {
   assert.ok(PERMISSION_FIELDS.includes('can_manage_blog'))
   for (const role of [...BLOG_MANAGER_ROLES, 'ordinary_member', 'custom', 'vice_chairperson']) {
